@@ -1,0 +1,14 @@
+# CODEOWNERS
+# -----------------------------------------------------------------------------
+# hengnao-autonomous-agent — 代码审查负责人（Code Owners）配置
+# 语法参考: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# 规则说明：
+#   * 默认所有路径的审查负责人统一指向仓库维护者。
+#   后续可按模块/目录细化归属，例如：
+#     /agents/            @lizhikeer
+#     /docs/              @lizhikeer
+# -----------------------------------------------------------------------------
+
+# 全局兜底：所有文件必须由以下负责人审查
+*       @lizhikeer
