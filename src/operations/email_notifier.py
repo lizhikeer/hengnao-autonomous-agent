@@ -55,6 +55,7 @@ DEFAULT_DRY_RUN_DIR = "dry_run_output"
 
 # 风险等级 -> 徽章配色（红 / 橙 / 蓝），保证收件人第一眼能分辨紧急程度
 _RISK_BADGE_STYLES: Dict[str, Dict[str, str]] = {
+    "CRITICAL": {"label": "CRITICAL · 严重", "bg": "#FCE8E6", "fg": "#7F0000", "border": "#E57373"},
     "HIGH": {"label": "HIGH · 高危", "bg": "#FDECEA", "fg": "#B71C1C", "border": "#F3B4AE"},
     "MEDIUM": {"label": "MEDIUM · 中危", "bg": "#FFF4E5", "fg": "#B25E09", "border": "#F5C67A"},
     "LOW": {"label": "LOW · 低危", "bg": "#E8F0FE", "fg": "#1A56C4", "border": "#B6CBF7"},
@@ -64,10 +65,15 @@ _RISK_BADGE_STYLES: Dict[str, Dict[str, str]] = {
 # 建议处置动作 -> 中文可读描述；未命中的动作原样透出，方便后续扩展新动作
 _ACTION_LABELS: Dict[str, str] = {
     "block_ip": "封禁攻击源 IP（block_ip）",
+    "block_ip_short_term": "短时封禁攻击源 IP（block_ip_short_term）",
+    "rate_limit": "对攻击源 IP 实施请求限速（rate_limit）",
+    "rate_limit_ip": "对攻击源 IP 实施请求限速（rate_limit_ip）",
+    "isolate_account": "临时冻结/隔离涉事账号（isolate_account）",
     "isolate_host": "隔离受影响主机（isolate_host）",
     "reset_password": "强制重置相关账号口令（reset_password）",
     "notify_owner": "通知资产负责人人工复核（notify_owner）",
     "monitor_only": "仅持续监控，暂不阻断（monitor_only）",
+    "none": "无需执行阻断处置（none）",
 }
 
 _MONO_STYLE = "font-family:Consolas,'Courier New',monospace;"

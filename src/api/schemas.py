@@ -131,9 +131,9 @@ class QueryLogsRequest(BaseModel):
         description="全链路追踪 ID，用于串联同一攻击故事链的多阶段日志",
         examples=["CHAIN-ATTACK-01"],
     )
-    log_source: Literal["nginx_access", "auth_log", "zeek_conn", "zeek_http", "all"] = Field(
+    log_source: Literal["nginx_access", "auth_log", "zeek_conn", "zeek_http", "zeek_dns", "all"] = Field(
         default="all",
-        description="日志来源白名单枚举：nginx_access(Web访问)/auth_log(认证)/zeek_conn(网络流)/zeek_http(HTTP还原)/all(全部)",
+        description="日志来源白名单枚举：nginx_access(Web访问)/auth_log(认证)/zeek_conn(网络流)/zeek_http(HTTP还原)/zeek_dns(DNS查询)/all(全部)",
         examples=["nginx_access"],
     )
     time_window: Optional[str] = Field(
