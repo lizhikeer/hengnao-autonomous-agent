@@ -1,0 +1,7 @@
+# 数据底座依赖（ClickHouse / 配置 / 通用工具）
+# 版本口径以团队已通过测试的 Week1 工具链为准（PR #10 实测 107 项通过）
+clickhouse-connect==0.8.9
+pydantic==2.14.1
+python-dotenv==1.0.1
+requests==2.32.3
+PyYAML==6.0.2

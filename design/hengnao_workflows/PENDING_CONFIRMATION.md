@@ -60,7 +60,7 @@
 
 ```
 [DEBUG_REQ] POST /tools/query_logs ct=None ua=Go-http-client/1.1 body=b''
-INFO:     183.129.153.157:0 - "POST /tools/query_logs HTTP/1.1" 422 Unprocessable Content
+INFO:     183.129.***.***:0 - "POST /tools/query_logs HTTP/1.1" 422 Unprocessable Content
 ```
 
 推论与影响：
