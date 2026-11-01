@@ -1,0 +1,110 @@
+[
+  {
+    "card_id": "KB-FUT-001",
+    "card_type": "security_knowledge",
+    "title": "Web应用可疑文件上传行为识别与调查",
+    "attack_category": "File_Upload_Traversal",
+    "mitre_id": "T1505.003",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "文件上传接口在短时间内出现异常集中的请求",
+      "上传请求的文件名、扩展名或Content-Type与业务允许范围不一致",
+      "上传请求后出现对新上传资源的异常访问",
+      "上传请求的响应状态码、响应字节数与正常上传行为存在明显差异"
+    ],
+    "investigation_steps": [
+      "检索nginx访问日志，统计上传接口的请求来源、请求频率、状态码和访问路径",
+      "关联zeek_http记录，核对请求方法、请求时间、目标主机和上传请求特征",
+      "检查同一来源IP在上传前后是否访问异常管理接口或其他敏感路径",
+      "结合应用侧文件审核记录，确认上传文件是否符合业务类型和安全策略"
+    ],
+    "recommended_action": "monitor_only",
+    "error_revision_note": "正常业务可能上传压缩包、图片或其他特殊格式文件。不能仅凭文件扩展名或Content-Type判定为恶意文件，应结合业务白名单、上传后的访问行为和安全审核结果判断。",
+    "source_reference": "MITRE ATT&CK T1505.003 Web Shell; OWASP File Upload Cheat Sheet",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-FUT-002",
+    "card_type": "security_knowledge",
+    "title": "敏感目录与备份文件异常探测识别",
+    "attack_category": "File_Upload_Traversal",
+    "mitre_id": "T1083",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "同一来源IP在短时间内连续请求多个非公开或不常见资源路径",
+      "请求路径集中出现备份文件、配置文件或管理资源相关关键词",
+      "大量请求返回404或403，且访问路径具有明显规律性",
+      "同一来源IP持续访问多个无关目录，访问频率明显偏离正常用户行为"
+    ],
+    "investigation_steps": [
+      "检索nginx访问日志，统计异常来源IP访问的路径数量、请求频率和状态码分布",
+      "关联zeek_http记录，核对请求时间、目标主机和异常路径特征",
+      "对比同一来源IP的正常业务访问记录，判断是否存在集中式资源探测行为",
+      "检查相关资源是否对外暴露，并核实是否存在敏感信息访问成功的记录"
+    ],
+    "recommended_action": "rate_limit_ip",
+    "error_revision_note": "搜索引擎爬虫、网站监测程序和合法运维扫描也可能访问大量路径。应结合爬虫身份、授权扫描记录、请求规律和访问结果综合判断。",
+    "source_reference": "MITRE ATT&CK T1083 File and Directory Discovery; OWASP Web Security Testing Guide",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-FUT-003",
+    "card_type": "security_knowledge",
+    "title": "路径穿越异常请求识别与调查",
+    "attack_category": "File_Upload_Traversal",
+    "mitre_id": "T1190",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "请求路径或参数中出现异常的目录跳转及路径规范化特征",
+      "同一来源IP对文件读取或下载接口发起连续异常请求",
+      "相关请求出现集中403、404或异常5xx响应",
+      "请求响应字节数与对应资源的正常响应情况存在明显差异"
+    ],
+    "investigation_steps": [
+      "检索nginx访问日志，定位包含异常路径特征的请求并统计来源IP、请求路径和状态码",
+      "关联zeek_http记录，核对请求时间、请求方法、目标主机和请求参数特征",
+      "检查同一来源IP是否连续访问其他文件读取接口或敏感资源路径",
+      "结合应用访问控制和文件访问审计记录，确认是否发生未授权文件访问"
+    ],
+    "recommended_action": "rate_limit_ip",
+    "error_revision_note": "正常文件路径、URL编码和应用路由规则可能产生相似字符串。应结合服务器路径规范化后的实际访问结果和权限校验记录判断，避免仅凭单个特殊字符触发告警。",
+    "source_reference": "MITRE ATT&CK T1190 Exploit Public-Facing Application; OWASP Path Traversal",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-FUT-004",
+    "card_type": "security_knowledge",
+    "title": "Slowloris异常连接与服务资源耗尽识别",
+    "attack_category": "File_Upload_Traversal",
+    "mitre_id": "T1499.001",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_conn"
+    ],
+    "key_indicators": [
+      "服务器同时维持的连接数量明显高于正常业务基线",
+      "部分客户端连接持续时间异常，连接释放速度明显下降",
+      "服务器响应延迟增加，正常请求出现超时或响应失败",
+      "连接数量和持续时间异常与业务访问量增长不匹配"
+    ],
+    "investigation_steps": [
+      "检索zeek_conn连接记录，统计来源IP、连接持续时间和并发连接变化",
+      "关联nginx访问日志，检查异常时间窗口内请求数量、响应状态码和响应延迟",
+      "对比异常发生前后的正常业务访问基线，判断是否存在异常连接集中现象",
+      "核实服务器资源监控和业务运行情况，判断服务性能下降是否与连接异常相关"
+    ],
+    "recommended_action": "rate_limit_ip",
+    "error_revision_note": "网络波动、客户端网络质量较差和业务高峰也可能造成连接持续时间增加。应结合并发连接数量、请求完成情况和服务器资源指标判断，不能仅凭连接时间长短认定攻击。",
+    "source_reference": "MITRE ATT&CK T1499.001 OS Exhaustion Flood; OWASP Denial of Service Cheat Sheet",
+    "review_status": "approved"
+  }
+]
