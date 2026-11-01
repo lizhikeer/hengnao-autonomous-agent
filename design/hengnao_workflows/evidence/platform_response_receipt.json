@@ -1,0 +1,8 @@
+{
+  "result_key": "[{\"type\":\"text\",\"text\":\"{\\n  \\\"status\\\": \\\"approval_required\\\",\\n  \\\"approval_id\\\": \\\"APPR-20261101-0001\\\",\\n  \\\"executed\\\": false,\\n  \\\"detail\\\": \\\"动作 block_ip（高危）已登记为待审批单 APPR-20261101-0001。权限网关与执行器本周未接入，**未执行任何真实封禁/限速动作**；证据真实性校验已通过，审批结论只能来自恒脑【交互节点】confirm_block 或权限服务的程序化回执。\\\",\\n  \\\"rejected_evidence_ids\\\": [],\\n  \\\"mock\\\": true\\n}\"}]",
+  "kv_local": {
+    "result_key": "[{\"type\":\"text\",\"text\":\"{\\n  \\\"status\\\": \\\"approval_required\\\",\\n  \\\"approval_id\\\": \\\"APPR-20261101-0001\\\",\\n  \\\"executed\\\": false,\\n  \\\"detail\\\": \\\"动作 block_ip（高危）已登记为待审批单 APPR-20261101-0001。权限网关与执行器本周未接入，**未执行任何真实封禁/限速动作**；证据真实性校验已通过，审批结论只能来自恒脑【交互节点】confirm_block 或权限服务的程序化回执。\\\",\\n  \\\"rejected_evidence_ids\\\": [],\\n  \\\"mock\\\": true\\n}\"}]"
+  },
+  "_error_code": 0,
+  "_error_message": ""
+}

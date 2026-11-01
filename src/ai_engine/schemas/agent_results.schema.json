@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Agent 结束节点 ``results`` 的强契约。11 个字段全部必填。",
+  "properties": {
+    "case_id": {
+      "description": "本次调查的案例编号，与评测集/日志包的 case_id 对齐",
+      "examples": [
+        "EVAL-CHAIN-001"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Case Id",
+      "type": "string"
+    },
+    "is_malicious": {
+      "description": "是否判定为恶意。注意：证据不足时不得据此为 false 推断'安全'，须看 attack_type 与 unknown_items",
+      "examples": [
+        true
+      ],
+      "title": "Is Malicious",
+      "type": "boolean"
+    },
+    "attack_type": {
+      "description": "攻击类型（自由文本，建议用下划线连接的多阶段描述）；证据不足时固定填 insufficient_evidence",
+      "examples": [
+        "SQL_Injection_After_Brute_Force"
+      ],
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Attack Type",
+      "type": "string"
+    },
+    "risk_level": {
+      "description": "风险等级四档：LOW/MEDIUM/HIGH/CRITICAL",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "examples": [
+        "HIGH"
+      ],
+      "title": "Risk Level",
+      "type": "string"
+    },
+    "attacker_ip": {
+      "description": "攻击源 IP。禁止编造：必须是本次已查询日志中出现过的地址",
+      "examples": [
+        "198.51.100.23"
+      ],
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Attacker Ip",
+      "type": "string"
+    },
+    "victim_asset": {
+      "description": "受害资产标识（asset_id 或 IP），同样须来自已查询证据",
+      "examples": [
+        "web-prod-01"
+      ],
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Victim Asset",
+      "type": "string"
+    },
+    "evidence_log_ids": {
+      "description": "支撑结论的证据日志编号列表，每个编号必须由本次调查的 /tools/query_logs 真实返回；伪造或跨 case 引用会被 /tools/request_response 拒绝。空数组是合法取值，含义是'本次未取得可引用证据'，此时 attack_type 必须为 insufficient_evidence 且 requires_human_approval 必须为 true（由模型校验强制）；绝不允许塞入占位编号充数",
+      "examples": [
+        [
+          "LOG-20261027-0001",
+          "LOG-20261027-0008",
+          "LOG-20261027-0015"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Log Ids",
+      "type": "array"
+    },
+    "attack_chain_summary": {
+      "description": "攻击链中文摘要：按阶段还原攻击者做了什么、成功了没有",
+      "examples": [
+        "攻击源 198.51.100.23 先对 /admin 执行账号爆破失败，随后针对登录接口发起 SQL 注入绕过认证并尝试导出敏感表数据。"
+      ],
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Attack Chain Summary",
+      "type": "string"
+    },
+    "recommended_action": {
+      "description": "处置建议：block_ip(封禁)/block_ip_short_term(短时封禁)/rate_limit(限速)/none(无需处置)",
+      "enum": [
+        "block_ip",
+        "block_ip_short_term",
+        "rate_limit",
+        "none"
+      ],
+      "examples": [
+        "block_ip"
+      ],
+      "title": "Recommended Action",
+      "type": "string"
+    },
+    "requires_human_approval": {
+      "description": "是否需要人工审批。高危动作、证据不足、结论不确定时必须为 true",
+      "examples": [
+        true
+      ],
+      "title": "Requires Human Approval",
+      "type": "boolean"
+    },
+    "unknown_items": {
+      "description": "未确认事项说明（可为空字符串，但字段必须存在）。证据不足时必须逐条写明缺什么，不得用'无'敷衍",
+      "examples": [
+        "暂未获取到数据库内部审计日志，需进一步确认敏感表具体泄露行数。"
+      ],
+      "title": "Unknown Items",
+      "type": "string"
+    }
+  },
+  "required": [
+    "case_id",
+    "is_malicious",
+    "attack_type",
+    "risk_level",
+    "attacker_ip",
+    "victim_asset",
+    "evidence_log_ids",
+    "attack_chain_summary",
+    "recommended_action",
+    "requires_human_approval",
+    "unknown_items"
+  ],
+  "title": "AgentResults",
+  "type": "object"
+}
