@@ -1,0 +1,34 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	http
+#open	2026-11-01-17-09-20
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	trans_depth	method	host	uri	referrer	version	user_agent	origin	request_body_len	response_body_len	status_code	status_msg	info_code	info_msg	tags	username	password	proxied	orig_fuids	orig_filenames	orig_mime_types	resp_fuids	resp_filenames	resp_mime_types
+#types	time	string	addr	port	addr	port	count	string	string	string	string	string	string	string	count	count	count	string	count	string	set[enum]	string	string	set[string]	vector[string]	vector[string]	vector[string]	vector[string]	vector[string]	vector[string]
+1793550547.958467	C1HTsi3wtjFrA2Y7xd	127.0.0.1	38910	127.0.0.1	18081	1	GET	127.0.0.1:18081	/	-	1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	-	0	896	200	OK	-	-	(empty)	-	-	-	-	-	-	FtzsYq4W8rlXaBla68	-	text/html
+1793550547.964233	Clg1hd348DIDOxWCr9	127.0.0.1	38914	127.0.0.1	18081	1	GET	127.0.0.1:18081	/api/user?id=1	-	1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	-	0	36	200	OK	-	-	(empty)	-	-	-	-	-	-	F88Izh2rClxlwQIzBg	-	text/json
+1793550547.969741	CqLfyW2VAo7y36jzi5	127.0.0.1	38928	127.0.0.1	18081	1	GET	127.0.0.1:18081	/	-	1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	-	0	896	200	OK	-	-	(empty)	-	-	-	-	-	-	F0pKGEfuquADzLL4e	-	text/html
+1793550547.975569	CrVPlUaaUYptpHSR2	127.0.0.1	38930	127.0.0.1	18081	1	GET	127.0.0.1:18081	/api/user?id=2	-	1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	-	0	36	200	OK	-	-	(empty)	-	-	-	-	-	-	FaHwmX1JXekrZ5Qgfh	-	text/json
+1793550547.981862	CWu4Z53NT1KqhU8ilb	127.0.0.1	38942	127.0.0.1	18081	1	GET	127.0.0.1:18081	/	-	1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	-	0	896	200	OK	-	-	(empty)	-	-	-	-	-	-	FDUYIu3GCsUAlZQbRi	-	text/html
+1793550547.988433	C2WEpuJa5NnIBbJWk	127.0.0.1	38958	127.0.0.1	18081	1	GET	127.0.0.1:18081	/api/user?id=3	-	1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	-	0	36	200	OK	-	-	(empty)	-	-	-	-	-	-	Fzngd92w33H3a0Qn71	-	text/json
+1793550547.995501	CmjAxu3mVV9st9gaSh	127.0.0.1	38968	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1	-	33	40	401	Unauthorized	-	-	(empty)	-	-	-	F2OmQx1vL2EDOMPlLa	-	text/plain	FhUmBl3HWYHwxHPAnh	-	text/json
+1793550548.002588	CKICsxtteG0rb3vT9	127.0.0.1	38976	127.0.0.1	18081	1	GET	127.0.0.1:18081	/.env	-	1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	-	0	153	404	Not Found	-	-	(empty)	-	-	-	-	-	-	FYlXiK3ixKurZTh3Wf	-	text/html
+1793550548.010936	CzG0Rp1qjgF08WJL9j	127.0.0.1	38984	127.0.0.1	18081	1	GET	127.0.0.1:18081	/.git/config	-	1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	-	0	153	404	Not Found	-	-	(empty)	-	-	-	-	-	-	FGcXZR1F3ZWWgBfWgi	-	text/html
+1793550548.017927	CQoWts1FNTPcK9sIfh	127.0.0.1	38996	127.0.0.1	18081	1	GET	127.0.0.1:18081	/wp-admin/	-	1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	-	0	153	404	Not Found	-	-	(empty)	-	-	-	-	-	-	FTBfGX3d86p11Jpyte	-	text/html
+1793550548.024867	CKikBfROudxgNODI6	127.0.0.1	39000	127.0.0.1	18081	1	GET	127.0.0.1:18081	/phpmyadmin/	-	1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	-	0	153	403	Forbidden	-	-	(empty)	-	-	-	-	-	-	FrH9WC2Ocq9XuUKo44	-	text/html
+1793550548.031928	CnAIst4vof2xxHqcfl	127.0.0.1	39006	127.0.0.1	18081	1	GET	127.0.0.1:18081	/config.php	-	1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	-	0	153	404	Not Found	-	-	(empty)	-	-	-	-	-	-	FpVLhj164GR5HITFnb	-	text/html
+1793550548.038897	CwbpPn4yGtHnlV9ARg	127.0.0.1	39008	127.0.0.1	18081	1	GET	127.0.0.1:18081	/admin/	-	1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	-	0	153	404	Not Found	-	-	(empty)	-	-	-	-	-	-	FiUaZa47tXNn5VWss2	-	text/html
+1793550548.046788	CoEq4s1V6pwGQpkxP4	127.0.0.1	39024	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	python-requests/2.31.0	-	30	40	401	Unauthorized	-	-	(empty)	-	-	-	FSa7jE1vHMQkyn4G9f	-	text/plain	FU9KDw4Ng6WnlKvn46	-	text/json
+1793550548.053808	CXEW6727EgTn7NLJ5k	127.0.0.1	39028	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	python-requests/2.31.0	-	30	40	401	Unauthorized	-	-	(empty)	-	-	-	FGI6Zv1Ns4vYxKilzl	-	text/plain	FKpATB1Z1CLhHYgtje	-	text/json
+1793550548.060773	CFsin32sCacuKO33C9	127.0.0.1	39038	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	python-requests/2.31.0	-	30	40	401	Unauthorized	-	-	(empty)	-	-	-	FWbGZz3DsHtCaTIo2h	-	text/plain	Fg4PNm2gs5536kQpol	-	text/json
+1793550548.067694	CNaanG4PyzrcQxOoSa	127.0.0.1	39042	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	python-requests/2.31.0	-	30	40	401	Unauthorized	-	-	(empty)	-	-	-	Fe1FQyNi4NZX2ZkGb	-	text/plain	F0ANFR1kanPeY9xpV6	-	text/json
+1793550548.074684	CRGjrt3Hm0SY4xlrZ1	127.0.0.1	39054	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	python-requests/2.31.0	-	30	40	401	Unauthorized	-	-	(empty)	-	-	-	FCD4hi2EZ9I0f0m8n4	-	text/plain	FnFS7o0rln1wULDUh	-	text/json
+1793550548.081576	CRuW912Q1Gc2CT3WCe	127.0.0.1	39062	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	python-requests/2.31.0	-	30	40	401	Unauthorized	-	-	(empty)	-	-	-	FJPrsG1xpY8mdWDQed	-	text/plain	FSyM0e2cJ9oDz2zPil	-	text/json
+1793550548.088496	CDgICMuEefWf8cN53	127.0.0.1	39066	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	python-requests/2.31.0	-	30	40	401	Unauthorized	-	-	(empty)	-	-	-	FWAndW2o4t5Dlzq83e	-	text/plain	FInYsa2queQYp2bPmh	-	text/json
+1793550548.095461	Ca7SEF4ludmmcwKoQg	127.0.0.1	39078	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	python-requests/2.31.0	-	30	40	401	Unauthorized	-	-	(empty)	-	-	-	F6Vr5w2yVLhSkXaNtb	-	text/plain	FuyVfj3m7uL08dV49j	-	text/json
+1793550548.102415	CR2nV61ORPcHMxtPUd	127.0.0.1	39082	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	-	38	40	401	Unauthorized	-	-	(empty)	-	-	-	FeT6VW2IPHvbYqwzv5	-	text/plain	FDPXRa3r81elj4yrlc	-	text/json
+1793550548.109350	CfjGre4uVZbpwyvdlg	127.0.0.1	39096	127.0.0.1	18081	1	GET	127.0.0.1:18081	/api/user?id=1 UNION SELECT username,password FROM users	-	1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	-	0	36	200	OK	-	-	(empty)	-	-	-	-	-	-	Fi9bgVAMBFxy1nXEf	-	text/json
+1793550548.116293	CQZ1yo1fWW5QuvGmGb	127.0.0.1	39110	127.0.0.1	18081	1	POST	127.0.0.1:18081	/uploads/shell.php	-	1.1	Mozilla/5.0	-	57	2	200	OK	-	-	(empty)	-	-	-	FAO8wn2N27xVDfLvBj	-	text/plain	FJBRCJ1w4HMjCjiKHc	-	-
+1793550548.123229	CwLRL42PFFO3oFBdy1	127.0.0.1	39118	127.0.0.1	18081	1	GET	127.0.0.1:18081	/uploads/shell.php?c=id	-	1.1	Mozilla/5.0	-	0	2	200	OK	-	-	(empty)	-	-	-	-	-	-	Fmxx7gZFWw7rMhDEj	-	-
+#close	2026-11-01-17-09-20

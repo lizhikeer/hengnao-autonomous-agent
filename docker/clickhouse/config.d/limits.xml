@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!--
+  ClickHouse 单机调优：面向 8G 内存的家用服务器，与 Qdrant / 其他容器共存。
+  关键约束：
+    - max_server_memory_usage 压到 2G，避免 OOM killer 波及同机服务
+    - 关闭非必要后台合并线程，降低空闲资源占用
+-->
+<clickhouse>
+    <logger>
+        <level>warning</level>
+        <console>true</console>
+    </logger>
+
+    <listen_host>0.0.0.0</listen_host>
+
+    <max_server_memory_usage>2000000000</max_server_memory_usage>
+    <max_concurrent_queries>20</max_concurrent_queries>
+    <max_thread_pool_size>2000</max_thread_pool_size>
+
+    <mark_cache_size>268435456</mark_cache_size>
+    <uncompressed_cache_size>0</uncompressed_cache_size>
+
+    <background_pool_size>4</background_pool_size>
+    <background_schedule_pool_size>8</background_schedule_pool_size>
+    <background_buffer_flush_schedule_pool_size>4</background_buffer_flush_schedule_pool_size>
+    <background_move_pool_size>2</background_move_pool_size>
+    <background_fetches_pool_size>2</background_fetches_pool_size>
+    <background_common_pool_size>4</background_common_pool_size>
+    <background_message_broker_schedule_pool_size>2</background_message_broker_schedule_pool_size>
+
+    <!-- 单条查询上限 1G，防止 Agent 侧构造的宽查询打爆内存 -->
+    <profiles>
+        <default>
+            <max_memory_usage>1000000000</max_memory_usage>
+            <max_execution_time>30</max_execution_time>
+            <max_result_rows>100000</max_result_rows>
+            <max_result_bytes>50000000</max_result_bytes>
+            <readonly>0</readonly>
+        </default>
+    </profiles>
+
+    <!-- 慢查询与错误日志保留 7 天即可 -->
+    <query_log>
+        <database>system</database>
+        <table>query_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </query_log>
+    <trace_log>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </trace_log>
+</clickhouse>
