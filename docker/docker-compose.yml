@@ -1,0 +1,100 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: seclog-clickhouse
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-log_ai}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-seclog}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD 必须设置}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      TZ: Asia/Shanghai
+    ports:
+      # 仅监听回环：对外只经 SecLog API 暴露，数据库端口不做公网映射
+      - "127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "127.0.0.1:${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+    volumes:
+      - ${SECLOG_DATA_ROOT:-/vol4/seclog}/clickhouse:/var/lib/clickhouse
+      - ./clickhouse/config.d:/etc/clickhouse-server/config.d:ro
+      - ./clickhouse/users.d:/etc/clickhouse-server/users.d:ro
+      # 首次启动（数据目录为空）时自动执行全部建表脚本，顺序按文件名
+      - ../sql/clickhouse:/docker-entrypoint-initdb.d:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8123/ping || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "3" }
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    container_name: seclog-qdrant
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__LOG_LEVEL: INFO
+      QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER: 2
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    volumes:
+      - ${SECLOG_DATA_ROOT:-/vol4/seclog}/qdrant:/qdrant/storage
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "3" }
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api/Dockerfile
+    image: seclog-api:0.1.0
+    container_name: seclog-api
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_HTTP_PORT: 8123
+      CLICKHOUSE_NATIVE_PORT: 9000
+      QDRANT_URL: http://qdrant:6333
+      API_BIND_HOST: 0.0.0.0
+      API_BIND_PORT: 8000
+      TZ: Asia/Shanghai
+    ports:
+      # 公网隧道（natfrp）指向本端口；宿主机其余服务不受影响
+      - "127.0.0.1:${SECLOG_API_PORT:-18000}:8000"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)\""]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "3" }
