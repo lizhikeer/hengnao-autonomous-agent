@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """PCAP → Zeek 格式日志（conn.log / http.log）转换器。
 
-## 为什么需要这个脚本
+## 定位
 
-本项目的部署机拉取 `zeek/zeek` 镜像持续失败（Docker Hub 直连 EOF，
-国内加速源只有 `lts` 标签且多次中断在 25MB）。为了不阻塞 W1 的日志样本交付，
-这里用标准库实现一个**字段与 Zeek 完全对齐**的解析器：
+**备用方案**。正式样本由真实 Zeek（`zeek/zeek:lts`）产出，见 `data/full_chain_logs/raw/README.md`。
+
+保留本脚本是因为部署机拉取 `zeek/zeek` 镜像曾连续失败 30 分钟（Docker Hub 直连 EOF，
+国内加速源反复中断在 25MB），离线或网络受限环境需要一个不依赖镜像的兜底。
+它输出的**字段与 Zeek 完全对齐**：
 
 - 输出 TSV，表头 `#separator \\x09` / `#fields` / `#types` 与 Zeek 6.x 一致；
 - `conn.log`、`http.log` 的字段名、顺序、类型与 Zeek 原生输出一致；

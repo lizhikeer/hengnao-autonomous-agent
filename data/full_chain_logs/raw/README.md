@@ -52,27 +52,37 @@
 
 其余字段（时间、PID、事件类型、消息结构）保持原样。
 
-## 三、关于 Zeek 产物
+## 三、Zeek 日志
 
-`conn.log` / `http.log` 目前由 `scripts/sample_env/pcap_to_zeek.py` 从 `seclog-sample.pcap` 解析生成，
-**字段名、顺序、`#types` 声明与 Zeek 6.x 原生输出完全一致**，下游按 `#fields` 解析即可。
+由 **Zeek 6.x**（`zeek/zeek:lts`）解析 `seclog-sample.pcap` 产出：
 
-之所以没用 Zeek 本体：`zeek/zeek` 镜像在本机拉取持续失败（Docker Hub 直连 EOF；
-`docker.1ms.run` 只有 `lts` 标签且多次中断在 25MB），已经耗掉约 30 分钟。为保证 W1 不阻塞，
-先用等效解析器产出样本。**W2 镜像拉通后应改用真 Zeek 重新生成并覆盖本目录**，届时：
-- conn.log 会多出更准确的状态机（`conn_state` / `history`）；
-- 会额外产出 `dns.log` / `ssl.log`；
-- 下游清洗脚本无需改动（按 `#fields` 解析，字段名一致）。
+```bash
+docker run --rm \
+    -v /vol4/seclog/samples/pcap:/pcap:ro \
+    -v /vol4/seclog/samples/zeek:/out \
+    zeek/zeek:lts zeek -C -r /pcap/seclog-sample.pcap Log::default_logdir=/out
+```
 
-### 已知差异（写清洗脚本时注意）
+- `conn.log`：25 条连接，带真实状态机（`conn_state`、`history` 如 `ShADTadtFf`）
+- `http.log`：25 条 HTTP 请求，覆盖正常业务与 4 个攻击阶段（10 条命中攻击特征）
+- `-C` 关闭校验和校验：抓包在容器虚拟网卡上进行，校验和可能未被卸载，不关会丢包
 
-| 字段 | 本样本 | 真 Zeek |
+**清洗脚本必须按 `#fields` 表头解析，不要按列序号硬编码**——Zeek 版本升级会增删字段。
+
+### 备用方案（镜像不可用时）
+
+`scripts/sample_env/pcap_to_zeek.py` 是纯标准库的等价解析器。本项目部署机拉 `zeek/zeek` 镜像
+曾连续失败 30 分钟（Docker Hub 直连 EOF、国内加速源反复中断在 25MB），最终用了 12 分 48 秒才拉通。
+在离线或网络受限环境可先用它兜底。
+
+它与真 Zeek 的差异（写清洗脚本时注意）：
+
+| 项目 | `pcap_to_zeek.py` | 真 Zeek |
 | :--- | :--- | :--- |
 | `conn_state` | 简化判定（SF / S1 / RSTO） | 完整状态机（含 S0、REJ、RSTR 等） |
 | `history` | 固定 `ShADadFf` | 逐包真实标记 |
 | `uid` | 确定性派生（`C` + 6 位） | 随机 17 字符 |
-| `duration` | 首末包时差 | 同 |
-| 缺失日志 | 无 `dns.log` / `ssl.log` | 视流量而定 |
+| 额外日志 | 无 | `files.log` 等 |
 
 ## 四、如何重新生成
 
@@ -81,14 +91,14 @@
 cd ~/seclog
 CAPTURE_SECONDS=35 SAMPLE_NGINX_PORT=18081 ./scripts/sample_env/capture_traffic.sh
 
-# 2. 解析 PCAP
+# 2. 用 Zeek 解析 PCAP（主路径）
+docker run --rm -v /vol4/seclog/samples/pcap:/pcap:ro -v /vol4/seclog/samples/zeek:/out \
+    zeek/zeek:lts zeek -C -r /pcap/seclog-sample.pcap Log::default_logdir=/out
+
+# 3. 备选：Zeek 镜像不可用时的标准库解析器
 python3 scripts/sample_env/pcap_to_zeek.py \
     --pcap /vol4/seclog/samples/pcap/seclog-sample.pcap \
     --outdir /vol4/seclog/samples/zeek
-
-# 3. 换成真 Zeek（镜像可用时）
-docker run --rm -v /vol4/seclog/samples/pcap:/pcap:ro -v /vol4/seclog/samples/zeek:/out \
-    zeek/zeek:lts zeek -C -r /pcap/seclog-sample.pcap Log::default_logdir=/out
 ```
 
 **端口注意**：`18080` 已被宿主机其他服务占用，样本站点固定用 `18081`。
