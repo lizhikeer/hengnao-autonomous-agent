@@ -1,0 +1,222 @@
+{
+  "checked_at": "2026-11-01T15:37:37.993883+00:00",
+  "base_url": "https://enhance-gold-startup-earth.trycloudflare.com",
+  "records": [
+    {
+      "check": "health",
+      "http_status": 200,
+      "body": {
+        "status": "ok",
+        "service": "seclog-tool-service",
+        "version": "0.1.0",
+        "mock_mode": true
+      }
+    },
+    {
+      "check": "stale_session_tools_list",
+      "tools": [
+        "seclog_health",
+        "seclog_query_logs",
+        "seclog_get_context",
+        "seclog_search_knowledge",
+        "seclog_request_response"
+      ]
+    },
+    {
+      "check": "blank_evidence",
+      "channel": "REST",
+      "mixed_with_valid": false,
+      "request": {
+        "case_id": "ONLINE-FIX-0b9c74b59fa2",
+        "action": "block_ip",
+        "target_ip": "198.51.100.23",
+        "evidence_log_ids": [
+          ""
+        ],
+        "reason": "在线回归：空编号不得创建待审批单"
+      },
+      "body": {
+        "status": "rejected",
+        "approval_id": null,
+        "executed": false,
+        "detail": "证据校验未通过，处置请求已拒绝（未产生任何副作用）。伪造/未经查询返回的证据：['']。请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。",
+        "rejected_evidence_ids": [
+          ""
+        ],
+        "mock": true
+      }
+    },
+    {
+      "check": "blank_evidence",
+      "channel": "MCP",
+      "mixed_with_valid": false,
+      "request": {
+        "case_id": "ONLINE-FIX-0b9c74b59fa2",
+        "action": "block_ip",
+        "target_ip": "198.51.100.23",
+        "evidence_log_ids": [
+          ""
+        ],
+        "reason": "在线回归：空编号不得创建待审批单"
+      },
+      "body": {
+        "status": "rejected",
+        "approval_id": null,
+        "executed": false,
+        "detail": "证据校验未通过，处置请求已拒绝（未产生任何副作用）。伪造/未经查询返回的证据：['']。请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。",
+        "rejected_evidence_ids": [
+          ""
+        ],
+        "mock": true
+      }
+    },
+    {
+      "check": "blank_evidence",
+      "channel": "REST",
+      "mixed_with_valid": false,
+      "request": {
+        "case_id": "ONLINE-FIX-0b9c74b59fa2",
+        "action": "block_ip",
+        "target_ip": "198.51.100.23",
+        "evidence_log_ids": [
+          "   "
+        ],
+        "reason": "在线回归：空编号不得创建待审批单"
+      },
+      "body": {
+        "status": "rejected",
+        "approval_id": null,
+        "executed": false,
+        "detail": "证据校验未通过，处置请求已拒绝（未产生任何副作用）。伪造/未经查询返回的证据：['   ']。请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。",
+        "rejected_evidence_ids": [
+          "   "
+        ],
+        "mock": true
+      }
+    },
+    {
+      "check": "blank_evidence",
+      "channel": "MCP",
+      "mixed_with_valid": false,
+      "request": {
+        "case_id": "ONLINE-FIX-0b9c74b59fa2",
+        "action": "block_ip",
+        "target_ip": "198.51.100.23",
+        "evidence_log_ids": [
+          "   "
+        ],
+        "reason": "在线回归：空编号不得创建待审批单"
+      },
+      "body": {
+        "status": "rejected",
+        "approval_id": null,
+        "executed": false,
+        "detail": "证据校验未通过，处置请求已拒绝（未产生任何副作用）。伪造/未经查询返回的证据：['   ']。请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。",
+        "rejected_evidence_ids": [
+          "   "
+        ],
+        "mock": true
+      }
+    },
+    {
+      "check": "blank_evidence",
+      "channel": "REST",
+      "mixed_with_valid": true,
+      "request": {
+        "case_id": "ONLINE-FIX-0b9c74b59fa2",
+        "action": "block_ip",
+        "target_ip": "198.51.100.23",
+        "evidence_log_ids": [
+          "LOG-20261027-0022",
+          ""
+        ],
+        "reason": "在线回归：空编号不得创建待审批单"
+      },
+      "body": {
+        "status": "rejected",
+        "approval_id": null,
+        "executed": false,
+        "detail": "证据校验未通过，处置请求已拒绝（未产生任何副作用）。伪造/未经查询返回的证据：['']。请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。",
+        "rejected_evidence_ids": [
+          ""
+        ],
+        "mock": true
+      }
+    },
+    {
+      "check": "blank_evidence",
+      "channel": "MCP",
+      "mixed_with_valid": true,
+      "request": {
+        "case_id": "ONLINE-FIX-0b9c74b59fa2",
+        "action": "block_ip",
+        "target_ip": "198.51.100.23",
+        "evidence_log_ids": [
+          "LOG-20261027-0022",
+          ""
+        ],
+        "reason": "在线回归：空编号不得创建待审批单"
+      },
+      "body": {
+        "status": "rejected",
+        "approval_id": null,
+        "executed": false,
+        "detail": "证据校验未通过，处置请求已拒绝（未产生任何副作用）。伪造/未经查询返回的证据：['']。请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。",
+        "rejected_evidence_ids": [
+          ""
+        ],
+        "mock": true
+      }
+    },
+    {
+      "check": "blank_evidence",
+      "channel": "REST",
+      "mixed_with_valid": true,
+      "request": {
+        "case_id": "ONLINE-FIX-0b9c74b59fa2",
+        "action": "block_ip",
+        "target_ip": "198.51.100.23",
+        "evidence_log_ids": [
+          "LOG-20261027-0022",
+          "   "
+        ],
+        "reason": "在线回归：空编号不得创建待审批单"
+      },
+      "body": {
+        "status": "rejected",
+        "approval_id": null,
+        "executed": false,
+        "detail": "证据校验未通过，处置请求已拒绝（未产生任何副作用）。伪造/未经查询返回的证据：['   ']。请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。",
+        "rejected_evidence_ids": [
+          "   "
+        ],
+        "mock": true
+      }
+    },
+    {
+      "check": "blank_evidence",
+      "channel": "MCP",
+      "mixed_with_valid": true,
+      "request": {
+        "case_id": "ONLINE-FIX-0b9c74b59fa2",
+        "action": "block_ip",
+        "target_ip": "198.51.100.23",
+        "evidence_log_ids": [
+          "LOG-20261027-0022",
+          "   "
+        ],
+        "reason": "在线回归：空编号不得创建待审批单"
+      },
+      "body": {
+        "status": "rejected",
+        "approval_id": null,
+        "executed": false,
+        "detail": "证据校验未通过，处置请求已拒绝（未产生任何副作用）。伪造/未经查询返回的证据：['   ']。请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。",
+        "rejected_evidence_ids": [
+          "   "
+        ],
+        "mock": true
+      }
+    }
+  ]
+}
