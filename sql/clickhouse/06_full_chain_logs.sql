@@ -161,3 +161,29 @@ SELECT
 FROM log_ai.full_chain_logs
 WHERE trace_id != ''
 ORDER BY trace_id, timestamp;
+
+-- -----------------------------------------------------------------------------
+-- 会话汇总视图
+-- session_rollup 是 SummingMergeTree，后台 merge 完成前同一 session 会有多行，
+-- 直接 SELECT 会拿到「部分和」。凡是消费会话数据的地方一律走本视图，
+-- 由 GROUP BY + sum 保证结果与 merge 进度无关。
+-- -----------------------------------------------------------------------------
+CREATE VIEW IF NOT EXISTS log_ai.v_session_summary
+AS
+-- 按 (session_id, asset_id) 聚合，源 IP 收敛成数组：
+-- 同一会话在 Web 日志里是外部攻击者 IP、在 Zeek 日志里是内网资产 IP，
+-- 若按 src_ip 分组会把同一会话拆成多行，反而不利于「一条会话看全貌」。
+SELECT
+    session_id,
+    asset_id,
+    groupUniqArray(src_ip)            AS src_ips,
+    any(user_name)                    AS user_name,
+    min(first_seen)                   AS first_seen,
+    max(last_seen)                    AS last_seen,
+    sum(event_count)                  AS event_count,
+    sum(error_count)                  AS error_count,
+    sum(bytes_out_sum)                AS bytes_out_sum,
+    groupUniqArrayArray(stages)       AS stages,
+    groupUniqArrayArray(log_sources)  AS log_sources
+FROM log_ai.session_rollup
+GROUP BY session_id, asset_id;
