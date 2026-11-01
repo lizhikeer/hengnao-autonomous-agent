@@ -1,0 +1,111 @@
+[
+  {
+    "card_id": "KB-XSS-001",
+    "card_type": "security_knowledge",
+    "title": "反射型与存储型XSS异常访问识别",
+    "attack_category": "XSS_RCE",
+    "mitre_id": "T1189",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "请求参数或请求路径中出现异常脚本相关标记或编码后的可疑内容",
+      "同一来源短时间内反复访问具有输入参数的页面",
+      "相同异常内容在多个请求中重复出现",
+      "异常请求之后出现非预期页面访问或用户会话行为变化"
+    ],
+    "investigation_steps": [
+      "检索nginx访问日志，定位包含异常参数的请求及其来源IP",
+      "关联zeek_http记录，核对请求方法、请求路径、参数特征和时间顺序",
+      "检查同一异常内容是否被重复提交或出现在多个业务页面相关请求中",
+      "结合应用侧安全审计记录，确认是否存在未经过滤的用户输入或异常脚本执行迹象"
+    ],
+    "recommended_action": "monitor_only",
+    "error_revision_note": "富文本编辑器、代码展示页面和正常业务输入也可能包含脚本相关字符。不能仅凭关键词判定XSS，应结合输入来源、输出位置、编码处理和应用侧证据判断。",
+    "source_reference": "OWASP Cross Site Scripting Prevention Cheat Sheet; MITRE ATT&CK T1189",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-XSS-002",
+    "card_type": "security_knowledge",
+    "title": "OS命令注入异常请求识别与调查",
+    "attack_category": "XSS_RCE",
+    "mitre_id": "T1059",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "同一接口短时间内收到多次结构相似的异常参数请求",
+      "请求参数中出现与系统命令执行相关的异常字符组合或关键词",
+      "异常请求后服务器响应状态码或响应字节数出现明显变化",
+      "相同来源IP连续访问多个具有参数输入功能的接口"
+    ],
+    "investigation_steps": [
+      "检索nginx访问日志，定位异常请求的时间、来源IP、目标路径和状态码",
+      "关联zeek_http记录，分析请求参数和相邻请求之间的关联性",
+      "检查应用侧审计日志，核实相关接口是否调用了系统命令处理功能",
+      "核对服务器进程审计和应用运行记录，确认是否存在未经授权的命令执行迹象"
+    ],
+    "recommended_action": "monitor_only",
+    "error_revision_note": "正常的系统管理接口、文件处理功能和运维任务可能包含命令相关参数。仅凭特殊字符或关键词不能认定命令注入，需要结合接口功能、授权情况和服务器侧审计证据。",
+    "source_reference": "OWASP OS Command Injection Defense Cheat Sheet; MITRE ATT&CK T1059",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-XSS-003",
+    "card_type": "security_knowledge",
+    "title": "文件包含异常访问行为识别",
+    "attack_category": "XSS_RCE",
+    "mitre_id": "T1190",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "请求路径或参数中出现异常文件路径相关字符或编码特征",
+      "同一来源IP反复访问非正常业务目录或文件资源",
+      "多个请求呈现相似的路径变化和异常状态码规律",
+      "访问不存在的资源时出现异常响应字节数或服务器错误"
+    ],
+    "investigation_steps": [
+      "检索nginx访问日志，统计异常路径请求的来源IP、请求时间和状态码",
+      "关联zeek_http记录，分析请求路径、参数和访问顺序",
+      "核对目标资源是否属于正常业务文件，并检查相关访问是否经过授权",
+      "结合服务器文件访问审计记录，确认是否存在越权读取或非预期文件访问"
+    ],
+    "recommended_action": "rate_limit_ip",
+    "error_revision_note": "正常的文件下载、图片访问、静态资源加载和目录映射也可能产生相似路径特征。应结合业务路由规则、资源权限和实际访问结果排除误报。",
+    "source_reference": "OWASP Path Traversal; OWASP Web Security Testing Guide; MITRE ATT&CK T1190",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-XSS-004",
+    "card_type": "security_knowledge",
+    "title": "远程代码执行异常行为与日志研判",
+    "attack_category": "XSS_RCE",
+    "mitre_id": "T1059",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http",
+      "zeek_conn"
+    ],
+    "key_indicators": [
+      "异常Web请求之后出现非预期的服务器外连行为",
+      "同一时间窗口内Web访问日志与网络连接记录出现异常关联",
+      "服务器向非业务相关目标建立异常连接",
+      "异常请求发生后服务器访问行为或响应特征明显偏离正常基线"
+    ],
+    "investigation_steps": [
+      "检索nginx访问日志，定位异常请求的来源IP、目标路径和发生时间",
+      "关联zeek_http记录，核对异常请求的上下文和响应情况",
+      "通过zeek_conn检查服务器在对应时间窗口内的外部连接目标、端口和连接频率",
+      "结合服务器进程审计和应用日志，核实是否存在未经授权的代码执行或异常进程活动"
+    ],
+    "recommended_action": "monitor_only",
+    "error_revision_note": "正常应用更新、远程服务调用、监控探针和运维任务也可能产生外连行为。不能仅凭一次外部连接认定RCE，应结合请求来源、连接目标、进程审计和业务授权进行交叉验证。",
+    "source_reference": "MITRE ATT&CK T1059; OWASP Top 10 A03:2021 Injection",
+    "review_status": "approved"
+  }
+]
