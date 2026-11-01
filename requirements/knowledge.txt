@@ -1,0 +1,5 @@
+# RAG 知识库依赖（@Snowed-night，W2 启用）
+#
+# 单独成文件的原因：qdrant-client 对 httpx 的版本区间与 api.txt 存在潜在冲突，
+# 把它隔离出来可避免「装知识库依赖导致 API 服务降级」。
+qdrant-client==1.12.1

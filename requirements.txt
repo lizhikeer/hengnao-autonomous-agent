@@ -1,8 +1,7 @@
-# SecLog 工具服务运行时依赖（Week 1 骨架）
-# 安装：.venv/Scripts/python -m pip install -r requirements.txt
-fastapi==0.162.0
-uvicorn[standard]==0.54.0
-pydantic==2.14.1
-
-# MCP 官方 Python SDK（src/mcp_server 使用）
-mcp==1.30.0
+# 兼容入口：根目录安装时转发到分层依赖，避免两套版本口径并存导致环境不可复现。
+# 分层说明见 requirements/ 目录：
+#   base.txt       数据底座（ClickHouse 客户端、配置、通用工具）
+#   api.txt        FastAPI / MCP 服务
+#   knowledge.txt  Qdrant 检索（W2 启用，与 api.txt 隔离以规避 httpx 版本冲突）
+#   runtime.txt    上面前两者的合并入口
+-r requirements/runtime.txt

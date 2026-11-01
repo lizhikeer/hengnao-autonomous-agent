@@ -17,8 +17,9 @@ services:
       - "127.0.0.1:${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
     volumes:
       - ${SECLOG_DATA_ROOT:-/vol4/seclog}/clickhouse:/var/lib/clickhouse
+      # 仅挂 config.d：entrypoint 需要在 users.d 写入 default-user.xml 来创建 CLICKHOUSE_USER，
+      # 该目录一旦被只读挂载，容器会因 "Read-only file system" 无限重启。
       - ./clickhouse/config.d:/etc/clickhouse-server/config.d:ro
-      - ./clickhouse/users.d:/etc/clickhouse-server/users.d:ro
       # 首次启动（数据目录为空）时自动执行全部建表脚本，顺序按文件名
       - ../sql/clickhouse:/docker-entrypoint-initdb.d:ro
     ulimits:

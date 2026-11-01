@@ -12,6 +12,7 @@ set -euo pipefail
 
 CONTAINER="${CLICKHOUSE_CONTAINER:-seclog-clickhouse}"
 DB_USER="${CLICKHOUSE_USER:-seclog}"
+DB_NAME="${CLICKHOUSE_DATABASE:-log_ai}"
 SQL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../sql/clickhouse" && pwd)"
 
 if ! docker ps --format '{{.Names}}' | grep -qx "${CONTAINER}"; then
@@ -22,8 +23,10 @@ fi
 if [[ -z "${CLICKHOUSE_PASSWORD:-}" ]]; then
     # 允许从项目根目录的 .env 读取，避免密码出现在命令行历史里
     if [[ -f "$(dirname "${BASH_SOURCE[0]}")/../.env" ]]; then
-        # shellcheck disable=SC1091
-        set -a && source "$(dirname "${BASH_SOURCE[0]}")/../.env" && set +a
+        ENV_FILE="$(dirname "${BASH_SOURCE[0]}")/../.env"
+        CLICKHOUSE_PASSWORD="$(grep -E '^CLICKHOUSE_PASSWORD=' "${ENV_FILE}" | head -1 | cut -d= -f2-)"
+        CLICKHOUSE_USER="$(grep -E '^CLICKHOUSE_USER=' "${ENV_FILE}" | head -1 | cut -d= -f2-)"
+        DB_USER="${CLICKHOUSE_USER:-seclog}"
     fi
 fi
 
@@ -32,6 +35,7 @@ for f in "${SQL_DIR}"/*.sql; do
     printf '>>> %-32s' "${name}"
     if docker exec -i "${CONTAINER}" clickhouse-client \
         --user "${DB_USER}" --password "${CLICKHOUSE_PASSWORD}" \
+        --database "${DB_NAME}" \
         --multiquery < "$f" 2>/tmp/seclog_sql_err; then
         echo " OK"
     else
@@ -45,4 +49,5 @@ echo
 echo "全部脚本执行完毕。当前库表："
 docker exec -i "${CONTAINER}" clickhouse-client \
     --user "${DB_USER}" --password "${CLICKHOUSE_PASSWORD}" \
+    --database "${DB_NAME}" \
     --query "SELECT database, name, engine FROM system.tables WHERE database NOT IN ('system','INFORMATION_SCHEMA','information_schema') ORDER BY database, name FORMAT PrettyCompact"

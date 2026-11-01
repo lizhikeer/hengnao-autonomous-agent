@@ -59,12 +59,15 @@ ORDER BY (log_source, asset_id, timestamp, src_ip)
 TTL toDateTime(timestamp) + INTERVAL 180 DAY DELETE
 SETTINGS index_granularity = 8192;
 
-COMMENT ON TABLE  log_ai.full_chain_logs IS 'SecLog-Agent 全链路日志统一事实表（W1 冻结）';
-COMMENT ON COLUMN log_ai.full_chain_logs.log_source IS 'nginx_access | auth_log | zeek_conn | zeek_http | zeek_dns';
-COMMENT ON COLUMN log_ai.full_chain_logs.attack_stage_hint IS 'recon | brute_force | exploitation | c2_callback | lateral_movement | benign | unknown';
-COMMENT ON COLUMN log_ai.full_chain_logs.trace_id IS '攻击故事链/调查链标识，CHAIN-<场景>-<序号>，同一条链上所有日志共享';
-COMMENT ON COLUMN log_ai.full_chain_logs.asset_id IS '被访问资产标识，与资产台账对齐，如 web-prod-01';
-COMMENT ON COLUMN log_ai.full_chain_logs.payload_summary IS '已脱敏的请求体/参数摘要，敏感字段以 *** 替代，禁止落库明文口令';
+-- 表与列注释：ClickHouse 不支持 PostgreSQL 的 ``COMMENT ON ...``，
+-- 用 ALTER TABLE 的原生写法，保证 DESCRIBE 时能看到字段语义。
+ALTER TABLE log_ai.full_chain_logs MODIFY COMMENT 'SecLog-Agent 全链路日志统一事实表（W1 冻结）';
+ALTER TABLE log_ai.full_chain_logs COMMENT COLUMN log_source 'nginx_access | auth_log | zeek_conn | zeek_http | zeek_dns';
+ALTER TABLE log_ai.full_chain_logs COMMENT COLUMN attack_stage_hint 'recon | brute_force | exploitation | c2_callback | lateral_movement | benign | unknown';
+ALTER TABLE log_ai.full_chain_logs COMMENT COLUMN trace_id '攻击故事链/调查链标识，CHAIN-<场景>-<序号>，同一条链上所有日志共享';
+ALTER TABLE log_ai.full_chain_logs COMMENT COLUMN asset_id '被访问资产标识，与资产台账对齐，如 web-prod-01';
+ALTER TABLE log_ai.full_chain_logs COMMENT COLUMN payload_summary '已脱敏的请求体/参数摘要，敏感字段以 *** 替代，禁止落库明文口令';
+ALTER TABLE log_ai.full_chain_logs COMMENT COLUMN user_name '契约字段 user；与 ClickHouse 内置函数区分故改名';
 
 -- -----------------------------------------------------------------------------
 -- 在原有 security_logs 上补齐全链路字段，保持老检测链路可用
@@ -136,9 +139,11 @@ CREATE TABLE IF NOT EXISTS log_ai.ingest_batches
     status        LowCardinality(String) DEFAULT 'running',
     error_summary String DEFAULT ''
 )
-ENGINE = ReplacingMergeTree(finished_at)
+-- 注意：版本列不能是 Nullable，因此用 started_at 而非 finished_at，
+-- 语义上「同一 batch_id 的较新记录覆盖旧记录」，对账时以 finished_at 是否为 NULL 判断是否完成。
+ENGINE = ReplacingMergeTree(started_at)
 PARTITION BY toYYYYMM(started_at)
-ORDER BY (started_at, batch_id);
+ORDER BY (batch_id);
 
 -- -----------------------------------------------------------------------------
 -- 常用查询视图：攻击链全景，供 Agent 工具层 get_attack_chain 直接消费

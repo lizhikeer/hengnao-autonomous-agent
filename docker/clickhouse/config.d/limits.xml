@@ -20,7 +20,13 @@
     <mark_cache_size>268435456</mark_cache_size>
     <uncompressed_cache_size>0</uncompressed_cache_size>
 
-    <background_pool_size>4</background_pool_size>
+    <!-- 后台合并线程：受两个硬约束
+           1) background_pool_size * background_merges_mutations_concurrency_ratio(2)
+              必须大于 number_of_free_entries_in_pool_to_execute_mutation
+           2) 同上，必须大于 number_of_free_entries_in_pool_to_execute_optimize_entire_partition
+         24.8 的默认阈值分别是 20 / 25，若只调小 pool 会在启动时直接 BAD_ARGUMENTS 退出。
+         这里把 pool 设为 8（可用槽位 16），并把两个阈值显式降到 4，双向留余量。 -->
+    <background_pool_size>8</background_pool_size>
     <background_schedule_pool_size>8</background_schedule_pool_size>
     <background_buffer_flush_schedule_pool_size>4</background_buffer_flush_schedule_pool_size>
     <background_move_pool_size>2</background_move_pool_size>
@@ -38,6 +44,12 @@
             <readonly>0</readonly>
         </default>
     </profiles>
+
+    <!-- 与 background_pool_size(8)*ratio(2)=16 匹配，见上方注释 -->
+    <merge_tree>
+        <number_of_free_entries_in_pool_to_execute_mutation>4</number_of_free_entries_in_pool_to_execute_mutation>
+        <number_of_free_entries_in_pool_to_execute_optimize_entire_partition>4</number_of_free_entries_in_pool_to_execute_optimize_entire_partition>
+    </merge_tree>
 
     <!-- 慢查询与错误日志保留 7 天即可 -->
     <query_log>
