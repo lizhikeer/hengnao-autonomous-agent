@@ -1,0 +1,17 @@
+{
+  "case_id": "EVAL-CHAIN-001",
+  "is_malicious": true,
+  "attack_type": "SQL_Injection_After_Brute_Force",
+  "risk_level": "HIGH",
+  "attacker_ip": "198.51.100.23",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261027-0001",
+    "LOG-20261027-0008",
+    "LOG-20261027-0015"
+  ],
+  "attack_chain_summary": "攻击源 198.51.100.23 先对 /admin 执行账号爆破失败，随后针对登录接口发起 SQL 注入绕过认证并尝试导出敏感表数据。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "暂未获取到数据库内部审计日志，需进一步确认敏感表具体泄露行数。"
+}

@@ -1,0 +1,110 @@
+[
+  {
+    "card_id": "KB-SQLI-001",
+    "card_type": "security_knowledge",
+    "title": "SQL注入异常请求的日志识别与调查",
+    "attack_category": "SQL_Injection",
+    "mitre_id": "T1190",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "同一来源短时间内对同一接口发送大量结构相似的异常请求",
+      "请求参数中出现明显的数据库语法探测特征或异常特殊字符组合",
+      "同一接口短时间内出现异常的4xx或5xx状态码增长",
+      "请求响应字节数与该接口历史正常访问情况存在明显偏差"
+    ],
+    "investigation_steps": [
+      "检索异常时间段内的nginx访问日志，统计来源IP、请求路径、请求频率和状态码分布",
+      "关联zeek_http记录，核对请求时间、目标主机、请求方法和异常参数特征",
+      "对比同一来源IP访问其他接口的行为，判断是否存在连续的异常探测活动",
+      "检查应用及数据库审计记录，确认是否存在异常数据库错误或未授权数据访问迹象"
+    ],
+    "recommended_action": "monitor_only",
+    "error_revision_note": "正常业务查询、搜索筛选和特殊字符输入也可能产生类似特征。不能仅凭单个特殊字符或一次4xx、5xx响应判定SQL注入，应结合请求频率、参数特征、上下游日志和应用错误信息综合判断。",
+    "source_reference": "OWASP Top 10 A03:2021 Injection; MITRE ATT&CK T1190",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-SQLI-002",
+    "card_type": "security_knowledge",
+    "title": "SQL盲注相关异常访问行为识别",
+    "attack_category": "SQL_Injection",
+    "mitre_id": "T1190",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "同一接口出现大量重复且参数变化细微的请求",
+      "相似请求的响应时间出现持续且不符合业务规律的差异",
+      "请求频率明显高于该接口正常访问基线",
+      "部分请求响应状态码或响应字节数呈现规律性变化"
+    ],
+    "investigation_steps": [
+      "按时间窗口聚合同一来源IP对目标接口的访问记录",
+      "比较相似请求的响应时间、状态码和响应字节数",
+      "关联zeek_http记录，检查请求序列是否具有自动化探测特征",
+      "结合应用日志核实是否存在异常数据库查询或请求处理延迟"
+    ],
+    "recommended_action": "rate_limit_ip",
+    "error_revision_note": "网络拥塞、数据库性能波动和正常业务查询也可能造成响应时间变化。应比较同一接口的正常基线，并排除服务器负载等因素，不能仅凭响应延迟判定盲注。",
+    "source_reference": "OWASP Web Security Testing Guide - Testing for SQL Injection; MITRE ATT&CK T1190",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-SQLI-003",
+    "card_type": "security_knowledge",
+    "title": "数据库异常文件导出行为的关联调查",
+    "attack_category": "SQL_Injection",
+    "mitre_id": "T1190",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "Web请求参数中出现与数据库文件写入或导出功能相关的异常关键词",
+      "短时间内出现多次针对同一业务接口的异常请求",
+      "相关请求之后服务器文件访问情况或文件完整性出现异常变化",
+      "异常请求时间与数据库审计记录中的非预期文件操作时间接近"
+    ],
+    "investigation_steps": [
+      "检索nginx访问日志，定位包含异常数据库操作特征的请求及其来源",
+      "关联zeek_http记录，核对请求时间、目标主机、请求路径和响应情况",
+      "检查数据库审计日志和服务器文件完整性记录，确认是否存在非预期文件写入",
+      "核对相关文件是否属于正常业务生成文件，并确认对应操作是否经过授权"
+    ],
+    "recommended_action": "monitor_only",
+    "error_revision_note": "正常的数据导出、报表生成和备份任务也可能产生文件操作记录。必须核对操作账号、业务任务、文件位置和授权记录，不能仅凭导出关键词判定攻击成功。",
+    "source_reference": "OWASP Top 10 A03:2021 Injection; OWASP Logging Cheat Sheet",
+    "review_status": "approved"
+  },
+  {
+    "card_id": "KB-SQLI-004",
+    "card_type": "security_knowledge",
+    "title": "SQL自动化扫描工具访问特征识别",
+    "attack_category": "SQL_Injection",
+    "mitre_id": "T1595",
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "key_indicators": [
+      "同一来源在较短时间内访问多个可能存在参数输入的接口",
+      "请求具有高频率、重复性和较为固定的参数变化模式",
+      "多个请求出现相似的自动化工具标识或异常请求头",
+      "访问路径和参数组合呈现批量探测特征"
+    ],
+    "investigation_steps": [
+      "统计来源IP在指定时间段内访问的接口数量、请求频率和请求方法",
+      "分析nginx访问日志中的User-Agent、状态码和请求路径分布",
+      "关联zeek_http记录，检查请求序列是否表现出自动化工具探测特征",
+      "核对来源IP是否属于授权安全测试人员或内部扫描任务"
+    ],
+    "recommended_action": "rate_limit_ip",
+    "error_revision_note": "合法漏洞扫描、安全测试和自动化运维也可能产生类似流量。User-Agent可以被伪造，不能单独作为识别依据，必须核对测试授权、来源身份和整体请求行为。",
+    "source_reference": "OWASP Web Security Testing Guide; MITRE ATT&CK T1595 Active Scanning",
+    "review_status": "approved"
+  }
+]

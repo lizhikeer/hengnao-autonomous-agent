@@ -1,0 +1,48 @@
+{
+  "token_usage": {
+    "completion_tokens": 928,
+    "prompt_tokens": 12776,
+    "completion_tokens_details": {
+      "accepted_prediction_tokens": 0,
+      "audio_tokens": 0,
+      "reasoning_tokens": 0,
+      "rejected_prediction_tokens": 0
+    },
+    "prompt_tokens_details": {
+      "audio_tokens": 0,
+      "cached_tokens": 0
+    },
+    "total_tokens": 13704
+  },
+  "session": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "{\"case_id\":\"EVAL-CHAIN-001\",\"trace_id\":\"CHAIN-ATTACK-01\",\"src_ip\":\"198.51.100.23\",\"asset_id\":\"web-prod-01\",\"service_url\":\"https://enhance-gold-startup-earth.trycloudflare.com\"}"
+      },
+      {
+        "role": "assistant",
+        "content": "# 调查报告（模拟数据）\n\n模拟数据。攻击链：暴力破解(admin账户hydra探测)→SQL注入(sqlmap成功绕过/admin/login.php,返回200)→敏感数据导出(table=users被访问,返回200)→内网主机10.0.0.15主动外连203.0.113.66(C2回调)。资产重要性HIGH,攻击者从198.51.100.23发起,内部主机已确认C2外连,判定为已沦陷的严重入侵事件。\n\n证据：LOG-20261027-0001, LOG-20261027-0008, LOG-20261027-0015, LOG-20261027-0022\n\n建议：block_ip\n\n未知事项：知识库搜索未返回额外上下文,但攻击链证据链完整。注意所有日志均为模拟数据(mock=true)。需排查10.0.0.15上是否有恶意进程、webshell或持久化后门。\n\n本周没有执行真实封禁。"
+      }
+    ],
+    "id": "ae71c072-f8fb-0b86-0abc-cf4db28959cc"
+  },
+  "results": {
+    "is_malicious": true,
+    "risk_level": "CRITICAL",
+    "requires_human_approval": true,
+    "attack_chain_summary": "模拟数据。攻击链：暴力破解(admin账户hydra探测)→SQL注入(sqlmap成功绕过/admin/login.php,返回200)→敏感数据导出(table=users被访问,返回200)→内网主机10.0.0.15主动外连203.0.113.66(C2回调)。资产重要性HIGH,攻击者从198.51.100.23发起,内部主机已确认C2外连,判定为已沦陷的严重入侵事件。",
+    "attack_type": "sql_injection_and_c2",
+    "recommended_action": "block_ip",
+    "attacker_ip": "198.51.100.23",
+    "unknown_items": "知识库搜索未返回额外上下文,但攻击链证据链完整。注意所有日志均为模拟数据(mock=true)。需排查10.0.0.15上是否有恶意进程、webshell或持久化后门。",
+    "case_id": "EVAL-CHAIN-001",
+    "victim_asset": "web-prod-01 (internal 10.0.0.15)",
+    "evidence_log_ids": [
+      "LOG-20261027-0001",
+      "LOG-20261027-0008",
+      "LOG-20261027-0015",
+      "LOG-20261027-0022"
+    ]
+  }
+}

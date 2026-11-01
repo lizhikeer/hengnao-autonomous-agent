@@ -1,0 +1,27 @@
+{
+  "confirm_block": {
+    "_question": "是否批准提交本次处置申请？本周只登记待审批，不执行封禁。拒绝则跳过处置。",
+    "_answer": {
+      "B": "拒绝"
+    },
+    "_options": {
+      "A": "批准提交申请",
+      "B": "拒绝"
+    }
+  },
+  "result_key": "",
+  "kv_local": {
+    "confirm_block": {
+      "_question": "是否批准提交本次处置申请？本周只登记待审批，不执行封禁。拒绝则跳过处置。",
+      "_answer": {
+        "B": "拒绝"
+      },
+      "_options": {
+        "A": "批准提交申请",
+        "B": "拒绝"
+      }
+    }
+  },
+  "_error_code": 0,
+  "_error_message": ""
+}

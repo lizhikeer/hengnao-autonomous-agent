@@ -1,0 +1,48 @@
+{
+  "token_usage": {
+    "completion_tokens": 1249,
+    "prompt_tokens": 12740,
+    "completion_tokens_details": {
+      "accepted_prediction_tokens": 0,
+      "audio_tokens": 0,
+      "reasoning_tokens": 0,
+      "rejected_prediction_tokens": 0
+    },
+    "prompt_tokens_details": {
+      "audio_tokens": 0,
+      "cached_tokens": 0
+    },
+    "total_tokens": 13989
+  },
+  "session": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "{\"case_id\":\"EVAL-CHAIN-001\",\"trace_id\":\"CHAIN-ATTACK-01\",\"src_ip\":\"198.51.100.23\",\"asset_id\":\"web-prod-01\",\"service_url\":\"https://enhance-gold-startup-earth.trycloudflare.com\"}"
+      },
+      {
+        "role": "assistant",
+        "content": "# 调查报告（模拟数据）\n\n攻击链包含4个阶段：(1)密码爆破——攻击者使用hydra对/admin端点进行字典攻击(LOG-20261027-0001)；(2)SQL注入利用——切换到sqlmap工具，通过' OR 1=1--注入成功绕过认证并获取HTTP 200(LOG-20261027-0008)；(3)数据导出——利用注入漏洞导出users表敏感数据(LOG-20261027-0015)；(4)C2外连——受害服务器10.0.0.15向203.0.113.66发起TLS外连，疑似建立命令控制通道(LOG-20261027-0022)。攻击者完整经历了从侦察到利用到数据窃取到持久化的攻击链。注：seclog_query_logs和seclog_get_context返回数据均标注mock=true，为模拟数据。\n\n证据：LOG-20261027-0001, LOG-20261027-0008, LOG-20261027-0015, LOG-20261027-0022\n\n建议：block_ip\n\n未知事项：攻击者具体使用何种持久化机制未知；203.0.113.66是否为已知恶意C2服务器需额外查证；users表数据是否完整导出无法确认；C2外连的具体协议和加密方式未记录。建议人工介入调查。\n\n本周没有执行真实封禁。"
+      }
+    ],
+    "id": "bb44011d-2d98-9bc3-405b-c4e71de07223"
+  },
+  "results": {
+    "is_malicious": true,
+    "risk_level": "HIGH",
+    "requires_human_approval": true,
+    "attack_chain_summary": "攻击链包含4个阶段：(1)密码爆破——攻击者使用hydra对/admin端点进行字典攻击(LOG-20261027-0001)；(2)SQL注入利用——切换到sqlmap工具，通过' OR 1=1--注入成功绕过认证并获取HTTP 200(LOG-20261027-0008)；(3)数据导出——利用注入漏洞导出users表敏感数据(LOG-20261027-0015)；(4)C2外连——受害服务器10.0.0.15向203.0.113.66发起TLS外连，疑似建立命令控制通道(LOG-20261027-0022)。攻击者完整经历了从侦察到利用到数据窃取到持久化的攻击链。注：seclog_query_logs和seclog_get_context返回数据均标注mock=true，为模拟数据。",
+    "attack_type": "sql_injection",
+    "recommended_action": "block_ip",
+    "attacker_ip": "198.51.100.23",
+    "unknown_items": "攻击者具体使用何种持久化机制未知；203.0.113.66是否为已知恶意C2服务器需额外查证；users表数据是否完整导出无法确认；C2外连的具体协议和加密方式未记录。建议人工介入调查。",
+    "case_id": "EVAL-CHAIN-001",
+    "victim_asset": "web-prod-01",
+    "evidence_log_ids": [
+      "LOG-20261027-0001",
+      "LOG-20261027-0008",
+      "LOG-20261027-0015",
+      "LOG-20261027-0022"
+    ]
+  }
+}
