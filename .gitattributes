@@ -1,0 +1,16 @@
+# 统一行尾：仓库内所有文本文件以 LF 存储。
+# 否则 Windows 下拉取后 .sh 带 CRLF，在服务器上会报 "bad interpreter"。
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.py    text eol=lf
+*.sql   text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+Dockerfile text eol=lf
+
+*.png   binary
+*.jpg   binary
+*.pcap  binary

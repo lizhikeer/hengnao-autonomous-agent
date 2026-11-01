@@ -1,0 +1,5 @@
+# SecLog-Agent 运行时依赖
+# 按「底座 / API」分层，避免把 flink、generator 等本项目已裁掉的组件带进来。
+
+-r base.txt
+-r api.txt
