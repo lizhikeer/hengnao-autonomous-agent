@@ -1,0 +1,34 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	http
+#open	2026-11-01-16-49-06
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	trans_depth	method	host	uri	referrer	version	user_agent	request_body_len	response_body_len	status_code	status_msg	info_code	info_msg	tags	username	password	proxied	orig_fuids	orig_filenames	orig_mime_types	resp_fuids	resp_filenames	resp_mime_types
+#types	time	string	addr	port	addr	port	count	string	string	string	string	string	string	count	count	count	string	count	string	set[enum]	string	string	set[string]	vector[string]	vector[string]	vector[string]	vector[string]	vector[string]	vector[string]
+1793550547.958467	CBAAAAA	127.0.0.1	38910	127.0.0.1	18081	1	GET	127.0.0.1:18081	/	-	HTTP/1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550547.964233	CCAAAAA	127.0.0.1	38914	127.0.0.1	18081	1	GET	127.0.0.1:18081	/api/user?id=1	-	HTTP/1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550547.969741	CDAAAAA	127.0.0.1	38928	127.0.0.1	18081	1	GET	127.0.0.1:18081	/	-	HTTP/1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550547.975569	CEAAAAA	127.0.0.1	38930	127.0.0.1	18081	1	GET	127.0.0.1:18081	/api/user?id=2	-	HTTP/1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550547.981862	CFAAAAA	127.0.0.1	38942	127.0.0.1	18081	1	GET	127.0.0.1:18081	/	-	HTTP/1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550547.988433	CGAAAAA	127.0.0.1	38958	127.0.0.1	18081	1	GET	127.0.0.1:18081	/api/user?id=3	-	HTTP/1.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550547.995501	CHAAAAA	127.0.0.1	38968	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.002588	CIAAAAA	127.0.0.1	38976	127.0.0.1	18081	1	GET	127.0.0.1:18081	/.env	-	HTTP/1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.010936	CJAAAAA	127.0.0.1	38984	127.0.0.1	18081	1	GET	127.0.0.1:18081	/.git/config	-	HTTP/1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.017927	CKAAAAA	127.0.0.1	38996	127.0.0.1	18081	1	GET	127.0.0.1:18081	/wp-admin/	-	HTTP/1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.024867	CLAAAAA	127.0.0.1	39000	127.0.0.1	18081	1	GET	127.0.0.1:18081	/phpmyadmin/	-	HTTP/1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.031928	CMAAAAA	127.0.0.1	39006	127.0.0.1	18081	1	GET	127.0.0.1:18081	/config.php	-	HTTP/1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.038897	CNAAAAA	127.0.0.1	39008	127.0.0.1	18081	1	GET	127.0.0.1:18081	/admin/	-	HTTP/1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.046788	COAAAAA	127.0.0.1	39024	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	python-requests/2.31.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.053808	CPAAAAA	127.0.0.1	39028	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	python-requests/2.31.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.060773	CQAAAAA	127.0.0.1	39038	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	python-requests/2.31.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.067694	CRAAAAA	127.0.0.1	39042	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	python-requests/2.31.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.074684	CSAAAAA	127.0.0.1	39054	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	python-requests/2.31.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.081576	CTAAAAA	127.0.0.1	39062	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	python-requests/2.31.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.088496	CUAAAAA	127.0.0.1	39066	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	python-requests/2.31.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.095461	CVAAAAA	127.0.0.1	39078	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	python-requests/2.31.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.102415	CWAAAAA	127.0.0.1	39082	127.0.0.1	18081	1	POST	127.0.0.1:18081	/admin/login.php	-	HTTP/1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.109350	CXAAAAA	127.0.0.1	39096	127.0.0.1	18081	1	GET	127.0.0.1:18081	/api/user?id=1%20UNION%20SELECT%20username,password%20FROM%20users	-	HTTP/1.1	sqlmap/1.7.2#stable (https://sqlmap.org)	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.116293	CYAAAAA	127.0.0.1	39110	127.0.0.1	18081	1	POST	127.0.0.1:18081	/uploads/shell.php	-	HTTP/1.1	Mozilla/5.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+1793550548.123229	CZAAAAA	127.0.0.1	39118	127.0.0.1	18081	1	GET	127.0.0.1:18081	/uploads/shell.php?c=id	-	HTTP/1.1	Mozilla/5.0	0	0	-	-	-	-	(empty)	-	-	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)	(empty)
+#close	2026-11-01-16-49-06
