@@ -1,0 +1,20 @@
+{
+  "case_id": "CHAIN-CASE-02",
+  "is_malicious": true,
+  "attack_type": "Webshell_Upload_And_C2_Callback",
+  "risk_level": "HIGH",
+  "attacker_ip": "203.0.113.45",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261028-0206",
+    "LOG-20261028-0207",
+    "LOG-20261028-0208",
+    "LOG-20261028-0211",
+    "LOG-20261028-0212",
+    "LOG-20261028-0213"
+  ],
+  "attack_chain_summary": "攻击源 203.0.113.45 于 10:04—10:05 两次探测 /upload.php 上传接口，随后在 10:05:44 以 filename=\"shell.php\" + Content-Type: image/jpeg 的双扩展名与 MIME 伪装方式上传 WebShell，接口返回 200 且响应体 2150 字节（LOG-20261028-0206）；10:06 起连续访问 /uploads/shell.php 并通过 GET/POST 携带 cmd= 参数执行命令（whoami、base64 编码的 cat /etc/passwd），Zeek HTTP 侧同步记录到 对 /uploads/shell.php 的 POST 请求（LOG-20261028-0207 / LOG-20261028-0208 / LOG-20261028-0213）；10:07:33 起受害主机 web-prod-01（10.0.0.15）主动向陌生公网 IP 45.77.128.203 的 4444 端口发起 3 次长时 TCP 连接（单次持续 288—512 秒），并通过 8080 端口访问 /beacon.php 心跳页，构成典型 C2 回连（LOG-20261028-0211 / LOG-20261028-0212）。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": ""
+}

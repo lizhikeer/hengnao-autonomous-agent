@@ -1,0 +1,19 @@
+{
+  "case_id": "CHAIN-CASE-03",
+  "is_malicious": false,
+  "attack_type": "Normal_Maintenance_Operation",
+  "risk_level": "LOW",
+  "attacker_ip": null,
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261029-0301",
+    "LOG-20261029-0302",
+    "LOG-20261029-0313",
+    "LOG-20261029-0314",
+    "LOG-20261029-0315"
+  ],
+  "attack_chain_summary": "在本地时间 2026-10-30 02:00—03:30 的资产登记维护窗口内，内网运维 IP 10.0.0.66 使用运维账号 ops_zhang 登录后台成功（LOG-20261029-0301 / LOG-20261029-0302），随后按页码顺序翻看用户与订单列表，并连续导出 orders / users / user_logs 三张表（单次响应最大 8.9MB，LOG-20261029-0313 / LOG-20261029-0314）；18:16 起内网备份主机 10.0.0.20 通过 SSH 从 web-prod-01 拉取 5.6MB 与 2.0MB 备份包（LOG-20261029-0315），与备份链周期一致。判断依据：源 IP 属内网且命中运维白名单、登录账号与资产责任人匹配、访问时点落在维护窗口、导出行为伴随成对出现的备份拉取、全程无 4xx 探测与异常外连，行为与既有运维基线一致，判定为正常运维，非恶意攻击，建议仅监控并记录。",
+  "recommended_action": "none",
+  "requires_human_approval": false,
+  "unknown_items": ""
+}

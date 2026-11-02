@@ -1,0 +1,5 @@
+2026-10-27T22:05:09+08:00 web-prod-01 webadmin[1188]: auth_event=login_failure user=admin src_ip=198.51.100.23 src_port=54321 app=web_admin uri=/admin/login.php session_id=- result=fail reason=invalid_password
+2026-10-27T22:05:31+08:00 web-prod-01 webadmin[1188]: auth_event=login_failure user=admin src_ip=198.51.100.23 src_port=54330 app=web_admin uri=/admin/login.php session_id=- result=fail reason=invalid_password
+2026-10-30T02:00:05+08:00 web-prod-01 webadmin[1188]: auth_event=login_success user=ops_zhang src_ip=10.0.0.66 src_port=52110 app=web_admin uri=/admin/login.php session_id=sess-7f2a91 result=success reason=-
+2026-10-30T02:30:00+08:00 web-prod-01 sshd[20431]: Accepted password for ops_zhang from 10.0.0.66 port 61234 ssh2
+2026-10-30T02:45:12+08:00 web-prod-01 sshd[20431]: session closed for user ops_zhang
