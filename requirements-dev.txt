@@ -1,4 +1,5 @@
 # 开发/测试依赖
 -r requirements.txt
+-r requirements/knowledge-base.txt
 pytest==9.1.1
 httpx==0.28.1

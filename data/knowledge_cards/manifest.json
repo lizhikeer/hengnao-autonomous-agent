@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "description": "维护者核对来源后更新；独立评测文件不得加入本清单。",
+  "excluded_scenario_ids": [],
+  "files": {
+    "data/knowledge_cards/Brute_Force.json": {
+      "sha256": "bd3ce9245bf4b324bdcfe11895f99e266657c7a8346c070da95e16265c5e1823",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-BF-001",
+        "KB-BF-002",
+        "KB-BF-003",
+        "KB-BF-004"
+      ]
+    },
+    "data/knowledge_cards/C2_Exfiltration.json": {
+      "sha256": "9e7043cfb06d85267e059160e363f81fe1831317c702aef4b421eec43064d0ac",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-C2-001",
+        "KB-C2-002",
+        "KB-C2-003",
+        "KB-C2-004"
+      ]
+    },
+    "data/knowledge_cards/File_Upload_Traversal.json": {
+      "sha256": "c969cf4fd8e8ec539cd8d0e21d1d5dd7c2e72aaf8be3526e5fc45588cc0092d9",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-FUT-001",
+        "KB-FUT-002",
+        "KB-FUT-003",
+        "KB-FUT-004"
+      ]
+    },
+    "data/knowledge_cards/SQL_Injection.json": {
+      "sha256": "7e5c346781f157371e7d8142c0e3e662579afaa73df7d052c768de03bc8e5948",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-SQLI-001",
+        "KB-SQLI-002",
+        "KB-SQLI-003",
+        "KB-SQLI-004"
+      ]
+    },
+    "data/knowledge_cards/XSS_RCE.json": {
+      "sha256": "c01f9cf78a823dca62e5be93693dc76ddf1eab8941b13e5f3eaff35f88d37978",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-XSS-001",
+        "KB-XSS-002",
+        "KB-XSS-003",
+        "KB-XSS-004"
+      ]
+    }
+  }
+}

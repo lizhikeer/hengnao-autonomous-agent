@@ -10,6 +10,8 @@
 | [全链路日志统一字段规范.md](./project%20design/全链路日志统一字段规范.md) | **W1 冻结基准**：18 个契约字段字典、5 类 `log_source`、6 种攻击阶段枚举、Nginx/auth/Zeek 三源字段映射表、`log_id` 确定性生成规则、脱敏规则与清洗脚本校验清单 |
 | [技术链.md](./project%20design/技术链.md) | 总体链路、数据链路、Agent 调查与受控处置链路、案例记忆与知识更新方案及原项目复用说明 |
 | [mcp.md](./project%20design/mcp.md) | 现成 MCP 工具选型与自建 SecLog MCP / FastAPI 服务接口清单 |
+| [知识库总体设计.md](./project%20design/database/知识库总体设计.md) | 日志与攻击分类、知识库参考资料和调查评测方法 |
+| [BGE中文向量模型与混合检索方案.md](./project%20design/database/BGE中文向量模型与混合检索方案.md) | small 模型、语义与关键词检索分工、结果融合及方案取舍 |
 
 ## 二、 恒脑平台开发规范与参考资料（`docs/平台文档/`）
 

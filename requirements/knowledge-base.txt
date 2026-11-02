@@ -1,0 +1,5 @@
+# 卡片、Qdrant 与 BM25 的基础依赖；离线测试不需要 PyTorch 和模型权重。
+qdrant-client==1.15.1
+jsonschema[format-nongpl]==4.25.1
+jieba==0.42.1
+PyYAML>=6,<7

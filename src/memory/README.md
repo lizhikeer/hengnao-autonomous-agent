@@ -23,4 +23,4 @@
 | 读写 `data/case_memories/`、SQLite 状态库 | 未经审核直接把候选案例写入 Qdrant |
 | 定义案例卡 Schema | 存放真实用户凭据或未脱敏日志 |
 
-W1 只冻结 Schema 与表结构，实现排在 W3（见 `docs/project design/项目分工与前期架构设计.md` §四）。
+`knowledge_store.py` 保存卡片版本、候选状态、证据引用、审核记录和发布任务，并维护 FTS5 索引。管理端通过知识库脚本批准导入或下架；完整案例的实验/人工确认记录按 1.1 Schema 校验。运行方式见 [知识库说明](../knowledge/README.md)。
