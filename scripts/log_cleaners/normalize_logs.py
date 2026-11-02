@@ -328,9 +328,17 @@ def parse_nginx_line(line, trace_id, asset_id, dest_ip=None, dest_port=None):
 _SSHD_RE = re.compile(
     r"(?P<event>Failed password|Accepted password|Failed publickey|Accepted publickey"
     r"|Invalid user|session opened|session closed|Connection closed)"
-    r"(?:\s+for\s+(?:(?:invalid user)\s+)?(?P<user>\S+))?"
+    # 兼容三个变体：for admin / for user ops(uid=1000) / for invalid user test
+    r"(?:\s+for\s+(?:(?:invalid\s+)?user\s+)?(?P<user>\S+))?"
     r"(?:\s+from\s+(?P<src_ip>\S+)\s+port\s+(?P<src_port>\d+))?"
 )
+# 真实 auth.log 里出现、但旧版本漏掉的断开/登出类事件（2026-11-02 用真机样本校准补入）
+_SSHD_DISCONNECT_RE = re.compile(
+    r"Disconnected from user (?P<user>\S+) (?P<src_ip>\S+) port (?P<src_port>\d+)")
+_SSHD_RECV_DISC_RE = re.compile(
+    r"Received disconnect from (?P<src_ip>\S+) port (?P<src_port>\d+)")
+_PAM_LOGOUT_RE = re.compile(
+    r"User: (?P<user>\S+) logon out from: (?P<src_ip>\S+)", re.I)
 _KV_RE = re.compile(r"(\w+)=(\S+)")
 
 
@@ -389,13 +397,39 @@ def parse_auth_line(line, trace_id, asset_id, dest_ip=None, dest_port=None, year
         if reason:
             payload = "reason=%s" % reason
     else:
-        m = _SSHD_RE.search(rest)
-        if not m:
+        # sshd_pam_ipblocker 是自定义 PAM 插件对登录/登出的二次审计记录，
+        # 内容与 sshd 自身的 Accepted / session 事件重复，直接跳过以免重复计数。
+        if "sshd_pam_ipblocker" in rest:
             return None
-        action = _auth_action_from_sshd(m.group("event"))
-        user = _clean(m.group("user"))
-        src_ip = _clean(m.group("src_ip"))
-        src_port = _to_int(m.group("src_port"))
+        m = _SSHD_RE.search(rest)
+        if m:
+            action = _auth_action_from_sshd(m.group("event"))
+            user = _clean(m.group("user"))
+            src_ip = _clean(m.group("src_ip"))
+            src_port = _to_int(m.group("src_port"))
+        else:
+            m = _SSHD_DISCONNECT_RE.search(rest)
+            if m:
+                action = "session_closed"
+                user = _clean(m.group("user"))
+                src_ip = _clean(m.group("src_ip"))
+                src_port = _to_int(m.group("src_port"))
+            else:
+                m = _SSHD_RECV_DISC_RE.search(rest)
+                if m:
+                    action = "session_closed"
+                    src_ip = _clean(m.group("src_ip"))
+                    src_port = _to_int(m.group("src_port"))
+                else:
+                    m = _PAM_LOGOUT_RE.search(rest)
+                    if not m:
+                        return None
+                    action = "session_closed"
+                    user = _clean(m.group("user"))
+                    src_ip = _clean(m.group("src_ip"))
+        # sshd 会把账号写成 ops(uid=1000)，这里只保留账号名
+        if user and "(" in user:
+            user = user.split("(", 1)[0]
         target_uri = "sshd"
 
     return new_record(
@@ -703,6 +737,25 @@ _SAMPLE_ZEEK_HTTP_JSON = json.dumps({
     "response_body_len": 120, "status_code": 200,
 })
 
+# ---- 以下三行摘自 data/full_chain_logs/raw/ 的真实采集样本（2026-11-02 @lizhikeer 交付）
+_REAL_NGINX = (
+    '172.17.0.1 - - [01/Nov/2026:16:29:07 +0000] "POST /admin/login.php HTTP/1.1" '
+    '401 40 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1" "-"'
+)
+_REAL_SSHD = (
+    "2026-11-02T00:33:19.239043+08:00 nas-host-01 sshd[1898194]: "
+    "Disconnected from user ops 2001:db8::1 port 64795"
+)
+_REAL_ZEEK_FIELDS = ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p",
+                     "proto", "service", "duration", "orig_bytes", "resp_bytes",
+                     "conn_state", "local_orig", "local_resp", "missed_bytes", "history",
+                     "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes",
+                     "tunnel_parents", "ip_proto"]
+_REAL_ZEEK_CONN = (
+    "1793550548.109304\tCfjGre4uVZbpwyvdlg\t127.0.0.1\t39096\t127.0.0.1\t18081\t"
+    "tcp\thttp\t0.000589\t173\t190\tSF\tT\tT\t0\tShADTadtFf\t12\t986\t8\t812\t-\t6"
+)
+
 
 def _selftest():
     cases = []
@@ -772,6 +825,40 @@ def _selftest():
         uri_or_target="/uploads/shell.php", payload_summary="request_body_len=96",
         status_code=200, bytes_out=120, user_agent="Mozilla/5.0",
         attack_stage_hint="exploitation",
+    )
+
+    # ---- 真实采集样本回归（data/full_chain_logs/raw/，2026-11-02 交付）
+    expect(
+        "real nginx",
+        parse_nginx_line(_REAL_NGINX, "CHAIN-001", "web-prod-01",
+                         dest_ip="10.0.0.15", dest_port=80),
+        trace_id="CHAIN-001",
+        timestamp="2026-11-01T16:29:07Z", log_source="nginx_access",
+        src_ip="172.17.0.1", dest_ip="10.0.0.15", dest_port=80,
+        action_or_method="POST", uri_or_target="/admin/login.php",
+        status_code=401, bytes_out=40,
+        user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1",
+        attack_stage_hint="brute_force",
+    )
+    expect(
+        "real sshd disconnect",
+        parse_auth_line(_REAL_SSHD, "CHAIN-001", "web-prod-01", dest_ip="10.0.0.15"),
+        trace_id="CHAIN-001",
+        timestamp="2026-11-01T16:33:19Z", log_source="auth_log",
+        src_ip="2001:db8::1", src_port=64795, dest_ip="10.0.0.15",
+        user="ops", action_or_method="session_closed", uri_or_target="sshd",
+    )
+    expect(
+        "real zeek conn (22 cols)",
+        parse_zeek_conn_line(_REAL_ZEEK_CONN, "CHAIN-001", "web-prod-01",
+                             fields=_REAL_ZEEK_FIELDS),
+        trace_id="CHAIN-001",
+        timestamp="2026-11-01T16:29:08Z", log_source="zeek_conn",
+        src_ip="127.0.0.1", src_port=39096, dest_ip="127.0.0.1", dest_port=18081,
+        session_id="CfjGre4uVZbpwyvdlg", action_or_method="tcp",
+        uri_or_target="127.0.0.1:18081",
+        payload_summary="conn_state=SF;duration=0.000589",
+        bytes_out=190, attack_stage_hint="benign",
     )
 
     failures = 0
