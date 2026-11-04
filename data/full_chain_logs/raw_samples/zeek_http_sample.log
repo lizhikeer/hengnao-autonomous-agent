@@ -1,0 +1,10 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	http
+#open	2026-10-26-00-00-00
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	trans_depth	method	host	uri	referrer	version	user_agent	request_body_len	response_body_len	status_code	status_msg	info_code	info_msg	tags	username	password	proxied	orig_fuids	orig_filenames	orig_mime_types	resp_fuids	resp_filenames	resp_mime_types
+#types	time	string	addr	port	addr	port	count	string	string	string	string	string	string	count	count	count	string	count	string	set[string]	string	string	bool	set[string]	set[string]	set[string]	set[string]	set[string]	set[string]
+1793181980.000000	C1d8e7a3409b2f61	203.0.113.45	51244	10.0.0.15	80	1	POST	shop.anheng-lab.cn	/uploads/shell.php	-	1.1	Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36	96	120	200	OK	-	-	(empty)	-	-	-	(empty)	(empty)	(empty)	-	-	text/html
+1793182082.000000	C2b9d0a51f8e7c34	10.0.0.15	49714	45.77.128.203	8080	1	GET	45.77.128.203	/beacon.php	-	1.1	Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)	0	78	200	OK	-	-	(empty)	-	-	-	(empty)	(empty)	(empty)	-	-	text/html

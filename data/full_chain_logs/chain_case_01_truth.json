@@ -1,0 +1,20 @@
+{
+  "case_id": "CHAIN-CASE-01",
+  "is_malicious": true,
+  "attack_type": "SQL_Injection_After_Brute_Force",
+  "risk_level": "HIGH",
+  "attacker_ip": "198.51.100.23",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261027-0103",
+    "LOG-20261027-0104",
+    "LOG-20261027-0112",
+    "LOG-20261027-0113",
+    "LOG-20261027-0126",
+    "LOG-20261027-0127"
+  ],
+  "attack_chain_summary": "攻击源 198.51.100.23 于 14:02 对站点发起目录扫描（依次探测 /robots.txt、/.git/config、/backup.zip、/phpmyadmin/ 等敏感路径，连续返回 404，LOG-20261027-0103），并通过 /admin/ 的 301 跳转发现后台入口（LOG-20261027-0104）；14:05—14:07 改用 python-requests 对 admin 账号连续 5 次口令爆破，全部失败，nginx_access 与 auth_log 双侧留痕（LOG-20261027-0112 / LOG-20261027-0113）；14:14 改用 sqlmap 先做 SLEEP(5) 时间盲注探测，再以 UNION SELECT 读取 users 表绕过认证，登录页响应体由 3980 字节突增至 15234 字节（LOG-20261027-0126）；随后调用 export.php 批量导出 users 与 orders 表，单次响应达 89KB / 214KB（LOG-20261027-0127），判定为注入成功且存在数据外泄。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": ""
+}
