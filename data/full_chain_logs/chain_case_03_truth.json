@@ -3,7 +3,7 @@
   "is_malicious": false,
   "attack_type": "Normal_Maintenance_Operation",
   "risk_level": "LOW",
-  "attacker_ip": null,
+  "attacker_ip": "10.0.0.66",
   "victim_asset": "web-prod-01",
   "evidence_log_ids": [
     "LOG-20261029-0301",
