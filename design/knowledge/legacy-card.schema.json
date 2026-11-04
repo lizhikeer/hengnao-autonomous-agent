@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:seclog:schema:legacy-knowledge-card:1.0",
+  "title": "首周知识卡兼容契约（规范化后）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tenant_id",
+    "card_id",
+    "version",
+    "card_type",
+    "title",
+    "attack_category",
+    "mitre_id",
+    "applicable_log_sources",
+    "keywords",
+    "key_indicators",
+    "investigation_steps",
+    "recommended_action",
+    "error_revision_note",
+    "source_reference",
+    "review_status",
+    "reviewed_by",
+    "reviewed_at",
+    "valid_from",
+    "valid_until",
+    "dataset_split",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "tenant_id": {
+      "$ref": "#/$defs/nonempty"
+    },
+    "card_id": {
+      "$ref": "#/$defs/nonempty"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "card_type": {
+      "const": "security_knowledge"
+    },
+    "title": {
+      "$ref": "#/$defs/nonempty",
+      "description": "写明具体异常或请求，以及本卡帮助查明的问题。例：Web 请求含 UNION SELECT 且返回 200：怎样核查是否读出了数据库数据。"
+    },
+    "summary": {
+      "$ref": "#/$defs/nonempty",
+      "description": "说明需要哪些数据、怎样关联和判断，以及能查明什么；不得只写有助于调查等空泛作用。"
+    },
+    "attack_category": {
+      "$ref": "#/$defs/nonempty"
+    },
+    "mitre_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$"
+    },
+    "applicable_log_sources": {
+      "$ref": "#/$defs/string_list"
+    },
+    "keywords": {
+      "$ref": "#/$defs/string_list"
+    },
+    "key_indicators": {
+      "$ref": "#/$defs/nonempty_list"
+    },
+    "investigation_steps": {
+      "$ref": "#/$defs/nonempty_list"
+    },
+    "recommended_action": {
+      "$ref": "#/$defs/nonempty"
+    },
+    "error_revision_note": {
+      "type": "string"
+    },
+    "source_reference": {
+      "$ref": "#/$defs/nonempty"
+    },
+    "review_status": {
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ]
+    },
+    "reviewed_by": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "\\S"
+    },
+    "reviewed_at": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/utc_time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "valid_from": {
+      "$ref": "#/$defs/utc_time"
+    },
+    "valid_until": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/utc_time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dataset_split": {
+      "const": "knowledge"
+    },
+    "created_at": {
+      "$ref": "#/$defs/utc_time"
+    },
+    "updated_at": {
+      "$ref": "#/$defs/utc_time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "review_status": {
+            "const": "pending"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "reviewed_by": {
+            "type": "null"
+          },
+          "reviewed_at": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "reviewed_by": {
+            "$ref": "#/$defs/nonempty"
+          },
+          "reviewed_at": {
+            "$ref": "#/$defs/utc_time"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonempty": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "utc_time": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "string_list": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/nonempty"
+      }
+    },
+    "nonempty_list": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonempty"
+      }
+    }
+  }
+}

@@ -1,0 +1,248 @@
+[
+  {
+    "schema_version": "1.1",
+    "tenant_id": "demo",
+    "card_id": "KB-WEB-SQLI-001",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "Web 请求含 UNION SELECT 且返回 HTTP 200：怎样核查是否读出了数据库数据",
+    "summary": "调查需要可疑请求参数与响应状态、已采集的响应内容，以及能关联到该请求的应用或数据库审计。先按请求编号核对同一次访问，再检查响应是否含未授权数据、审计是否记录了对应查询。只有 200 或 SQL 关键字时，记录为疑似注入请求，不能判定数据库数据已被读出。",
+    "investigation_goal": "含 UNION SELECT 的这次 Web 请求，是否让应用查询并向请求方返回了其无权访问的数据库数据？",
+    "trigger_conditions": ["接口参数出现 UNION SELECT 结构，且与该参数的正常用途不符。", "访问日志返回 200，但现有告警没有说明响应内容和数据库查询结果。"],
+    "required_data": [
+      {
+        "data_id": "D1", "description": "可疑请求和同一接口已有的正常请求记录",
+        "log_sources": ["nginx_access", "zeek_http"],
+        "fields": ["timestamp", "trace_id", "src_ip", "asset_id", "uri_or_target", "payload_summary", "status_code", "bytes_out"],
+        "purpose": "定位具体请求，核对参数中的 SQL 结构、目标接口和响应状态；正常记录用于比较页面差异。",
+        "if_missing": "向日志查询工具补取该次请求；参数只留有截断摘要时，注明无法确认完整载荷。"
+      },
+      {
+        "data_id": "D2", "description": "已合法采集并脱敏的响应正文、错误页或响应特征",
+        "log_sources": ["http_response_archive", "application_audit"],
+        "fields": ["trace_id", "timestamp", "attrs.response_excerpt", "attrs.response_hash", "attrs.response_content_type"],
+        "purpose": "区分正常页面、统一错误页和疑似数据库数据；bytes_out 的变化不能代替响应内容。",
+        "if_missing": "登记响应正文未采集，继续检查 D3；不通过重放攻击请求补证，也不能凭 200 推断数据已返回。"
+      },
+      {
+        "data_id": "D3", "description": "同一请求对应的应用查询记录或数据库审计及其覆盖范围",
+        "log_sources": ["application_audit", "database_audit"],
+        "fields": ["trace_id", "asset_id", "timestamp", "attrs.db_statement_summary", "attrs.db_result_summary", "attrs.audit_coverage"],
+        "purpose": "核对查询是否执行、是否访问超出授权范围的数据，并检查它与 HTTP 响应是否属于同一次访问。",
+        "if_missing": "登记查询执行与数据影响尚未确认；没有审计记录不能解释为没有执行。"
+      }
+    ],
+    "analysis_rules": [
+      {
+        "rule_id": "R1", "data_ids": ["D1"],
+        "condition": "参数中有与接口正常用途不符的 UNION SELECT 结构，但只有访问日志和 200 状态码。",
+        "conclusion": "有疑似联合查询注入请求；还没有证据说明数据库执行了该查询或向外返回了数据。",
+        "next_step": "按 trace_id 查 D2、D3；没有请求编号时结合资产、接口和时间核对，存在多个候选请求就保留关联不确定性。",
+        "source_ids": ["SRC-OWASP-SQLI"]
+      },
+      {
+        "rule_id": "R2", "data_ids": ["D1", "D2"],
+        "condition": "可疑请求返回 200，响应内容却是已知错误页、拦截页，或没有提供未授权数据的证据。",
+        "conclusion": "本次响应不能证明数据库数据已被读出；错误页也不能单独证明数据库完全没有执行查询。",
+        "next_step": "查 D3，核对该请求的查询结果和日志覆盖范围，不把页面状态直接当成执行结果。",
+        "source_ids": ["SRC-OWASP-SQLI"]
+      },
+      {
+        "rule_id": "R3", "data_ids": ["D1", "D2", "D3"],
+        "condition": "请求、应用/数据库查询与响应能可靠关联；查询和响应包含经权限核验不应向该请求方提供的同一批数据。",
+        "conclusion": "这些证据支持该次请求造成了未授权数据读取并返回；已确认的范围限于实际核实的数据。",
+        "next_step": "保存请求、查询、响应和权限核验的证据编号，再查询同接口及相关会话是否存在其他读取行为。",
+        "source_ids": ["SRC-OWASP-SQLI"]
+      },
+      {
+        "rule_id": "R4", "data_ids": ["D1", "D2", "D3"],
+        "condition": "响应正文没有采集，也没有可关联的应用/数据库审计，或请求之间无法可靠对应。",
+        "conclusion": "是否读出数据库数据仍未知；当前只确认已观察到的请求和响应状态。",
+        "next_step": "列明缺少哪些数据、向哪个数据源申请补取；无法补取时保留未知项，停止作出数据泄露已成立的结论。",
+        "source_ids": ["SRC-OWASP-SQLI"]
+      }
+    ],
+    "applicability_limits": ["本卡只调查 UNION 联合查询是否造成未授权读取并返回，不涵盖写文件、写数据或时间盲注的全部判断方法。", "响应正文和数据库审计可能未采集；这里列的是所需数据，不表示系统已经具备这些数据。", "只分析已有记录；不执行载荷、不重放攻击请求。"],
+    "attack_category": "SQL_Injection",
+    "mitre_id": null,
+    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "keywords": ["SQLi", "SQL 注入", "HTTP 200", "UNION SELECT"],
+    "key_indicators": ["请求参数出现与接口用途不符的 UNION SELECT 结构。", "需要核对的影响是未授权数据库记录是否出现在该次响应中。"],
+    "investigation_steps": ["读取 D1，定位这次请求的接口、参数、请求编号与响应状态。", "用同一请求编号查 D2，比较已有正常响应与可疑响应，按 R1、R2 确定哪些事实尚未证实。", "查 D3 并核对请求方权限；满足 R3 才记录已确认读取范围，缺少关键数据则按 R4 返回未知项。"],
+    "recommended_action": "investigate",
+    "error_revision_note": "",
+    "source_reference": "OWASP WSTG：Testing for SQL Injection；示例调查卡",
+    "sources": [{
+      "source_id": "SRC-OWASP-SQLI",
+      "title": "OWASP WSTG: Testing for SQL Injection",
+      "uri": "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection",
+      "locator": "Summary / How to Test",
+      "accessed_at": "2026-10-27T08:00:00.000Z"
+    }],
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-10-27T08:00:00.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-10-27T08:00:00.000Z",
+    "updated_at": "2026-10-27T08:00:00.000Z"
+  },
+  {
+    "schema_version": "1.1",
+    "tenant_id": "demo",
+    "card_id": "MEM-AUTH-001",
+    "version": 1,
+    "card_type": "verified_correct_case",
+    "title": "维护账号在夜间登录：怎样核对工单、来源和操作范围",
+    "summary": "调查需要该次认证日志、审批工单和登录后的操作记录。逐项核对账号、来源、时间与获批资源；都一致时，只将本次已核验行为记为计划维护。工单缺失或操作超出范围时，继续查证，不能因账号名为维护账号就放行。",
+    "investigation_goal": "该次夜间登录及随后观察到的操作，是否都处于已经批准的维护范围？",
+    "trigger_conditions": ["维护账号在常态时段之外登录，检测规则产生异常线索。"],
+    "required_data": [
+      {"data_id": "D1", "description": "登录与会话内操作记录", "log_sources": ["auth_log", "operation_audit"], "fields": ["timestamp", "user", "src_ip", "session_id", "asset_id", "action_Or_method", "uri_or_target"], "purpose": "确定是谁从哪里登录，随后操作了哪些资源。", "if_missing": "补查相应会话；不能仅核对登录而宣称后续操作均正常。"},
+      {"data_id": "D2", "description": "可信的已审批维护工单", "log_sources": ["maintenance_ticket"], "fields": ["user_id", "attrs.allowed_src_ips", "valid_from", "valid_until", "attrs.allowed_assets", "attrs.allowed_actions", "attrs.approval_status"], "purpose": "逐项对照实际活动与授权边界。", "if_missing": "联系有权限的审核人确认，保持待确认。"}
+    ],
+    "analysis_rules": [
+      {"rule_id": "R1", "data_ids": ["D1", "D2"], "condition": "工单已批准，登录的账号、来源和时间均处于其授权范围。", "conclusion": "只确认该次登录符合维护工单；后续操作是否合规仍需另查。", "next_step": "按 session_id 查询登录后的资源与操作记录。", "source_ids": ["SRC-DEV-001"]},
+      {"rule_id": "R2", "data_ids": ["D1", "D2"], "condition": "已确认登录符合工单，且同会话已采集操作的资源和动作也均在获批范围内。", "conclusion": "本次登录及已核验的操作符合计划维护；结论不覆盖其他会话和未采集操作。", "next_step": "保存逐项比对证据并记录调查覆盖范围。", "source_ids": ["SRC-DEV-001"]},
+      {"rule_id": "R3", "data_ids": ["D1", "D2"], "condition": "工单缺失、未批准，或任意一项实际活动超出授权范围。", "conclusion": "不能按计划维护直接关闭调查；超出授权不单独等于已确认攻击。", "next_step": "围绕不匹配的账号、来源或操作继续查询，并请授权人员核实。", "source_ids": ["SRC-DEV-001"]}
+    ],
+    "applicability_limits": ["这是虚构开发案例，工单比对规则需本站审核；不能代替真实调查结论。", "不能把其他账号、时段、会话或未观察到的操作一起判为正常。"],
+    "attack_category": "Benign_Maintenance",
+    "mitre_id": null,
+    "applicable_log_sources": ["auth_log"],
+    "keywords": ["维护窗口", "计划登录", "工单核验"],
+    "key_indicators": ["登录时间偏离常态，但存在已登记的维护任务。"],
+    "investigation_steps": ["核对账号、来源、维护时段与工单范围。", "确认相关行为没有超出授权范围。"],
+    "recommended_action": "observe",
+    "error_revision_note": "",
+    "source_reference": "虚构开发调查 INV-DEV-001；仅用于结构验证",
+    "sources": [{
+      "source_id": "SRC-DEV-001",
+      "title": "虚构维护调查",
+      "uri": "urn:seclog:investigation:INV-DEV-001",
+      "locator": "审核结论与证据摘要",
+      "accessed_at": "2026-10-27T08:00:00.000Z"
+    }],
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-10-27T08:00:00.000Z",
+    "valid_until": null,
+    "dataset_split": "development",
+    "created_at": "2026-10-27T08:00:00.000Z",
+    "updated_at": "2026-10-27T08:00:00.000Z",
+    "origin": {
+      "case_id": "DEV-MAINT-001", "investigation_id": "INV-DEV-001",
+      "event_id": "ANOM-DEV-001", "judgement_id": "JUDGE-DEV-001",
+      "source_feedback_id": null, "agent_run_id": "RUN-DEV-001",
+      "trace_id": null, "attack_chain_id": null, "scenario_ids": ["SCENARIO-DEV-MAINT-001"]
+    },
+    "case_details": {
+      "symptom_summary": "维护账号在常态时段之外登录。",
+      "environment_summary": "虚构内部维护环境，工单与认证日志可关联。",
+      "investigation_summary": ["查询认证日志的账号与来源。", "核对维护工单覆盖的时段和资源。"],
+      "original_judgement": "需核验的异常时段登录。",
+      "final_judgement": "该次登录及已核验的两项操作符合已审批维护范围；不覆盖其他会话或未采集操作。",
+      "outcome": "benign", "risk_level": "low",
+      "dimension_labels": {"diagnosis": "correct", "evidence": "correct", "response": "not_applicable"},
+      "error_reason": "", "corrected_steps": [],
+      "lessons": ["维护记录必须与账号、来源、时段、资源和动作一起核对。"],
+      "investigation_trace": [
+        {"step_id": "S1", "question": "本次登录是否与已审批工单一致？", "action": "按账号与会话读取认证记录，并查询对应工单的审批状态和允许范围。", "evidence_ids": ["E-DEV-MAINT-1"], "rule_ids": ["R1"], "observation": "虚构比对结果中，账号、来源、时间均匹配已审批工单。", "conclusion": "该次登录符合工单范围，后续操作仍需另查。", "next_step": "核对同会话的资源与操作。"},
+        {"step_id": "S2", "question": "登录后的已观察操作是否超出工单范围？", "action": "按同一会话查询操作记录，逐项比对获批资源和动作。", "evidence_ids": ["E-DEV-MAINT-1", "E-DEV-MAINT-2"], "rule_ids": ["R2"], "observation": "虚构操作比对记录显示，已采集到的两项操作均在工单范围内。", "conclusion": "仅本次登录与已核验的两项操作符合计划维护。", "next_step": "记录调查覆盖范围，不扩展结论到未观察行为。"}
+      ],
+      "verification": {"method": "unverified", "reference": null, "notes": "手工构造的结构样例，未执行真实实验，也未完成真实人工审核。"},
+      "response_summary": "记录调查结果，未申请阻断。", "response_result": "not_executed"
+    },
+    "evidence_refs": [{
+      "evidence_id": "E-DEV-MAINT-1", "ref_type": "tool_result", "source_table": null,
+      "source_id": "TOOL-DEV-MAINT-1", "locator": "INV-DEV-001 / 工单与登录比对结果",
+      "observed_at": "2026-10-27T07:00:00.000Z",
+      "snapshot_summary": "虚构比对结果：工单已批准，该次登录的账号、来源和时段均与工单一致。",
+      "snapshot_sha256": "b6e3f4a2d1a7c2d1f81bc1fe48f258ff7020d0b3329f34ff06ee37470a763ed3"
+    }, {
+      "evidence_id": "E-DEV-MAINT-2", "ref_type": "tool_result", "source_table": null,
+      "source_id": "TOOL-DEV-MAINT-2", "locator": "INV-DEV-001 / 会话操作与工单范围比对",
+      "observed_at": "2026-10-27T07:05:00.000Z",
+      "snapshot_summary": "虚构会话中已采集的两项操作，其资源与动作均在已批准工单范围内。",
+      "snapshot_sha256": "7ec0046e3fbff7703d87b7b590b3e04ee16dc799b486e42f6e6af53e50881460"
+    }]
+  },
+  {
+    "schema_version": "1.1", "tenant_id": "demo", "card_id": "MEM-WEB-001", "version": 1,
+    "card_type": "verified_error_revision",
+    "title": "纠错案例：含 UNION SELECT 的请求返回 200，却缺少数据库数据已被读出的证据",
+    "summary": "原调查只查看请求参数和 200 状态码，就认定数据库数据已泄露。复核需要响应正文及同请求的应用或数据库审计；本例缺少这些数据，所以只能确认疑似注入请求，不能确认数据已被读出，也不能确认攻击失败。",
+    "investigation_goal": "原调查认定数据库数据已泄露，有没有请求、响应与查询结果相互对应的证据？",
+    "trigger_conditions": ["调查报告仅凭请求含 UNION SELECT 且返回 200，就写入数据泄露结论。"],
+    "required_data": [
+      {"data_id": "D1", "description": "这次可疑 Web 请求的参数和响应状态", "log_sources": ["nginx_access"], "fields": ["timestamp", "trace_id", "asset_id", "uri_or_target", "payload_summary", "status_code"], "purpose": "定位原结论依据的请求。", "if_missing": "补查原请求，无法补查时不得确认原结论。"},
+      {"data_id": "D2", "description": "同一请求的响应内容与应用/数据库审计及其采集覆盖情况", "log_sources": ["http_response_archive", "application_audit", "database_audit", "data_source_coverage"], "fields": ["trace_id", "attrs.response_excerpt", "attrs.db_result_summary", "attrs.audit_coverage"], "purpose": "检查有没有未授权数据返回；数据未采集与查到没有数据返回必须分开。", "if_missing": "列出缺失项，保持数据泄露是否发生为未知。"}
+    ],
+    "analysis_rules": [
+      {"rule_id": "R1", "data_ids": ["D1"], "condition": "现有证据只有可疑 UNION SELECT 参数及 HTTP 200。", "conclusion": "证据只支持观察到疑似注入请求，不支持数据已泄露。", "next_step": "向 D2 指定的数据源补查响应和查询结果。", "source_ids": ["SRC-OWASP-SQLI"]},
+      {"rule_id": "R2", "data_ids": ["D1", "D2"], "condition": "确认未采集该次响应正文，也没有接入可关联的应用/数据库审计。", "conclusion": "缺少确认或排除数据泄露的关键证据；原报告的已泄露结论应撤回。", "next_step": "在报告中注明缺失数据并申请补取；补取不到时保留未知，不改写为攻击失败。", "source_ids": ["SRC-DEV-003", "SRC-OWASP-SQLI"]}
+    ],
+    "applicability_limits": ["修订只纠正数据泄露结论的证据不足，不表示请求无害，也不证明数据库未执行查询。", "本例是手工构造的开发样例，不是独立评测题或已核验事件。"],
+    "attack_category": "SQL_Injection", "mitre_id": null,
+    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "keywords": ["HTTP 200", "SQLi", "统一错误页"],
+    "key_indicators": ["含 UNION SELECT 参数的请求返回 200，而原报告没有引用响应正文或数据库查询结果。"],
+    "investigation_steps": ["读取 D1，确认原报告引用的具体请求及其参数。", "查询 D2 的响应、查询结果和采集覆盖情况。", "按 R1、R2 修订结论，保留缺失项和仍需补取的数据。"],
+    "recommended_action": "investigate",
+    "error_revision_note": "原报告只凭 UNION SELECT 参数与 200 就认定数据库数据已泄露。应关联响应和查询结果；本例未采集这些数据，必须保留是否泄露为未知。",
+    "source_reference": "虚构开发调查 INV-DEV-003；仅用于结构验证",
+    "sources": [{
+      "source_id": "SRC-DEV-003", "title": "虚构 SQL 注入纠错调查",
+      "uri": "urn:seclog:investigation:INV-DEV-003", "locator": "证据不足项与正确查证步骤",
+      "accessed_at": "2026-10-27T08:00:00.000Z"
+    }, {
+      "source_id": "SRC-OWASP-SQLI", "title": "OWASP WSTG: Testing for SQL Injection",
+      "uri": "https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection/",
+      "locator": "Summary / Detection Techniques / Union Exploitation Technique",
+      "accessed_at": "2026-10-27T08:00:00.000Z"
+    }],
+    "review_status": "pending", "reviewed_by": null, "reviewed_at": null,
+    "valid_from": "2026-10-27T08:00:00.000Z", "valid_until": null,
+    "dataset_split": "development",
+    "created_at": "2026-10-27T08:00:00.000Z", "updated_at": "2026-10-27T08:00:00.000Z",
+    "origin": {
+      "case_id": "DEV-SQLI-003", "investigation_id": "INV-DEV-003",
+      "event_id": "ANOM-DEV-003", "judgement_id": "JUDGE-DEV-003",
+      "source_feedback_id": "FEEDBACK-DEV-003", "agent_run_id": "RUN-DEV-003",
+      "trace_id": "CHAIN-DEV-003", "attack_chain_id": "CHAIN-DEV-003", "scenario_ids": ["SCENARIO-DEV-SQLI-003"]
+    },
+    "case_details": {
+      "symptom_summary": "请求参数含 UNION SELECT，访问日志返回 HTTP 200。",
+      "environment_summary": "虚构 Web 应用只保留了请求摘要和响应状态，没有留存响应正文，也未接入数据库审计。",
+      "investigation_summary": ["读取指定请求的参数与状态，确认原报告只有这些证据。", "查询数据源覆盖情况，确认缺少该次响应内容及关联审计。"],
+      "original_judgement": "只根据 UNION SELECT 参数与 HTTP 200，就认定数据库数据已泄露。",
+      "final_judgement": "可确认有疑似联合查询注入请求；是否读出数据库数据未知，原报告的数据泄露结论缺少证据。",
+      "outcome": "inconclusive", "risk_level": "medium",
+      "dimension_labels": {"diagnosis": "incorrect", "evidence": "incorrect", "response": "not_applicable"},
+      "error_reason": "把 HTTP 响应状态当成数据库已执行并返回未授权数据的证明。",
+      "corrected_steps": ["用请求编号关联响应和应用/数据库查询结果。", "如果响应和审计未采集，注明缺失数据并撤回已泄露结论，继续申请补证。"],
+      "lessons": ["数据未采集不是查无攻击；数据泄露判断应引用该次请求实际读出和返回了什么。"],
+      "investigation_trace": [
+        {"step_id": "S1", "question": "原报告据什么认定数据已泄露？", "action": "按 LOG-DEV-003 读取请求摘要、请求编号与响应状态。", "evidence_ids": ["E-DEV-SQLI-1"], "rule_ids": ["R1"], "observation": "虚构请求参数含 UNION SELECT，状态码为 200，日志未带响应正文。", "conclusion": "这些信息只能确认请求特征，不能确认数据库数据已返回。", "next_step": "查询响应留存与数据库审计覆盖情况。"},
+        {"step_id": "S2", "question": "能否补到该次响应或数据库查询结果？", "action": "查询该资产和时段的数据源配置、日志覆盖与保留情况。", "evidence_ids": ["E-DEV-SQLI-1", "E-DEV-SQLI-2"], "rule_ids": ["R2"], "observation": "虚构覆盖结果显示响应正文未采集，应用/数据库审计也未接入。", "conclusion": "数据已泄露和攻击失败均无法据此确认。", "next_step": "撤回原报告的数据泄露结论，记录缺失项并申请补证。"}
+      ],
+      "verification": {"method": "unverified", "reference": null, "notes": "手工构造的结构样例，未执行真实实验，也未完成真实人工审核。"},
+      "response_summary": "未执行阻断，继续调查。", "response_result": "not_executed"
+    },
+    "evidence_refs": [{
+      "evidence_id": "E-DEV-SQLI-1", "ref_type": "log", "source_table": "security_logs",
+      "source_id": "LOG-DEV-003", "locator": "demo / LOG-DEV-003 / status_code",
+      "observed_at": "2026-10-27T07:30:00.000Z",
+      "snapshot_summary": "虚构请求 LOG-DEV-003 的参数摘要含 UNION SELECT，响应状态为 HTTP 200；没有响应正文。",
+      "snapshot_sha256": "70371891c3e1fbb3eda08a4485a71b6559f55a7ad728a5fae8d107ac1cfe80b3"
+    }, {
+      "evidence_id": "E-DEV-SQLI-2", "ref_type": "tool_result", "source_table": null,
+      "source_id": "TOOL-DEV-SQLI-COVERAGE", "locator": "INV-DEV-003 / 数据源覆盖查询结果",
+      "observed_at": "2026-10-27T07:35:00.000Z",
+      "snapshot_summary": "虚构覆盖检查显示：该请求的响应正文未采集，关联应用和数据库审计未接入。",
+      "snapshot_sha256": "14381d41390fa42da7d9ea79ba0156771fe6f6520a381bb3bc46efa68d6c5b4e"
+    }]
+  }
+]

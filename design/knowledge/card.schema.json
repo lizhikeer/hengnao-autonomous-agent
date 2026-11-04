@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:seclog:schema:knowledge-card:1.1",
+  "title": "SecLog 知识卡与案例卡",
+  "description": "规范化存储契约。审核身份、来源清单和评测隔离由后台验证，不能信任提交者声明。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "tenant_id", "card_id", "version", "card_type", "title", "summary",
+    "investigation_goal", "trigger_conditions", "required_data", "analysis_rules", "applicability_limits",
+    "attack_category", "mitre_id", "applicable_log_sources", "keywords", "key_indicators",
+    "investigation_steps", "recommended_action", "error_revision_note", "source_reference",
+    "sources", "review_status", "reviewed_by", "reviewed_at", "valid_from", "valid_until",
+    "dataset_split", "created_at", "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.1" },
+    "tenant_id": { "$ref": "#/$defs/nonempty" },
+    "card_id": { "$ref": "#/$defs/nonempty" },
+    "version": { "type": "integer", "minimum": 1 },
+    "card_type": { "enum": ["security_knowledge", "verified_correct_case", "verified_error_revision"] },
+    "title": { "$ref": "#/$defs/nonempty", "description": "写明具体异常或请求，以及本卡帮助查明的问题。例：Web 请求含 UNION SELECT 且返回 200：怎样核查是否读出了数据库数据。" },
+    "summary": { "$ref": "#/$defs/nonempty", "description": "说明需要哪些数据、怎样关联和判断，以及能查明什么；不得只写有助于调查等空泛作用。" },
+    "investigation_goal": { "$ref": "#/$defs/nonempty", "description": "本卡要回答的一个具体调查问题；成功、影响、异常等词需写明对象。" },
+    "trigger_conditions": { "$ref": "#/$defs/nonempty_list", "description": "看到哪些现象时应检索本卡；触发条件不等于攻击成立。" },
+    "required_data": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/data_requirement" } },
+    "analysis_rules": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/analysis_rule" } },
+    "applicability_limits": { "$ref": "#/$defs/nonempty_list" },
+    "attack_category": { "$ref": "#/$defs/nonempty" },
+    "mitre_id": { "type": ["string", "null"], "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" },
+    "applicable_log_sources": { "$ref": "#/$defs/string_list" },
+    "keywords": { "$ref": "#/$defs/string_list" },
+    "key_indicators": { "$ref": "#/$defs/nonempty_list" },
+    "investigation_steps": { "$ref": "#/$defs/nonempty_list" },
+    "recommended_action": { "$ref": "#/$defs/nonempty" },
+    "error_revision_note": { "type": "string" },
+    "source_reference": { "$ref": "#/$defs/nonempty" },
+    "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/source" } },
+    "review_status": { "enum": ["pending", "approved", "rejected"] },
+    "reviewed_by": { "type": ["string", "null"], "pattern": "\\S" },
+    "reviewed_at": { "anyOf": [{ "$ref": "#/$defs/utc_time" }, { "type": "null" }] },
+    "valid_from": { "$ref": "#/$defs/utc_time" },
+    "valid_until": { "anyOf": [{ "$ref": "#/$defs/utc_time" }, { "type": "null" }] },
+    "dataset_split": { "enum": ["knowledge", "development", "production"] },
+    "created_at": { "$ref": "#/$defs/utc_time" },
+    "updated_at": { "$ref": "#/$defs/utc_time" },
+    "origin": { "$ref": "#/$defs/origin" },
+    "case_details": { "$ref": "#/$defs/case_details" },
+    "evidence_refs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "review_status": { "const": "pending" } } },
+      "then": { "properties": { "reviewed_by": { "type": "null" }, "reviewed_at": { "type": "null" } } },
+      "else": { "properties": { "reviewed_by": { "$ref": "#/$defs/nonempty" }, "reviewed_at": { "$ref": "#/$defs/utc_time" } } }
+    },
+    {
+      "if": { "properties": { "card_type": { "const": "security_knowledge" } } },
+      "then": {
+        "properties": { "dataset_split": { "const": "knowledge" }, "error_revision_note": { "const": "" } },
+        "not": { "anyOf": [{ "required": ["origin"] }, { "required": ["case_details"] }, { "required": ["evidence_refs"] }] }
+      },
+      "else": {
+        "required": ["origin", "case_details", "evidence_refs"],
+        "properties": { "dataset_split": { "enum": ["development", "production"] } }
+      }
+    },
+    {
+      "if": { "properties": { "card_type": { "const": "verified_correct_case" }, "review_status": { "const": "approved" } } },
+      "then": {
+        "properties": {
+          "error_revision_note": { "const": "" },
+          "case_details": {
+            "properties": {
+              "outcome": { "enum": ["confirmed_attack", "benign"] },
+              "error_reason": { "const": "" },
+              "corrected_steps": { "maxItems": 0 },
+              "dimension_labels": { "properties": {
+                "diagnosis": { "const": "correct" },
+                "evidence": { "const": "correct" },
+                "response": { "enum": ["correct", "not_applicable"] }
+              } }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "card_type": { "const": "verified_error_revision" }, "review_status": { "const": "approved" } } },
+      "then": {
+        "properties": {
+          "error_revision_note": { "$ref": "#/$defs/nonempty" },
+          "case_details": {
+            "properties": {
+              "error_reason": { "$ref": "#/$defs/nonempty" },
+              "corrected_steps": { "minItems": 1 },
+              "dimension_labels": { "anyOf": [
+                { "properties": { "diagnosis": { "const": "incorrect" } } },
+                { "properties": { "evidence": { "const": "incorrect" } } },
+                { "properties": { "response": { "const": "incorrect" } } }
+              ] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": {
+        "card_type": { "enum": ["verified_correct_case", "verified_error_revision"] },
+        "review_status": { "const": "approved" }
+      } },
+      "then": { "properties": { "case_details": { "properties": {
+        "verification": { "properties": {
+          "method": { "enum": ["controlled_experiment", "human_evidence_review"] },
+          "reference": { "$ref": "#/$defs/nonempty" }
+        } }
+      } } } }
+    }
+  ],
+  "$defs": {
+    "data_requirement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["data_id", "description", "log_sources", "fields", "purpose", "if_missing"],
+      "properties": {
+        "data_id": { "$ref": "#/$defs/nonempty" },
+        "description": { "$ref": "#/$defs/nonempty" },
+        "log_sources": { "$ref": "#/$defs/nonempty_list" },
+        "fields": { "$ref": "#/$defs/nonempty_list" },
+        "purpose": { "$ref": "#/$defs/nonempty" },
+        "if_missing": { "$ref": "#/$defs/nonempty" }
+      }
+    },
+    "analysis_rule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rule_id", "data_ids", "condition", "conclusion", "next_step", "source_ids"],
+      "properties": {
+        "rule_id": { "$ref": "#/$defs/nonempty" },
+        "data_ids": { "$ref": "#/$defs/nonempty_list" },
+        "condition": { "$ref": "#/$defs/nonempty" },
+        "conclusion": { "$ref": "#/$defs/nonempty" },
+        "next_step": { "$ref": "#/$defs/nonempty" },
+        "source_ids": { "$ref": "#/$defs/nonempty_list" }
+      }
+    },
+    "investigation_trace_step": {
+      "type": "object", "additionalProperties": false,
+      "required": ["step_id", "question", "action", "evidence_ids", "rule_ids", "observation", "conclusion", "next_step"],
+      "properties": {
+        "step_id": { "$ref": "#/$defs/nonempty" },
+        "question": { "$ref": "#/$defs/nonempty" },
+        "action": { "$ref": "#/$defs/nonempty" },
+        "evidence_ids": { "$ref": "#/$defs/nonempty_list" },
+        "rule_ids": { "$ref": "#/$defs/nonempty_list" },
+        "observation": { "$ref": "#/$defs/nonempty" },
+        "conclusion": { "$ref": "#/$defs/nonempty" },
+        "next_step": { "$ref": "#/$defs/nonempty" }
+      }
+    },
+    "nonempty": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "nullable_id": { "type": ["string", "null"], "minLength": 1 },
+    "utc_time": {
+      "type": "string", "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "string_list": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonempty" } },
+    "nonempty_list": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonempty" } },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_id", "title", "uri", "locator", "accessed_at"],
+      "properties": {
+        "source_id": { "$ref": "#/$defs/nonempty" },
+        "title": { "$ref": "#/$defs/nonempty" },
+        "uri": { "type": "string", "format": "uri" },
+        "locator": { "$ref": "#/$defs/nonempty" },
+        "accessed_at": { "$ref": "#/$defs/utc_time" }
+      }
+    },
+    "origin": {
+      "type": "object", "additionalProperties": false,
+      "required": ["case_id", "investigation_id", "event_id", "judgement_id", "source_feedback_id", "agent_run_id", "trace_id", "attack_chain_id", "scenario_ids"],
+      "properties": {
+        "case_id": { "$ref": "#/$defs/nonempty" },
+        "investigation_id": { "$ref": "#/$defs/nonempty" },
+        "event_id": { "$ref": "#/$defs/nullable_id" },
+        "judgement_id": { "$ref": "#/$defs/nullable_id" },
+        "source_feedback_id": { "$ref": "#/$defs/nullable_id" },
+        "agent_run_id": { "$ref": "#/$defs/nullable_id" },
+        "trace_id": { "$ref": "#/$defs/nullable_id" },
+        "attack_chain_id": { "$ref": "#/$defs/nullable_id" },
+        "scenario_ids": { "$ref": "#/$defs/string_list" }
+      }
+    },
+    "case_details": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "symptom_summary", "environment_summary", "investigation_summary", "original_judgement",
+        "final_judgement", "outcome", "risk_level", "dimension_labels", "error_reason",
+        "corrected_steps", "lessons", "investigation_trace", "verification", "response_summary", "response_result"
+      ],
+      "properties": {
+        "symptom_summary": { "$ref": "#/$defs/nonempty" },
+        "environment_summary": { "$ref": "#/$defs/nonempty" },
+        "investigation_summary": { "$ref": "#/$defs/nonempty_list" },
+        "original_judgement": { "$ref": "#/$defs/nonempty" },
+        "final_judgement": { "$ref": "#/$defs/nonempty" },
+        "outcome": { "enum": ["confirmed_attack", "benign", "inconclusive"] },
+        "risk_level": { "enum": ["low", "medium", "high", "critical"] },
+        "dimension_labels": {
+          "type": "object", "additionalProperties": false,
+          "required": ["diagnosis", "evidence", "response"],
+          "properties": {
+            "diagnosis": { "$ref": "#/$defs/dimension_label" },
+            "evidence": { "$ref": "#/$defs/dimension_label" },
+            "response": { "$ref": "#/$defs/dimension_label" }
+          }
+        },
+        "error_reason": { "type": "string" },
+        "corrected_steps": { "$ref": "#/$defs/string_list" },
+        "lessons": { "$ref": "#/$defs/nonempty_list" },
+        "investigation_trace": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/investigation_trace_step" } },
+        "verification": {
+          "type": "object", "additionalProperties": false,
+          "required": ["method", "reference", "notes"],
+          "properties": {
+            "method": { "enum": ["unverified", "controlled_experiment", "human_evidence_review"] },
+            "reference": { "$ref": "#/$defs/nullable_id" },
+            "notes": { "$ref": "#/$defs/nonempty" }
+          }
+        },
+        "response_summary": { "$ref": "#/$defs/nonempty" },
+        "response_result": { "enum": ["effective", "ineffective", "not_executed", "unknown"] }
+      }
+    },
+    "dimension_label": { "enum": ["correct", "incorrect", "unknown", "not_applicable"] },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "ref_type", "source_table", "source_id", "locator", "observed_at", "snapshot_summary", "snapshot_sha256"],
+      "allOf": [
+        { "if": { "properties": { "ref_type": { "const": "log" } } },
+          "then": { "properties": { "source_table": { "const": "security_logs" } } } },
+        { "if": { "properties": { "ref_type": { "const": "anomaly" } } },
+          "then": { "properties": { "source_table": { "const": "anomaly_events" } } } },
+        { "if": { "properties": { "ref_type": { "enum": ["tool_result", "external_document"] } } },
+          "then": { "properties": { "source_table": { "type": "null" } } } }
+      ],
+      "properties": {
+        "evidence_id": { "$ref": "#/$defs/nonempty" },
+        "ref_type": { "enum": ["log", "anomaly", "tool_result", "external_document"] },
+        "source_table": { "$ref": "#/$defs/nullable_id" },
+        "source_id": { "$ref": "#/$defs/nonempty" },
+        "locator": { "$ref": "#/$defs/nonempty" },
+        "observed_at": { "$ref": "#/$defs/utc_time" },
+        "snapshot_summary": { "$ref": "#/$defs/nonempty" },
+        "snapshot_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

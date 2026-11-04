@@ -15,6 +15,10 @@ __pycache__/
 venv/
 env/
 .pytest_cache/
+.ruff_cache/
+
+# 知识库本地数据库、模型权重及临时联调结果。
+/work/
 
 # === Node ===
 node_modules/

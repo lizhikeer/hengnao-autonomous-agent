@@ -1,0 +1,4 @@
+# 知识库与检索依赖；CPU 环境使用 uv pip install --torch-backend cpu。
+-r knowledge-base.txt
+sentence-transformers==5.1.2
+transformers==4.57.1
