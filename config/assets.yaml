@@ -1,0 +1,81 @@
+# 资产台账（Asset Registry）
+#
+# 用途：
+#   1. 统一 Schema 里 `asset_id` 的取值来源，禁止各脚本自造资产名
+#   2. 给 Agent 提供「这个资产有多重要、暴露面有多大、归谁管」的判断依据
+#   3. 维护窗口与处置白名单通过 asset_id 关联（见 maintenance-windows.yaml / response-policy.yaml）
+#
+# 维护：改资产请同时更新 `updated` 字段；新增资产必须先在测试场景里出现再登记，
+#       避免出现「台账里有、日志里查不到」的空资产。
+
+version: "1.0"
+updated: "2026-11-12"
+
+assets:
+  - asset_id: web-prod-01
+    name: 生产 Web 前端
+    ip: 10.0.0.15
+    type: web
+    criticality: high
+    exposed_to_internet: true
+    owner: ops-team
+    department: 运维
+    services: [http, https]
+    # 该资产会产生哪些来源的日志，用于判断「查不到日志」是资产没上报还是真没事件
+    log_sources: [nginx_access, zeek_http, zeek_conn]
+    # 处置影响面：封禁该资产会波及什么
+    blast_radius: 对外主站，封禁即业务中断
+    notes: 承载登录、用户信息接口与文件上传，是首期攻击场景的主要靶标
+
+  - asset_id: db-core-01
+    name: 核心数据库
+    ip: 10.0.0.30
+    type: database
+    criticality: critical
+    exposed_to_internet: false
+    owner: dba-team
+    department: 运维
+    services: [mysql]
+    log_sources: [zeek_conn]
+    blast_radius: 数据泄露与业务不可用，禁止任何自动阻断
+    notes: 仅允许 web-prod-01 与备份主机访问；来自其他源的连接一律视为异常
+
+  - asset_id: nas-host-01
+    name: 运维跳板 NAS
+    ip: 10.0.0.20
+    type: host
+    criticality: high
+    exposed_to_internet: true
+    owner: ops-team
+    department: 运维
+    services: [ssh, smb]
+    log_sources: [auth_log, zeek_conn]
+    blast_radius: 跳板机失陷等于内网门户失守
+    notes: 仅开放密钥登录；出现密码认证失败即高度可疑
+
+  - asset_id: backup-01
+    name: 备份主机
+    ip: 10.0.0.40
+    type: host
+    criticality: medium
+    exposed_to_internet: false
+    owner: ops-team
+    department: 运维
+    services: [ssh]
+    log_sources: [auth_log]
+    blast_radius: 备份中断，可恢复
+    notes: 夜间批量传输属正常行为，判断外传时需排除该资产
+
+  # 无法归属的日志统一落到这个资产，禁止留空
+  - asset_id: unknown
+    name: 未登记资产
+    ip: ""
+    type: unknown
+    criticality: low
+    exposed_to_internet: false
+    owner: ""
+    department: ""
+    services: []
+    log_sources: []
+    blast_radius: 未知
+    notes: 出现该 asset_id 说明清洗时没能完成归属，属于数据质量问题，需回溯补台账
