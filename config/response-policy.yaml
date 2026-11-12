@@ -1,0 +1,128 @@
+# 处置授权范围（Response Authorization Policy）
+#
+# 用途：定义 Agent 能申请哪些处置动作、哪些可自动执行、哪些必须人工审批、最长多久自动解除。
+# 这是「受控处置」的权限边界，任何执行器在动手前必须过本文件的校验。
+#
+# 权威性：本文件的 `actions` 是**唯一权威枚举**。
+#   - API 侧 `src/api/config.py` 的 `ALLOWED_RESPONSE_ACTIONS`
+#   - 知识卡 `data/knowledge_cards/*.json` 的 `recommended_action`
+#   都必须落在本文件的键里，否则执行器拒绝执行。
+
+version: "1.0"
+updated: "2026-11-12"
+
+# --- 动作枚举与授权 ------------------------------------------------
+#
+# risk            动作本身的风险等级，决定审批层级
+# auto_execute    true = 满足条件即可自动执行；false = 必须人工审批
+# requires_evidence  是否必须携带 log_id 证据，缺证据一律拒绝
+# max_duration_minutes  单次最长生效时间，到期自动解除
+# target_types    允许作用在哪些资产类型上（防止误伤数据库/备份机）
+# notes           给审批人看的说明
+
+actions:
+  none:
+    display: 无需处置
+    risk: none
+    auto_execute: true
+    requires_evidence: false
+    max_duration_minutes: 0
+    target_types: []
+    notes: 仅记录结论，不产生任何副作用
+
+  rate_limit:
+    display: 限速
+    risk: low
+    auto_execute: true
+    requires_evidence: true
+    max_duration_minutes: 30
+    target_types: [web, host]
+    notes: 对源 IP 做连接/请求限速，30 分钟后自动解除；命中 web 资产时优先用它而不是封禁
+    # 知识卡里写的是 rate_limit_ip，语义相同，执行前统一映射到本键
+    aliases: [rate_limit_ip, throttle_ip]
+
+  block_ip_short_term:
+    display: 短时封禁
+    risk: high
+    auto_execute: false
+    requires_evidence: true
+    max_duration_minutes: 240
+    target_types: [web, host]
+    notes: 4 小时后自动解除；必须人工审批，审批单需附证据编号
+
+  block_ip:
+    display: 长效封禁
+    risk: high
+    auto_execute: false
+    requires_evidence: true
+    max_duration_minutes: 1440
+    target_types: [web]
+    notes: 24 小时后自动解除；仅允许作用于 web 资产，禁止用于数据库与备份机
+
+  isolate_account:
+    display: 账号隔离
+    risk: high
+    auto_execute: false
+    requires_evidence: true
+    max_duration_minutes: 1440
+    target_types: [web, host]
+    notes: 停用账号登录权限；必须人工审批，且需确认账号归属人
+
+# --- 禁止动作 ------------------------------------------------------
+# Agent 可以提出，但永远不执行，只能转人工。防止模型被诱导做出不可逆操作。
+forbidden_actions:
+  - action: delete_data
+    reason: 不可逆，任何场景都不允许 Agent 触发
+  - action: shutdown_host
+    reason: 影响面过大，需人工在运维平台操作
+  - action: modify_firewall_rule
+    reason: 绕过本策略体系，必须走变更流程
+
+# --- 白名单 --------------------------------------------------------
+# 命中的源不进入自动处置，但仍会生成线索供人判断
+allowlist:
+  ips:
+    - ip: 10.0.0.40
+      reason: 备份主机，夜间大流量属正常
+      scope: 全部动作
+    - ip: 127.0.0.1
+      reason: 本机回环，非真实攻击源
+      scope: 全部动作
+  users:
+    # 支持通配：ops_* 覆盖 ops_zhang / ops_li 等运维账号
+    - user: ops_*
+      reason: 运维账号，允许非常规时间登录
+      scope: [isolate_account]   # 允许登录，但禁止被自动隔离
+    - user: ops
+      reason: 通用运维账号
+      scope: [isolate_account]
+  assets:
+    - asset_id: db-core-01
+      reason: 核心数据库，任何自动阻断都会造成业务中断
+      scope: [block_ip, block_ip_short_term]
+
+# --- 审批要求 ------------------------------------------------------
+approval:
+  # 高危动作的审批渠道，与恒脑平台【交互节点】对应
+  channel: hengnao_interactive_node
+  # 审批单必须包含的字段
+  required_fields:
+    - case_id
+    - action
+    - target_ip
+    - evidence_log_ids
+    - expected_effect
+    - rollback_plan
+  # 超时未审批的处理
+  on_timeout: reject
+
+# --- 到期与撤销 ----------------------------------------------------
+lifecycle:
+  auto_revoke: true
+  check_interval_minutes: 5
+  # 处置后必须做的事
+  post_checks:
+    - name: effect_verification
+      description: 确认攻击是否停止（同源 IP 请求是否归零）
+    - name: business_impact
+      description: 确认正常业务未受影响（关键接口成功率）
