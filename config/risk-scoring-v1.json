@@ -1,0 +1,96 @@
+{
+  "scoring_version": "risk-scoring-v1",
+  "risk_levels": {
+    "low": {"min": 1, "max": 25},
+    "medium": {"min": 26, "max": 50},
+    "high": {"min": 51, "max": 75},
+    "critical": {"min": 76, "max": 100}
+  },
+  "component_max_scores": {
+    "rule_strength": 25,
+    "baseline_deviation": 35,
+    "behavior_sensitivity": 20,
+    "event_correlation": 10,
+    "feedback_adjustment": 10
+  },
+  "baseline_severity_scores": {
+    "low": 5,
+    "medium": 15,
+    "high": 25,
+    "critical": 35
+  },
+  "unknown_reason_components": {
+    "rule_strength": 15
+  },
+  "reason_components": {
+    "failed_login_spike": {
+      "rule_strength": 25,
+      "baseline_deviation": 20,
+      "event_correlation": 10
+    },
+    "credential_stuffing_pattern": {
+      "rule_strength": 25,
+      "baseline_deviation": 20,
+      "event_correlation": 10
+    },
+    "new_source_ip": {
+      "rule_strength": 20,
+      "baseline_deviation": 15
+    },
+    "rare_login_hour": {
+      "rule_strength": 15,
+      "baseline_deviation": 10
+    },
+    "sensitive_resource_access": {
+      "rule_strength": 20,
+      "behavior_sensitivity": 20
+    },
+    "new_source_then_sensitive_access": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10
+    },
+    "admin_resource_access": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20
+    },
+    "high_api_rate": {
+      "rule_strength": 25,
+      "baseline_deviation": 10
+    },
+    "download_volume_spike": {
+      "rule_strength": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10
+    },
+    "vpn_traffic_volume_spike": {
+      "rule_strength": 20,
+      "behavior_sensitivity": 20
+    },
+    "permission_change": {
+      "rule_strength": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10
+    },
+    "lateral_movement_signal": {
+      "rule_strength": 25,
+      "baseline_deviation": 20,
+      "event_correlation": 10
+    },
+    "service_account_anomaly": {
+      "rule_strength": 25,
+      "baseline_deviation": 20
+    },
+    "system_error_pattern": {
+      "rule_strength": 25
+    },
+    "maintenance_window": {
+      "feedback_adjustment": -8
+    },
+    "allowlisted_context": {
+      "feedback_adjustment": -10
+    }
+  }
+}
