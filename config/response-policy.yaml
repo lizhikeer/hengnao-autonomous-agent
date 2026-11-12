@@ -89,9 +89,13 @@ allowlist:
       reason: 本机回环，非真实攻击源
       scope: 全部动作
   users:
-    - user: ops
+    # 支持通配：ops_* 覆盖 ops_zhang / ops_li 等运维账号
+    - user: ops_*
       reason: 运维账号，允许非常规时间登录
       scope: [isolate_account]   # 允许登录，但禁止被自动隔离
+    - user: ops
+      reason: 通用运维账号
+      scope: [isolate_account]
   assets:
     - asset_id: db-core-01
       reason: 核心数据库，任何自动阻断都会造成业务中断

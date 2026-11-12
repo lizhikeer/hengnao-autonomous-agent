@@ -38,8 +38,46 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.detection.from_full_chain import to_normalized  # noqa: E402
+from src.detection.context_builder import ContextRegistry  # noqa: E402
 from src.detection.full_chain_rules import detect_supplementary  # noqa: E402
-from src.detection.rules import detect_batch  # noqa: E402
+from src.detection.rules import RuleEngine  # noqa: E402
+
+# 即使落在维护窗口 + 白名单内，这些攻击类型也不降级——窗口是降噪手段，不是免死金牌
+NEVER_EXEMPT_TYPES = {
+    "sql_injection", "malicious_upload", "webshell_access",
+    "path_traversal", "suspicious_outbound", "xss_attempt",
+}
+
+
+def downgrade_exempt(anomalies, logs, registry) -> int:
+    """把「维护窗口 + 白名单」内的运维类线索降到 medium 以下。
+
+    判定按 (src_ip, user_id) 配对：同一主体在窗口内且命中白名单，其触发的
+    非攻击类线索（登录异常、越权、权限变更等）属于正常运维，降级并留下痕迹。
+    """
+    exempt: set[tuple[str, str]] = set()
+    for log in logs:
+        ctx = registry.build(log)
+        if ctx.maintenance_window and ctx.allowlisted_context:
+            exempt.add((log.src_ip or "", log.user_id or ""))
+    if not exempt:
+        return 0
+
+    changed = 0
+    for a in anomalies:
+        if (a.src_ip or "", a.user_id or "") not in exempt:
+            continue
+        if (a.attack_type or "").lower() in NEVER_EXEMPT_TYPES:
+            continue
+        if a.risk_level in ("high", "critical"):
+            a.risk_level = "medium"
+            a.risk_score = min(float(a.risk_score), 50.0)
+            evidence = dict(a.evidence or {})
+            evidence["downgraded_by"] = "maintenance_window+allowlist"
+            a.evidence = evidence
+            changed += 1
+    return changed
+
 
 COLUMNS = (
     "log_id", "trace_id", "timestamp", "log_source", "src_ip", "src_port",
@@ -114,12 +152,22 @@ def main() -> int:
     print(f"读入 {len(rows)} 条日志")
 
     logs = [to_normalized(r) for r in rows]
-    # 两层规则：老项目 RuleEngine（账号/资源语义）+ 针对统一 Schema 的补充规则
-    legacy = detect_batch(logs)
+    # 两层规则：老项目 RuleEngine（账号/资源语义）+ 针对统一 Schema 的补充规则。
+    # 老规则必须带 context 调用：维护窗口与白名单是降权因子，不带 context 等于永久关闭，
+    # 实测会把正常运维场景（CASE-03）误报成 critical。
+    engine = RuleEngine()
+    registry = ContextRegistry()
+    legacy = []
+    for log in logs:
+        legacy.extend(engine.evaluate_log(log, registry.build(log)))
     supplementary = detect_supplementary(logs)
     anomalies = legacy + supplementary
 
+    downgraded = downgrade_exempt(anomalies, logs, registry)
+
     print(f"命中线索 {len(anomalies)} 条（老规则 {len(legacy)} / 补充规则 {len(supplementary)}）")
+    if downgraded:
+        print(f"  维护窗口+白名单降级: {downgraded} 条")
     if anomalies:
         dist = Counter(a.risk_level for a in anomalies)
         rules = Counter(a.attack_type for a in anomalies)

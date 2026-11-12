@@ -165,16 +165,32 @@ def validate_row(row: dict, line_no: int, source_file: str) -> tuple[dict | None
     return out, None
 
 
-def iter_jsonl(path: Path):
-    with path.open(encoding="utf-8") as fp:
-        for idx, line in enumerate(fp, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                yield idx, json.loads(line), None
-            except json.JSONDecodeError as exc:
-                yield idx, None, f"第 {idx} 行 JSON 解析失败: {exc}"
+def iter_records(path: Path):
+    """按行读 JSONL，或整体读 JSON 数组——场景包是后者。"""
+    text = path.read_text(encoding="utf-8").strip()
+    if not text:
+        return
+    # 以 [ 开头视为 JSON 数组
+    if text[0] == "[":
+        try:
+            arr = json.loads(text)
+        except json.JSONDecodeError as exc:
+            yield 1, None, f"JSON 数组解析失败: {exc}"
+            return
+        for idx, row in enumerate(arr, start=1):
+            if isinstance(row, dict):
+                yield idx, row, None
+            else:
+                yield idx, None, f"第 {idx} 个元素不是对象"
+        return
+    for idx, line in enumerate(text.splitlines(), start=1):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            yield idx, json.loads(line), None
+        except json.JSONDecodeError as exc:
+            yield idx, None, f"第 {idx} 行 JSON 解析失败: {exc}"
 
 
 def main() -> int:
@@ -190,9 +206,9 @@ def main() -> int:
     table = env.get("CLICKHOUSE_FULL_CHAIN_TABLE", "log_ai.full_chain_logs")
 
     src = Path(args.input)
-    files = sorted(src.rglob("*.jsonl")) if src.is_dir() else [src]
+    files = sorted(list(src.rglob("*.jsonl")) + list(src.rglob("*.json"))) if src.is_dir() else [src]
     if not files:
-        print(f"[ERR] 未找到任何 .jsonl：{src}", file=sys.stderr)
+        print(f"[ERR] 未找到任何 .jsonl/.json：{src}", file=sys.stderr)
         return 2
 
     total = parsed = dropped = 0
@@ -201,7 +217,7 @@ def main() -> int:
 
     for f in files:
         rel = str(f.relative_to(project_root)) if f.is_relative_to(project_root) else str(f)
-        for line_no, row, err in iter_jsonl(f):
+        for line_no, row, err in iter_records(f):
             total += 1
             if err:
                 dropped += 1
