@@ -1,0 +1,52 @@
+# 维护窗口（Maintenance Windows）
+#
+# 用途：
+#   判断「这个时间点、这个资产上发生的行为是否属于正常运维」，
+#   用于压低误报。它是**降权因子**，不是免死金牌——窗口内的攻击行为仍然要报，
+#   只是风险分会被 `maintenance_window` 这个 reason_code 拉低（见 risk-scoring-v1.json，-8）。
+#
+# 与检测规则的衔接：
+#   `src/detection/rules.py` 通过 `DetectionContext.baseline_deviations` 接收窗口信息；
+#   补充规则在输出 evidence 时也应带上 `in_maintenance_window` 标记。
+#
+# 维护：窗口调整需负责人确认，夜间发布/备份变更要同步更新本文件。
+
+version: "1.0"
+updated: "2026-11-12"
+timezone: Asia/Shanghai
+
+windows:
+  - asset_id: web-prod-01
+    days: [mon, tue, wed, thu, fri, sat, sun]
+    start: "02:00"
+    end: "03:30"
+    activity: 例行发布与备份
+    # 该窗口内允许的动作类型：这些动作本身不构成异常
+    allowed_actions: [deploy, backup, restart]
+    # 即便在窗口内，以下行为仍然照常告警
+    never_exempt: [sql_injection, malicious_upload, webshell_access]
+
+  - asset_id: db-core-01
+    days: [sun]
+    start: "01:00"
+    end: "04:00"
+    activity: 全量备份与索引重建
+    allowed_actions: [backup, index_rebuild]
+    never_exempt: [suspicious_outbound]
+
+  - asset_id: backup-01
+    days: [mon, tue, wed, thu, fri, sat, sun]
+    start: "23:00"
+    end: "23:59"
+    activity: 夜间增量备份（大流量属正常）
+    allowed_actions: [backup, bulk_transfer]
+    never_exempt: [lateral_movement]
+
+  - asset_id: nas-host-01
+    days: [mon, tue, wed, thu, fri, sat, sun]
+    start: "00:00"
+    end: "23:59"
+    activity: 运维随时可登录
+    # 跳板机本身就没有「运维时间」概念，但仍不允许密码登录
+    allowed_actions: [ssh_key_login]
+    never_exempt: [failed_login_spike, brute_force]

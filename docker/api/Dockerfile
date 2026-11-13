@@ -19,6 +19,14 @@ RUN pip install -i "${PIP_INDEX_URL}" -r /app/requirements/base.txt \
 
 COPY src/ /app/src/
 
+# 运行时配置（资产台账 / 维护窗口 / 处置授权 / 风险打分）
+# 缺了它 get_context 会因找不到 config/assets.yaml 直接 503
+COPY config/ /app/config/
+
+# 数据集回放与知识卡：未接 ClickHouse 时的回放来源，体积很小一并带上
+COPY data/full_chain_logs/ /app/data/full_chain_logs/
+COPY data/knowledge_cards/ /app/data/knowledge_cards/
+
 # 非 root 运行
 RUN useradd --create-home --uid 10001 seclog && chown -R seclog:seclog /app
 USER seclog
@@ -28,6 +36,13 @@ EXPOSE 8000
 HEALTHCHECK --interval=20s --timeout=5s --start-period=20s --retries=5 \
     CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"
 
-# src.api:app 由 @chensz-u 在 Issue #4 中提供；W1 联调期若尚未合入，
-# 可临时用 `CMD ["python", "-m", "src.health_server"]` 启动最小 /health 服务。
-CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# 同时挂载 REST 与 MCP：
+#   /            REST（src/api/app.py，由 @chensz-u 提供）
+#   /mcp/        MCP 全量工具（注意尾部斜杠，Starlette Mount + streamable_http_path="/"）
+#   /investigation/  仅只读调查工具，处置工具由审批后的节点单独调用
+# service.py 用 `from api.app import ...` 这种以 src/ 为根的导入，所以两个路径都要进 PYTHONPATH：
+#   /app      → 供 `src.api.service` 被 uvicorn 解析
+#   /app/src  → 供 service.py 内部的 `from api.app` / `from mcp_server.server` 解析
+ENV PYTHONPATH=/app:/app/src
+
+CMD ["uvicorn", "src.api.service:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]

@@ -40,6 +40,29 @@ ACTIONS = ("block_ip", "block_ip_short_term", "rate_limit", "none")
 HIGH_RISK_ACTIONS = ("block_ip", "block_ip_short_term")
 INSUFFICIENT = "insufficient_evidence"
 
+#: 首期七类口径（与 ``ai_engine.attack_types`` 保持同步，测试会断言一致）。
+#: 这里内联而不 import，是为了让本文件仍能整段粘进恒脑代码节点（纯标准库、零依赖）。
+VALID_ATTACK_SEGMENTS = frozenset(
+    {
+        # 七类结果分类（独立语义，互不合并）
+        "Scan",
+        "Brute_Force",
+        "SQL_Injection",
+        "XSS",
+        "Path_Traversal_Privilege",
+        "Malicious_Upload",
+        "C2_Exfiltration",
+        # 非攻击结论
+        INSUFFICIENT,
+        "none",
+        # 历史兼容：第二周初版的合并类与兜底值，仅放行旧产物，不再作为新输出目标
+        "XSS_RCE",
+        "File_Upload_Traversal",
+        "C2_Callback",
+        "Unknown_Attack",
+    }
+)
+
 
 @dataclass
 class VerifyResult:
@@ -125,6 +148,19 @@ def verify_triage(
         )
 
     # --- 结论与证据的联动 ---
+    attack_type = str(data.get("attack_type") or "")
+    parts = attack_type.split("_After_")
+    if any(not p for p in parts) or (len(parts) > 1 and any(p in {"none", INSUFFICIENT} for p in parts)):
+        problems.append("attack_type 分段为空或非攻击状态参与组合")
+    bad_segments = [
+        seg for seg in (p for p in attack_type.split("_After_") if p) if seg not in VALID_ATTACK_SEGMENTS
+    ]
+    if bad_segments:
+        problems.append(
+            "attack_type 含未定义的攻击类别：" + ",".join(bad_segments)
+            + "（首期七类见 ai_engine/attack_types.py）"
+        )
+
     is_malicious = data.get("is_malicious") is True
     if is_malicious and not ids:
         problems.append("判定为恶意但未提供任何证据编号")

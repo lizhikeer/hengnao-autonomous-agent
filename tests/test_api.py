@@ -134,15 +134,18 @@ def test_query_logs_time_window_accepts_hours(client):
     assert r.status_code == 200
 
 
-def test_real_backend_switch_returns_503(monkeypatch, client):
-    """要求真实后端但未接入时必须 503，不得用 Mock 数据冒充。"""
+def test_clickhouse_mode_without_backend_returns_503(monkeypatch, client):
+    """显式要求 ClickHouse 但连不上时必须 503，不得用 Mock 数据冒充。"""
+    monkeypatch.setenv("SECLOG_DATA_SOURCE", "clickhouse")
     app_module = importlib.import_module("api.app")
-    monkeypatch.setattr(app_module, "_REAL_BACKEND_REQUESTED", True)
+    app_module.reset_source_cache()
     r = client.post("/tools/query_logs", json={"trace_id": "CHAIN-ATTACK-01"})
     assert r.status_code == 503
     body = r.json()
     assert body["code"] == "backend_unavailable"
     assert body["details"]["backend_available"] is False
+    assert body["details"]["backend"] == "clickhouse"
+    app_module.reset_source_cache()
 
 
 # ---------------------------------------------------------------------------
@@ -151,11 +154,13 @@ def test_real_backend_switch_returns_503(monkeypatch, client):
 
 
 def test_get_context_returns_profile_and_asset(client):
-    r = client.post("/tools/get_context", json={"user": "admin", "asset_id": "web-prod-01"})
+    # 语义变化：账号画像只来自 config/response-policy.yaml 的白名单，
+    # 只有运维账号（ops_*）会被认作已登记；admin 不在白名单，故用 ops_zhang。
+    r = client.post("/tools/get_context", json={"user": "ops_zhang", "asset_id": "web-prod-01"})
     assert r.status_code == 200
     body = r.json()
     assert body["meta"]["total"] == 2
-    assert body["user_profile"]["user"] == "admin"
+    assert body["user_profile"]["user"] == "ops_zhang"
     assert body["asset_context"]["importance"] == "HIGH"
     assert body["asset_context"]["whitelisted"] is False
 

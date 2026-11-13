@@ -23,6 +23,7 @@ from __future__ import annotations
 import os
 import sys
 from dataclasses import dataclass, field
+import datetime as _dt
 from typing import Any, Callable, Optional
 
 # 允许以 `python src/ai_engine/investigation.py` 单独运行
@@ -30,6 +31,8 @@ _SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
+from ai_engine.redaction import redact_text
+from ai_engine import attack_types  # noqa: E402
 from ai_engine.results_schema import AgentResults, build_insufficient_evidence  # noqa: E402
 
 #: 内部/保留地址段，不当作攻击源
@@ -37,6 +40,10 @@ _PRIVATE_PREFIXES = ("10.", "127.", "192.168.", "169.254.")
 _PRIVATE_172 = tuple(f"172.{i}." for i in range(16, 32))
 
 MAX_ROUNDS_DEFAULT = 8
+
+#: 需要维护窗口佐证的账号类型：运维/服务账号在受管资产上的操作必须有窗口依据。
+#: 普通业务账号（application_admin 等）不在此列，避免给正常访问强加运维约束。
+WINDOW_REQUIRED_ACCOUNT_TYPES = {"legit_operator", "service"}
 MAX_EMPTY_STREAK = 2  # 连续两轮零新增证据即收束
 
 
@@ -106,6 +113,8 @@ class InvestigationSession:
 
         # 2) 上一轮零结果：放宽条件重试一次（不要立刻判"无攻击"）
         if self.empty_streak == 1 and not self.seen["query_logs_broadened"]:
+            if self.seed_trace_id:
+                return None  # 精确场景不存在，不能转为全库扫描
             args = {"case_id": self.case_id, "limit": 100}
             if self.seed_src_ip:
                 args["src_ip"] = self.seed_src_ip
@@ -124,12 +133,16 @@ class InvestigationSession:
         stages = self._stage_counts()
 
         # 3) 有日志但还没有账号/资产上下文：判断"广域扫描"还是"定向打点"必须靠基线
-        if not self.seen["get_context"] and (stages.get("brute_force") or self._first_user()):
+        if not self.seen["get_context"] and (stages.get("brute_force") or self._first_user() or self._first_asset()):
             args: dict[str, Any] = {}
             if self._first_user():
                 args["user"] = self._first_user()
             if self.seed_asset_id or self._first_asset():
                 args["asset_id"] = self.seed_asset_id or self._first_asset()
+            # 带上被调查行为的时间，服务端才能判断是否落在维护窗口内
+            focus = self._focus_time()
+            if focus:
+                args["at_time"] = focus
             if args:
                 return ToolCall(
                     "get_context",
@@ -183,6 +196,7 @@ class InvestigationSession:
                 "total": (result.get("meta") or {}).get("total", 0),
             }
         elif call.tool == "search_knowledge":
+            self.findings["knowledge_status"] = result
             self.findings["knowledge"] = result.get("items") or []
         elif call.tool == "request_response":
             self.findings["response"] = result
@@ -214,43 +228,409 @@ class InvestigationSession:
     # 结论
     # ------------------------------------------------------------------
 
-    def build_results(self) -> AgentResults:
-        stages = self._stage_counts()
-        attacker_ip = self._guess_attacker_ip()
-        victim_asset = self.seed_asset_id or self._first_asset() or "unknown"
+    # ------------------------------------------------------------------
+    # 行为事实（与人工标签无关）
+    # ------------------------------------------------------------------
 
-        if not self.evidence_ids:
-            return build_insufficient_evidence(
-                case_id=self.case_id,
-                attacker_ip=attacker_ip or "unknown",
-                victim_asset=victim_asset,
-                evidence_log_ids=[],
-                missing=[
-                    "本次调查未取得任何可引用日志（query_logs 两轮均为零结果）",
-                    "无法确认攻击源与受害资产，需人工核对日志采集链路与时间窗",
-                ],
-                summary="两轮放宽条件后仍无日志命中，无法判断是否存在攻击，未作恶意结论。",
+    #: 常见 C2 回连端口；仅作为"外连可疑"的辅助信号，不单独定性
+    _C2_PORTS = {4444, 5555, 1337, 6667, 8888, 9001}
+
+    @staticmethod
+    def _event_time(log: dict[str, Any]) -> _dt.datetime:
+        from api.datasource import _parse_ts
+        return _parse_ts(log.get("timestamp")) or _dt.datetime.min.replace(tzinfo=_dt.timezone.utc)
+
+    @staticmethod
+    def _interactive_login(log: dict[str, Any]) -> bool:
+        action = str(log.get("action_or_method") or "").lower()
+        target = str(log.get("uri_or_target") or "").lower()
+        return ("ssh" in action or "interactive" in action or
+                (log.get("log_source") == "auth_log" and target == "sshd"
+                 and action in {"login_success", "session_opened"}))
+
+    def _c2_signal(self, log: dict[str, Any]) -> bool:
+        """只把明确的回连行为描述作为线索，端口与人工标签不证明 C2。"""
+        payload = str(log.get("payload_summary") or "").lower()
+        fields = dict(part.strip().split("=", 1) for part in payload.split(";") if "=" in part)
+        if fields.get("conn_state") != "sf" or "beacon" not in payload or any(word in payload for word in ("disabled", "health", "backup", "approved")):
+            return False
+        if not self._is_external(log.get("dest_ip")) or log.get("log_source") not in {"zeek_conn", "zeek_http"}:
+            return False
+        # 回连必须关联同一主机此前的明确 Webshell 行为，单独心跳不定性。
+        from urllib.parse import urlsplit
+        from ipaddress import ip_address
+        import re
+        try:
+            destination = ip_address(str(log.get("dest_ip")))
+        except ValueError:
+            return False
+        for prior in self.logs:
+            if not (prior.get("dest_ip") == log.get("src_ip")
+                    and self._event_time(prior) < self._event_time(log)
+                    and prior.get("log_source") in {"nginx_access", "zeek_http"}
+                    and 200 <= (prior.get("status_code") or 0) < 300):
+                continue
+            text = str(prior.get("payload_summary") or "")
+            # URL 与括号地址先整体消费，不能再从 IPv6 内提取 IPv4 尾部。
+            tokens = re.findall(r"[a-zA-Z][a-zA-Z0-9+.-]*://[^\s\"'<>;]+|\[[0-9a-fA-F:.]+\](?::[0-9]+)?|(?<![\w:.])[0-9a-fA-F:.]+(?![\w:.])", text)
+            addresses = set()
+            for token in tokens:
+                try:
+                    if "://" in token or token.startswith("["):
+                        host = urlsplit(token if "://" in token else "//" + token).hostname
+                        addresses.add(ip_address(host))
+                    else:
+                        try:
+                            addresses.add(ip_address(token))
+                        except ValueError:
+                            # 裸 IPv4:port；完整裸 IPv6 已由上一步解析。
+                            addresses.add(ip_address(urlsplit("//" + token).hostname))
+                except ValueError:
+                    continue
+            if destination not in addresses:
+                continue
+            try:
+                path = urlsplit(str(prior.get("uri_or_target") or "")).path
+            except ValueError:
+                errors = self.findings.setdefault("request_target_errors", {})
+                errors[str(prior.get("log_id") or "unknown")] = "请求目标解析失败，未用于 C2 关联"
+                continue
+            if path.lower().rsplit("/", 1)[-1] in {"shell.php", "c99.php"}:
+                return True
+        return False
+
+    def _brute_failure_ids(self) -> set[str]:
+        """暂定本地规则：同源、同目标、同账号五分钟内至少五次失败。"""
+        groups: dict[tuple, dict[str, tuple]] = {}
+        markers = ("invalid_password", "failed password", "authentication failure", "auth_fail", "登录失败", "invalid user")
+        for log in self.logs:
+            if log.get("log_source") != "auth_log":
+                continue
+            text = str(log.get("payload_summary") or "").lower()
+            if not any(m in text for m in markers):
+                continue
+            try:
+                stamp = _dt.datetime.fromisoformat(str(log.get("timestamp")).replace("Z", "+00:00"))
+                if stamp.tzinfo is None:
+                    stamp = stamp.replace(tzinfo=_dt.timezone.utc)
+            except ValueError:
+                continue
+            key = (log.get("src_ip"), log.get("asset_id") or log.get("dest_ip"), log.get("user"))
+            if not all(key) or not log.get("log_id"):
+                continue
+            groups.setdefault(key, {})[log["log_id"]] = (stamp, log["log_id"])
+        accepted = set()
+        for group in groups.values():
+            rows = sorted(group.values())
+            for stamp, _ in rows:
+                window = [lid for t, lid in rows if 0 <= (t - stamp).total_seconds() <= 300]
+                if len(window) >= 5:
+                    accepted.update(window)
+        return accepted
+
+    def _behavior_facts(self) -> dict[str, Any]:
+        """从日志事实提取攻击证据，**不以人工阶段标签为依据**。
+
+        三层区分：
+
+        * ``attack``：命中**强特征**（注入语法、攻击工具 UA、webshell 路径、路径穿越、
+          外连信号）。正常业务基本不会出现这些字符串，才可支撑"攻击成立"；
+        * ``leads``：只命中**弱特征**（robots.txt、upload、filename=、multipart、.php 等）。
+          这些在日常流量里很常见，单独不构成攻击，只作为线索记录；
+        * ``impact``：attack 中带影响迹象的（外连已建立，或强特征且请求被受理）。
+
+        HTTP 2xx 只表示请求被处理过，**不能单独**证明利用成功——所以它只在与强特征同时
+        出现时才计入 impact，且不因此把风险抬到 CRITICAL。
+        外部 IP 只是来源属性，不参与定性。
+        """
+        attack: list[dict[str, Any]] = []
+        c2_logs: list[dict[str, Any]] = []
+        responded: list[dict[str, Any]] = []
+        leads: list[dict[str, Any]] = []
+        unexplained: list[dict[str, Any]] = []
+        kinds: list[str] = []
+        #: 每条日志各自命中的类别，供分类/摘要/证据回溯
+        log_kinds: dict[str, list[str]] = {}
+
+        brute_ids = self._brute_failure_ids()
+        for log in self.logs:
+            text = " ".join(
+                str(log.get(k) or "")
+                for k in ("uri_or_target", "payload_summary", "user_agent")
             )
+            signals = attack_types.classify_signals(text)
+            stage = self._stage_of(log)
+            status = log.get("status_code") or 0
+            c2 = self._c2_signal(log)
 
-        malicious = bool(stages.get("exploitation") or stages.get("c2_callback")) or (
-            stages.get("brute_force", 0) >= 3
-        )
-        if not malicious:
-            missing = []
-            if self.round >= self.max_rounds:
-                missing.append("调查达到轮次上限，尚不能确认不存在攻击")
-            if self.no_new_evidence_streak >= MAX_EMPTY_STREAK:
-                missing.append("连续查询无新增证据，尚不能排除攻击")
-            if any(log.get("attack_stage_hint") != "benign" for log in self.logs):
-                missing.append("现有日志包含可疑行为或阶段不明，证据不足以判定攻击是否成立")
-            if missing:
-                return build_insufficient_evidence(
-                    case_id=self.case_id,
-                    attacker_ip=attacker_ip or "unknown",
-                    victim_asset=victim_asset,
-                    evidence_log_ids=list(self.evidence_ids),
-                    missing=missing,
+            strong = [k for k in signals["strong"] if k not in {"Brute_Force", "C2_Exfiltration"}]
+            if log.get("log_id") in brute_ids or any(tool in text.lower() for tool in ("hydra", "medusa")):
+                strong.append("Brute_Force")
+            if c2 and "C2_Exfiltration" not in strong:
+                strong.append("C2_Exfiltration")
+
+            if strong:
+                attack.append(log)
+                kinds.extend(strong)
+                log_id = log.get("log_id")
+                if log_id:
+                    log_kinds[str(log_id)] = strong
+                if c2 and "conn_state=sf" in [part.strip() for part in str(log.get("payload_summary") or "").lower().split(";")]:
+                    c2_logs.append(log)
+                elif 200 <= status < 300:
+                    # 强特征 + 2xx：说明攻击请求得到了响应，**不等于利用成功**
+                    responded.append(log)
+            elif signals["weak"]:
+                # 弱特征：只是线索。只有当日志本身还带可疑标记（非 benign 阶段 / 5xx）才需解释
+                if stage != "benign" or status >= 500:
+                    unexplained.append(log)
+                else:
+                    leads.append(log)
+            elif stage != "benign" or status >= 500:
+                unexplained.append(log)
+
+        return {
+            "attack": attack,
+            "c2": c2_logs,
+            "responded": responded,
+            "leads": leads,
+            "unexplained": unexplained,
+            "kinds": kinds,
+            "log_kinds": log_kinds,
+            "has_attack": bool(attack),
+            # 确认影响：只有外连建立（可延伸到外传判定）；"被响应"不算确认影响
+            "has_confirmed_impact": bool(c2_logs),
+        }
+
+    # ------------------------------------------------------------------
+    # 授权核对
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _in_window(asset: dict[str, Any], timestamp: Optional[str]) -> bool:
+        """按日志时间判断是否落在资产的维护窗口内（固定 UTC+8）。"""
+        windows = asset.get("maintenance_windows") or []
+        if not windows:
+            return False
+        if not timestamp:
+            return False
+        try:
+            text = str(timestamp).replace("Z", "+00:00")
+            dt = _dt.datetime.fromisoformat(text)
+        except ValueError:
+            return False
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_dt.timezone.utc)
+        local = dt.astimezone(_dt.timezone(_dt.timedelta(hours=8)))
+        weekday = local.strftime("%a").lower()[:3]
+        for window in windows:
+            # 兼容两种写法：config/maintenance-windows.yaml 用 days，早期自建配置用 weekdays
+            days = [
+                str(d).lower()[:3]
+                for d in (window.get("days") or window.get("weekdays") or [])
+            ]
+            if days and weekday not in days:
+                continue
+            try:
+                sh, sm = (int(x) for x in str(window.get("start", "00:00")).split(":"))
+                eh, em = (int(x) for x in str(window.get("end", "00:00")).split(":"))
+            except ValueError:
+                continue
+            start = local.replace(hour=sh, minute=sm, second=0, microsecond=0)
+            end = local.replace(hour=eh, minute=em, second=0, microsecond=0)
+            if end <= start:
+                end += _dt.timedelta(days=1)
+            if start <= local <= end:
+                return True
+        return False
+
+    def _authorization(self) -> dict[str, Any]:
+        """核对账号、来源、目标资产与维护窗口。
+
+        三条硬要求：
+        1. **画像必须与被判断的账号一一对应**，不能拿一个账号的画像批准整批日志；
+        2. **空配置不等于不限范围**：缺来源/资产依据时保留不确定性，而不是跳过检查；
+        3. **按行为类型取必要条件**：只有运维/服务类账号才要求落在维护窗口内，
+           普通业务访问不强行套窗口。
+        """
+        ctx = self.findings.get("context") or {}
+        profile = ctx.get("user_profile")
+        asset = ctx.get("asset_context")
+        checks: dict[str, bool] = {}
+        notes: list[str] = []
+
+        if not ctx.get("total"):
+            return {
+                "available": False,
+                "authorized": False,
+                "checks": {},
+                "failed": [],
+                "notes": ["未取得账号与资产上下文，无法核对授权"],
+                "subjects": [],
+                "evidence": {},
+            }
+
+        account_logs = [log for log in self.logs if log.get("user")]
+        if any(not log.get("src_ip") or not log.get("asset_id") for log in account_logs):
+            notes.append("行为缺少来源或实际资产，无法核对授权")
+        if any(log.get("asset_id") != (asset or {}).get("asset_id") for log in account_logs):
+            notes.append("实际资产与上下文不匹配，不能复用其他资产窗口")
+        if profile and profile.get("is_service_account") and any(self._interactive_login(log) for log in account_logs):
+            notes.append("服务账号交互式登录不在授权范围")
+        if not account_logs:
+            return {
+                "available": True,
+                "authorized": False,
+                "checks": {"账号已登记": False},
+                "failed": ["账号已登记"],
+                "notes": ["日志中未出现账号信息，无法核对授权"],
+                "subjects": [],
+            }
+
+        users = sorted({log["user"] for log in account_logs})
+        if len(users) > 1:
+            raise_multi = f"同一批日志出现多个账号：{', '.join(users)}，无法用单一画像批准"
+            checks["账号唯一"] = False
+            notes.append(raise_multi)
+        elif profile is None or profile.get("user") != users[0]:
+            checks["账号已登记"] = False
+            notes.append(
+                f"画像与日志账号不匹配（画像 {profile.get('user') if profile else None}，日志 {users[0]}）"
+            )
+        else:
+            checks["账号已登记"] = True
+            checks["账号类型可执行该操作"] = profile.get("account_type") in {
+                "legit_operator",
+                "service",
+                "application_admin",
+            }
+
+            # 来源：必须有**行为授权范围**才能判断"这个来源是否被允许"。
+            # 注意 config/response-policy.yaml#allowlist.ips 是"处置豁免名单"
+            # （不自动封禁），不是"账号只能从这些 IP 登录"，不能拿来当授权依据。
+            srcs = {log.get("src_ip") for log in account_logs if log.get("src_ip")}
+            source_scope = "common_src_ips" in profile or profile.get("source_scope_provided") is True
+            if not source_scope:
+                checks["来源授权范围"] = False
+                notes.append(
+                    "配置未提供该账号的来源授权范围（allowlist 只是处置豁免），"
+                    f"无法确认来源 {sorted(srcs)} 是否被允许"
                 )
+            else:
+                allowed_src = list(profile.get("common_src_ips") or [])
+                if not allowed_src:
+                    checks["来源授权范围"] = False
+                    notes.append("账号画像的来源授权范围为空，不能视为不限范围")
+                else:
+                    checks["来源 IP 符合授权范围"] = srcs <= set(allowed_src)
+                    if not checks["来源 IP 符合授权范围"]:
+                        notes.append(f"来源 IP {sorted(srcs - set(allowed_src))} 不在授权范围")
+
+            # 资产：同理，必须来自配置的账号-资产范围；未提供就不能判"未越权"。
+            targets = {log.get("asset_id") for log in account_logs if log.get("asset_id")}
+            asset_scope = "allowed_assets" in profile or profile.get("asset_scope_provided") is True
+            if targets and not asset_scope:
+                checks["资产授权范围"] = False
+                notes.append(
+                    f"配置未提供该账号的资产授权范围，无法确认 {sorted(targets)} 是否属于授权资产"
+                )
+            elif targets:
+                allowed_assets = list(profile.get("allowed_assets") or [])
+                if not allowed_assets:
+                    checks["资产授权范围"] = False
+                    notes.append("账号画像的资产授权范围为空")
+                else:
+                    checks["目标资产在授权范围"] = targets <= set(allowed_assets)
+                    if not checks["目标资产在授权范围"]:
+                        notes.append(f"资产 {sorted(targets - set(allowed_assets))} 不在授权范围")
+
+            # 是否需要维护窗口佐证，由**账号类型**这条规则决定，而不是"配置里有没有窗口"。
+            # 否则"没配置"会被读成"不需要检查"，把缺失当成合规。
+            needs_window = profile.get("account_type") in WINDOW_REQUIRED_ACCOUNT_TYPES
+            if needs_window:
+                windows = (asset or {}).get("maintenance_windows") or []
+                if not windows:
+                    checks["维护窗口配置"] = False
+                    notes.append(
+                        f"账号类型 {profile.get('account_type')} 要求维护窗口佐证，"
+                        "但资产未配置任何 maintenance_windows，无法核验"
+                    )
+                else:
+                    outside = [
+                        log
+                        for log in account_logs
+                        if not self._in_window(asset or {}, log.get("timestamp"))
+                    ]
+                    checks["全部行为在维护窗口内"] = not outside
+                    if outside:
+                        notes.append(
+                            f"{len(outside)} 条账号行为落在维护窗口外（"
+                            + ", ".join(sorted({str(log.get('timestamp')) for log in outside})[:3])
+                            + "）"
+                        )
+
+        if asset is not None:
+            checks["资产已登记"] = True
+        else:
+            notes.append("未取得目标资产上下文")
+
+        authorized = bool(checks) and all(checks.values()) and not notes
+        return {
+            "available": True,
+            "authorized": authorized,
+            "checks": checks,
+            "failed": [k for k, v in checks.items() if not v],
+            "notes": notes,
+            "subjects": users,
+            "evidence": {
+                "account_type": (profile or {}).get("account_type"),
+                "allowed_src_ips": (profile or {}).get("common_src_ips") or [],
+                "allowed_assets": (profile or {}).get("allowed_assets") or [],
+                "source_scope_provided": "common_src_ips" in (profile or {})
+                or (profile or {}).get("source_scope_provided") is True,
+                "asset_scope_provided": "allowed_assets" in (profile or {})
+                or (profile or {}).get("asset_scope_provided") is True,
+                "disposition_exempt": (profile or {}).get("disposition_exempt"),
+                "observed_src_ips": sorted({log.get("src_ip") for log in account_logs if log.get("src_ip")}),
+                "observed_assets": sorted({log.get("asset_id") for log in account_logs if log.get("asset_id")}),
+                "evaluated_at": self._focus_time(),
+                "maintenance_windows": (asset or {}).get("maintenance_windows") or [],
+                "per_log_in_window": (
+                    {
+                        str(log.get("timestamp")): self._in_window(asset or {}, log.get("timestamp"))
+                        for log in account_logs
+                    }
+                    if (asset or {}).get("maintenance_windows")
+                    else {}
+                ),
+            },
+        }
+
+    def _focus_time(self) -> Optional[str]:
+        """被调查行为的代表时间：最后一条非 benign 日志，否则最后一条日志。"""
+        suspicious = [l for l in self.logs if self._stage_of(l) != "benign" and l.get("timestamp")]
+        pool = suspicious or [l for l in self.logs if l.get("timestamp")]
+        return pool[-1]["timestamp"] if pool else None
+
+    def _build_non_attack(
+        self, *, attacker_ip: Optional[str], victim_asset: str, facts: dict[str, Any]
+    ) -> AgentResults:
+        """没有确认的攻击：授权核对全部通过且无未解释行为才判"正常"，否则弃权。"""
+        auth = self._authorization()
+        # 存下来供轨迹核验"为什么这么判"
+        self.findings["authorization"] = auth
+        evidence = self._evidence_ids(facts)
+        unresolved = facts["unexplained"]
+
+        if auth["authorized"] and not unresolved:
+            basis = "、".join(k for k, v in auth["checks"].items() if v) or "账号/来源/资产/窗口"
+            summary = (
+                f"未发现攻击载荷或外连迹象；账号 {', '.join(auth.get('subjects') or []) or '-'} "
+                f"经上下文核对（{basis}）与授权范围一致，判定为授权运维/业务行为。"
+            )
+            self._record_conclusion_basis(
+                facts, attack_type="none", risk="LOW", summary=summary, attacker_ip=attacker_ip
+            )
             return AgentResults(
                 case_id=self.case_id,
                 is_malicious=False,
@@ -258,32 +638,133 @@ class InvestigationSession:
                 risk_level="LOW",
                 attacker_ip=attacker_ip or "unknown",
                 victim_asset=victim_asset,
-                evidence_log_ids=list(self.evidence_ids),
-                attack_chain_summary="已查日志中未发现利用或外连行为，仅见正常访问，判定为无恶意行为。",
+                evidence_log_ids=evidence,
+                attack_chain_summary=summary,
                 recommended_action="none",
                 requires_human_approval=False,
                 unknown_items=self._unknown_items(),
             )
 
-        risk = "HIGH"
-        if stages.get("c2_callback"):
-            risk = "CRITICAL" if stages.get("exploitation") else "HIGH"
-        elif stages.get("exploitation", 0) == 0:
+        missing: list[str] = []
+        if not auth["available"]:
+            missing.append("上下文不可用，无法判断该行为是否属授权范围")
+        else:
+            if auth["failed"]:
+                missing.append("授权核对未通过：" + "、".join(auth["failed"]))
+            if auth["notes"]:
+                missing.append("；".join(auth["notes"]))
+        for log_id, reason in self.findings.get("request_target_errors", {}).items():
+            missing.append(f"{log_id}：{reason}，保留待查")
+        if unresolved:
+            stages = sorted({self._stage_of(log) for log in unresolved})
+            missing.append(
+                f"{len(unresolved)} 条日志存在未解释的行为（阶段标注 {', '.join(stages)}，"
+                "但无攻击载荷特征），不能据此确认攻击成立，也不能判为正常"
+            )
+        if self.round >= self.max_rounds:
+            missing.append("调查达到轮次上限，尚不能确认不存在攻击")
+        if not missing:
+            missing.append("证据不足以判定该行为是否恶意")
+
+        abstain_summary = "未确认攻击成立，也未取得充分的授权依据，不判定为正常，交人工复核。"
+        self._record_conclusion_basis(
+            facts,
+            attack_type="insufficient_evidence",
+            risk="LOW",
+            summary=abstain_summary,
+            attacker_ip=attacker_ip,
+        )
+        return build_insufficient_evidence(
+            case_id=self.case_id,
+            attacker_ip=attacker_ip or "unknown",
+            victim_asset=victim_asset,
+            evidence_log_ids=evidence,
+            missing=missing,
+            summary=abstain_summary,
+        )
+
+    def _evidence_ids(self, facts: Optional[dict[str, Any]] = None) -> list[str]:
+        """挑出支撑结论的证据编号，**依据与判定同一套行为事实**。
+
+        顺序：
+        1. 有攻击 → 用命中强特征的那些日志（结论由它们推出，证据就必须是它们）；
+        2. 无攻击但有未解释线索 → 用这些线索（弃权也要说清基于哪几条）；
+        3. 判正常 → 用带账号的行为日志（授权判断的依据），没有账号则取首尾各一条。
+
+        刻意不再按 ``attack_stage_hint`` 挑证据：标签是人工标注，
+        用它挑证据会出现"结论来自载荷、证据却引用普通访问"的错配。
+        """
+        facts = facts if facts is not None else self._behavior_facts()
+        attack_ids = [log["log_id"] for log in facts["attack"] if log.get("log_id")]
+        if attack_ids:
+            return attack_ids
+        unexplained_ids = [log["log_id"] for log in facts["unexplained"] if log.get("log_id")]
+        if unexplained_ids:
+            return unexplained_ids
+        account = [log["log_id"] for log in self.logs if log.get("user") and log.get("log_id")]
+        if account:
+            return account[:8]
+        ids = [log["log_id"] for log in self.logs if log.get("log_id")]
+        return ids[:1] + ids[-1:] if len(ids) > 1 else ids
+
+    def build_results(self) -> AgentResults:
+        # 先算行为事实：攻击源、分类、风险、摘要、证据**全部**从这一份事实派生，
+        # 避免"结论来自 A、证据引用 B、风险来自 C"的不同源问题。
+        facts = self._behavior_facts()
+        attacker_ip = self._guess_attacker_ip(facts)
+        victim_asset = self.seed_asset_id or self._first_asset() or "unknown"
+
+        errors = [r for r in self.results if r.get("code")]
+        if errors and not self.evidence_ids:
+            return build_insufficient_evidence(case_id=self.case_id, attacker_ip="unknown", victim_asset=victim_asset, evidence_log_ids=[], missing=[redact_text(str(r.get("message") or r.get("code"))) for r in errors], summary="日志工具调用失败，未取得可核验证据；不能视为零命中。")
+        if not self.evidence_ids:
+            return build_insufficient_evidence(
+                case_id=self.case_id,
+                attacker_ip=attacker_ip or "unknown",
+                victim_asset=victim_asset,
+                evidence_log_ids=[],
+                missing=[
+                    "本次调查未取得任何可引用日志",
+                    "无法确认攻击源与受害资产，需人工核对日志采集链路与时间窗",
+                ],
+                summary="当前关联条件下未取得日志，无法判断是否存在攻击。",
+            )
+
+        if not facts["has_attack"]:
+            return self._build_non_attack(
+                attacker_ip=attacker_ip, victim_asset=victim_asset, facts=facts
+            )
+
+        # 字节量只能说明传输规模，不能证明数据外泄。
+        if facts["c2"] or facts["responded"]:
+            risk = "HIGH"
+        else:
             risk = "MEDIUM"
 
         action = "block_ip" if risk in {"HIGH", "CRITICAL"} else "block_ip_short_term"
+        attack_type = self._attack_type(facts)
+        summary = self._chain_summary(facts, attacker_ip, victim_asset)
+        self._record_conclusion_basis(
+            facts,
+            attack_type=attack_type,
+            risk=risk,
+            summary=summary,
+            attacker_ip=attacker_ip,
+        )
+        if not attacker_ip:
+            action = "none"
         return AgentResults(
             case_id=self.case_id,
             is_malicious=True,
-            attack_type=self._attack_type(stages),
+            attack_type=attack_type,
             risk_level=risk,  # type: ignore[arg-type]
             attacker_ip=attacker_ip or "unknown",
             victim_asset=victim_asset,
-            evidence_log_ids=list(self.evidence_ids),
-            attack_chain_summary=self._chain_summary(stages, attacker_ip, victim_asset),
+            evidence_log_ids=self._evidence_ids(facts),
+            attack_chain_summary=summary,
             recommended_action=action,  # type: ignore[arg-type]
             requires_human_approval=True,  # 封禁类动作一律需人工审批
-            unknown_items=self._unknown_items(),
+            unknown_items=self._unknown_items(facts=facts),
         )
 
     # ------------------------------------------------------------------
@@ -291,11 +772,21 @@ class InvestigationSession:
     # ------------------------------------------------------------------
 
     def _stage_counts(self) -> dict[str, int]:
+        """按阶段计数。**缺失标签归为 unknown，而不是 benign**。
+
+        ``attack_stage_hint`` 是队友做日志清洗时的人工标注，属于线索而非判据：
+        缺失时必须保留"未知"，否则去掉标签后所有日志都会被当成正常流量，
+        等于把"没标注"读成"没问题"。
+        """
         counts: dict[str, int] = {}
         for log in self.logs:
-            stage = log.get("attack_stage_hint") or "benign"
+            stage = log.get("attack_stage_hint") or "unknown"
             counts[stage] = counts.get(stage, 0) + 1
         return counts
+
+    @staticmethod
+    def _stage_of(log: dict[str, Any]) -> str:
+        return log.get("attack_stage_hint") or "unknown"
 
     def _first_user(self) -> Optional[str]:
         return next((log.get("user") for log in self.logs if log.get("user")), None)
@@ -310,12 +801,17 @@ class InvestigationSession:
             return False
         return True
 
-    def _guess_attacker_ip(self) -> Optional[str]:
-        """取出现次数最多的外部源 IP（排除内网/保留地址）。"""
+    def _guess_attacker_ip(self, facts: Optional[dict[str, Any]] = None) -> Optional[str]:
+        """从**攻击行为日志**定位攻击源。
+
+        不再按 ``benign`` 标签排除：标签是人工标注，而"这条日志带注入载荷"是日志事实。
+        优先级：攻击日志 → 未解释线索；两者都没有时返回 ``None``
+        （判正常的场景不该把某个访客 IP 当成"攻击源"）。
+        """
+        facts = facts if facts is not None else self._behavior_facts()
+        pool = facts["attack"] or facts["unexplained"]
         counter: dict[str, int] = {}
-        for log in self.logs:
-            if (log.get("attack_stage_hint") or "benign") == "benign":
-                continue
+        for log in pool:
             ip = log.get("src_ip")
             if self._is_external(ip):
                 counter[ip] = counter.get(ip, 0) + 1
@@ -326,46 +822,184 @@ class InvestigationSession:
     def _knowledge_query(self) -> str:
         stages = self._stage_counts()
         if stages.get("c2_callback"):
-            return "主机向境外可疑地址外连（疑似 C2 回连）如何研判与处置"
+            return "内网主机向境外可疑地址持续外连（疑似 C2 回连与数据外传）如何研判与处置"
         if stages.get("exploitation"):
-            return "SQL 注入绕过认证成功后如何处置，是否需要短时封禁 IP"
-        return "账号爆破攻击如何研判与处置"
+            kind = self._exploit_type()
+            if kind:
+                return f"{attack_types.zh_name(kind)}利用成功后如何研判与处置，是否需要短时封禁 IP"
+            return "Web 应用出现利用痕迹后如何研判与处置"
+        if stages.get("brute_force"):
+            return "账号密码爆破攻击如何研判与处置"
+        return "可疑扫描探测如何研判与处置"
 
-    def _attack_type(self, stages: dict[str, int]) -> str:
-        """按时间顺序组装攻击类型名，最新阶段写最前。
+    #: 七类的阶段顺序，用于把分类按时间排列
+    _TYPE_ORDER = (
+        "Scan",
+        "Brute_Force",
+        "SQL_Injection",
+        "XSS",
+        "Path_Traversal_Privilege",
+        "Malicious_Upload",
+        "C2_Exfiltration",
+    )
+    _EXPLOIT_KINDS = {"SQL_Injection", "XSS", "Path_Traversal_Privilege", "Malicious_Upload"}
 
-        例：爆破 → 注入 生成 ``SQL_Injection_After_Brute_Force``；
-        再加外连则生成 ``C2_Callback_After_SQL_Injection_After_Brute_Force``。
+    def _attack_type(self, facts: dict[str, Any]) -> str:
+        """分类完全由行为事实决定，最新阶段写最前。
+
+        **不再用 ``attack_stage_hint`` 补阶段**：标签是人工标注，
+        只用它会让一条"标了 recon 的普通访问"凭空给结论加上 Scan。
+        标签带来的疑点改为在 ``unknown_items`` 里单独说明。
         """
-        parts: list[str] = []
-        if stages.get("brute_force"):
-            parts.append("Brute_Force")
-        if stages.get("exploitation"):
-            parts.append("SQL_Injection")
-        if stages.get("c2_callback"):
-            parts.append("C2_Callback")
-        return "_After_".join(reversed(parts)) if parts else "Unknown_Attack"
+        codes = set(facts.get("kinds") or [])
+        first_seen = {}
+        for log in facts["attack"]:
+            for code in facts["log_kinds"].get(str(log.get("log_id")), []):
+                stamp = self._event_time(log)
+                first_seen[code] = min(first_seen.get(code, stamp), stamp)
+        ordered = sorted(codes, key=lambda code: (first_seen.get(code, _dt.datetime.min.replace(tzinfo=_dt.timezone.utc)), code))
+        # 同时命中的类别不声称先后；只输出最后时刻的一类，其余在依据中保留。
+        if len(set(first_seen.values())) < len(first_seen):
+            ordered = ordered[-1:]
+        return "_After_".join(reversed(ordered)) if ordered else "Unknown_Attack"
 
-    def _chain_summary(self, stages: dict[str, int], attacker: str | None, asset: str) -> str:
-        seg: list[str] = []
-        if stages.get("brute_force"):
-            seg.append(f"对 {asset} 的登录端点发起 {stages['brute_force']} 次账号爆破")
-        if stages.get("exploitation"):
-            seg.append(f"随后以注入类载荷发起 {stages['exploitation']} 次利用尝试")
-        if stages.get("c2_callback"):
-            seg.append(f"并从 {asset} 向外部地址发起 {stages['c2_callback']} 次可疑外连")
+    def _exploit_type(self) -> Optional[str]:
+        """按利用阶段日志特征推断具体类别；无特征返回 ``None``。"""
+        texts = [
+            f"{log.get('uri_or_target') or ''} {log.get('payload_summary') or ''} "
+            f"{log.get('user_agent') or ''}"
+            for log in self.logs
+            if (log.get("attack_stage_hint") or "") == "exploitation"
+        ]
+        if not texts:
+            return None
+        return attack_types.infer_from_text(" ".join(texts))
+
+    #: 类别 → 摘要措辞（摘要里声称的每个阶段都必须有对应日志）
+    _KIND_PHRASE = {
+        "Scan": "扫描探测",
+        "Brute_Force": "账号爆破",
+        "SQL_Injection": "SQL 注入尝试",
+        "XSS": "跨站脚本尝试",
+        "Path_Traversal_Privilege": "目录遍历/越权访问",
+        "Malicious_Upload": "恶意上传或 webshell 访问",
+        "C2_Exfiltration": "可疑外连",
+    }
+
+    def _chain_summary(
+        self, facts: dict[str, Any], attacker: str | None, asset: str
+    ) -> str:
+        """摘要只陈述**有日志证据**的行为，不按标签编造阶段。"""
+        per_kind: dict[str, int] = {}
+        for kinds in (facts.get("log_kinds") or {}).values():
+            for kind in kinds:
+                per_kind[kind] = per_kind.get(kind, 0) + 1
+
+        seg = [
+            f"{self._KIND_PHRASE.get(code, code)} {per_kind[code]} 次"
+            for code in self._TYPE_ORDER
+            if per_kind.get(code)
+        ]
         if not seg:
-            seg.append("观察到可疑行为但阶段不明")
-        return f"攻击源 {attacker or 'unknown'} " + "，".join(seg) + "。"
+            seg.append("观察到未解释的行为")
 
-    def _unknown_items(self) -> str:
+        text = f"攻击源 {attacker or '未确定'} 对 {asset} 实施：" + "，".join(seg)
+        if facts.get("c2"):
+            text += "；已建立对外连接"
+        elif facts.get("responded"):
+            text += "；攻击请求得到响应（未确认利用成功）"
+        return text + "。"
+
+    def _record_conclusion_basis(
+        self,
+        facts: dict[str, Any],
+        *,
+        attack_type: str,
+        risk: str,
+        summary: str,
+        attacker_ip: Optional[str],
+    ) -> None:
+        """记录"分类 / 风险 / 攻击源 / 摘要"分别依据哪些日志，供轨迹核对。
+
+        只写日志编号与规则名，不重复存日志正文。
+        """
+        kind_logs: dict[str, list[str]] = {}
+        for log_id, kinds in (facts.get("log_kinds") or {}).items():
+            for kind in kinds:
+                kind_logs.setdefault(kind, []).append(str(log_id))
+
+        if risk == "HIGH":
+            risk_pool = facts["c2"] or facts["responded"]
+            risk_rule = "已建立外连" if facts["c2"] else "强特征请求得到响应（未确认利用成功）"
+        elif risk == "MEDIUM":
+            risk_pool = facts["attack"]
+            risk_rule = "存在强攻击特征但请求未被受理/无响应"
+        else:
+            risk_pool = []
+            risk_rule = "未确认攻击"
+
+        src_pool = facts["attack"] or facts["unexplained"]
+        self.findings["conclusion_basis"] = {
+            "attack_type": {
+                "value": attack_type,
+                "segments": [
+                    {"code": code, "log_ids": sorted(kind_logs.get(code, []))}
+                    for code in self._TYPE_ORDER
+                    if code in set(facts.get("kinds") or [])
+                ],
+            },
+            "risk_level": {
+                "value": risk,
+                "rule": risk_rule,
+                "log_ids": sorted(str(l["log_id"]) for l in risk_pool if l.get("log_id")),
+            },
+            "attacker_ip": {
+                # 与 AgentResults 口径一致：定位不到就是 unknown
+                "value": attacker_ip or "unknown",
+                "log_ids": sorted(
+                    str(l["log_id"])
+                    for l in src_pool
+                    if l.get("log_id") and l.get("src_ip") == attacker_ip
+                ),
+            },
+            "summary": {
+                "text": summary,
+                "stage_counts": {code: len(ids) for code, ids in kind_logs.items()},
+            },
+        }
+
+    def _unknown_items(self, facts: Optional[dict[str, Any]] = None) -> str:
+        facts = facts if facts is not None else self._behavior_facts()
         missing: list[str] = []
-        if self._stage_counts().get("exploitation") or self._stage_counts().get("c2_callback"):
+        for log_id, reason in self.findings.get("request_target_errors", {}).items():
+            missing.append(f"{log_id}：{reason}，保留待查")
+        if not self._guess_attacker_ip(facts) and facts["has_attack"]:
+            missing.append("处置目标未能定位，交人工复核，不建议封禁")
+        times = [log.get("timestamp") for log in facts["attack"]]
+        if len(facts.get("kinds", [])) > 1 and (len(set(times)) < len(times) or any(len(kinds) > 1 for kinds in facts["log_kinds"].values())):
+            missing.append("部分分类同时命中，时序不确定；主分类外的类别保留在 conclusion_basis")
+        if facts["has_attack"]:
             missing.append("处置建议尚未经过人工审批，未提交处置申请")
+        # 标签带来的、但没有行为证据支撑的疑点，单独列出而不是计入结论
+        unbacked = [
+            stage
+            for stage in ("recon", "brute_force", "exploitation", "c2_callback")
+            if self._stage_counts().get(stage)
+        ]
+        if facts["unexplained"]:
+            missing.append(
+                "存在标注为 " + "、".join(unbacked) + " 的日志，但缺少对应行为证据，"
+                "仅作待查线索，未计入结论"
+            )
         if not self.findings.get("context") or not (self.findings["context"].get("total") or 0):
             missing.append("未取得账号行为基线与资产重要性上下文")
-        if not self.findings.get("knowledge"):
-            missing.append("未检索到匹配的处置知识卡，处置建议缺少标准依据")
+        retrieval = self.findings.get("knowledge_status")
+        if retrieval is None:
+            missing.append("未调用知识检索工具")
+        elif retrieval.get("code"):
+            missing.append("知识检索调用失败：" + redact_text(str(retrieval.get("message") or retrieval["code"])))
+        elif not self.findings.get("knowledge"):
+            missing.append("知识检索成功但零命中，处置建议缺少标准依据")
         resp = self.findings.get("response") or {}
         if resp.get("status") == "approval_required":
             missing.append(f"处置单 {resp.get('approval_id')} 仍在待审批，处置尚未生效")

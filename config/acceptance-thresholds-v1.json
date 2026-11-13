@@ -1,0 +1,17 @@
+{
+  "version": "acceptance-v1",
+  "normal_false_positive_rate_max": 0.05,
+  "attack_detection_rate_min": 0.8,
+  "high_risk_detection_rate_min": 0.8,
+  "traceability_rate_min": 0.95,
+  "precision_high_risk_min": 0.8,
+  "attack_event_recall_min": 0.8,
+  "risk_level_accuracy_min": 0.8,
+  "detection_latency_p95_seconds_max": 120,
+  "notification_latency_p95_seconds_max": 300,
+  "parse_error_rate_max": 0.01,
+  "required_field_missing_rate_max": 0.01,
+  "raw_to_parsed_loss_rate_max": 0.01,
+  "event_id_traceability_rate_min": 0.99,
+  "consumer_lag_max": 1000
+}

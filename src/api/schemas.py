@@ -29,24 +29,82 @@ from .config import (
 
 
 class QueryMeta(BaseModel):
-    """查询元信息：标识数据来源、是否 Mock、以及后端可用性。"""
+    """查询元信息：标识数据来源、是否 Mock、以及后端可用性。
 
-    reference_time: Optional[str] = Field(default=None, description="日志时间窗的回放基准时刻；仅 Mock 查询提供", examples=["2026-10-27T14:26:00+00:00"])
+    第二周起 ``data_source`` 会如实反映真实后端（``clickhouse`` / ``dataset_replay``）；
+    只有显式开启 Mock 时才是 ``mock``。下游必须据此区分"真实证据"与"演示样例"。
+    """
+
+    reference_time: Optional[str] = Field(
+        default=None,
+        description="本次查询的时间基准。dataset_replay 为场景最新日志时间，clickhouse 为服务器当前时间，mock 为固定演示时刻",
+        examples=["2026-10-29T19:00:00Z"],
+    )
     total: int = Field(
         description="本次查询命中的日志/记录总数（分页前）",
         examples=[3, 0],
     )
-    data_source: Literal["mock"] = Field(
-        description='数据来源标识。第一周骨架固定为 "mock"；接入真实 ClickHouse/Qdrant 后变更为 "clickhouse"/"qdrant"',
-        examples=["mock"],
+    data_source: Literal[
+        "mock", "clickhouse", "dataset_replay", "hybrid_search", "asset_context"
+    ] = Field(
+        default="mock",
+        description=(
+            "数据来源标识：clickhouse（真实日志库）/ dataset_replay（离线日志包回放）/ "
+            "hybrid_search（BGE+Qdrant+FTS5 混合检索）/ asset_context（资产与账号配置）/ "
+            "mock（演示数据，不可作为证据）"
+        ),
+        examples=["dataset_replay"],
     )
-    mock: Literal[True] = Field(
-        description="恒为 true 直到真实后端接入。消费方（恒脑模型节点）必须把 mock 数据视为演示样例而非真实证据",
-        examples=[True],
+    mock: bool = Field(
+        default=False,
+        description="是否为演示数据。为 true 时消费方必须把结果视为样例而非真实证据",
+        examples=[False],
     )
     backend_available: bool = Field(
-        description="真实后端是否可用。骨架阶段恒为 false；false 时返回的数据仅是 Mock 样例",
-        examples=[False],
+        default=True,
+        description="所选后端当前是否可用。false 表示本次结果不是来自可用的真实后端",
+        examples=[True],
+    )
+    dataset: Optional[str] = Field(
+        default=None,
+        description="数据来源的具体位置：数据集目录路径，或 ClickHouse 表名",
+        examples=["data/full_chain_logs"],
+    )
+    time_base: Optional[str] = Field(
+        default=None,
+        description="时间窗的基准口径：scenario_latest（场景最新日志）/ server_now（库服务器时间）/ fixed_demo（固定演示时刻）",
+        examples=["scenario_latest"],
+    )
+    time_window_applied: Optional[str] = Field(
+        default=None,
+        description="实际生效的回溯时间窗，如 1h / 30m",
+        examples=["1h"],
+    )
+    scenarios: list[str] = Field(
+        default_factory=list,
+        description="本次命中日志所属的场景/故事链标识（trace_id）",
+        examples=[["CHAIN-CASE-01"]],
+    )
+    scenario_time_bases: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "逐场景的时间基准与窗口边界：trace_id / reference_time / window_start / window_end / matched。"
+            "多场景查询时各场景独立计时，reference_time 会置空，请以此字段为准"
+        ),
+        examples=[
+            {
+                "trace_id": "CHAIN-CASE-01",
+                "reference_time": "2026-10-27T14:17:02+00:00",
+                "window_start": "2026-10-27T13:17:02+00:00",
+                "window_end": "2026-10-27T14:17:02+00:00",
+                "matched": 29,
+            }
+        ],
+    )
+    notes: list[str] = Field(
+        default_factory=list,
+        description="数据集加载或回放过程中的告警（如文件解析失败），便于排查数据问题",
+        examples=[],
     )
 
 
@@ -142,6 +200,20 @@ class QueryLogsRequest(BaseModel):
         description="相对回溯时间窗，单位 m(分钟)/h(小时)/d(天)，如 30m、1h、7d。与 time_window_minutes 二选一；都不填时默认 1h",
         examples=["1h"],
     )
+    time_start: Optional[str] = Field(
+        default=None,
+        description=(
+            "绝对时间窗起点（ISO8601 UTC，如 2026-10-27T14:00:00Z）。"
+            "用于复核历史场景；与 time_window/time_window_minutes 互斥。"
+            "不给 time_end 时按 time_start 起 1 小时。"
+        ),
+        examples=["2026-10-27T14:00:00Z"],
+    )
+    time_end: Optional[str] = Field(
+        default=None,
+        description="绝对时间窗终点（ISO8601 UTC）。仅在给出 time_start 时有效",
+        examples=["2026-10-27T15:00:00Z"],
+    )
     time_window_minutes: Optional[int] = Field(
         default=None,
         ge=TIME_WINDOW_MIN_MINUTES,
@@ -166,9 +238,13 @@ class LogItem(BaseModel):
     timestamp: str = Field(description="日志时间，ISO8601 UTC", examples=["2026-10-27T14:20:05Z"])
     log_source: str = Field(description="日志来源", examples=["nginx_access"])
     src_ip: str = Field(description="源 IP", examples=["198.51.100.23"])
+    src_port: Optional[int] = Field(default=None, description="源端口", examples=[54321])
     dest_ip: str = Field(description="目标 IP", examples=["10.0.0.15"])
+    dest_port: Optional[int] = Field(default=None, description="目标端口", examples=[443])
     asset_id: Optional[str] = Field(default=None, description="受害资产 ID", examples=["web-prod-01"])
     user: Optional[str] = Field(default=None, description="涉及账号", examples=["admin"])
+    session_id: Optional[str] = Field(default=None, description="会话 ID", examples=["sess-9f8a7b"])
+    bytes_out: Optional[int] = Field(default=None, description="响应字节数，用于识别数据外传", examples=[5120])
     action_or_method: Optional[str] = Field(default=None, description="HTTP 方法或动作", examples=["POST"])
     uri_or_target: Optional[str] = Field(default=None, description="URI 或攻击目标", examples=["/admin/login.php"])
     payload_summary: Optional[str] = Field(default=None, description="载荷摘要", examples=["username=admin&password=' OR 1=1--"])
@@ -204,8 +280,16 @@ class GetContextRequest(BaseModel):
     )
     asset_id: Optional[str] = Field(
         default=None,
-        description="目标资产 ID（与 user 至少填一项）",
+        description="目标资产 ID（与 user 至少填一项）；也可填资产 IP，如 10.0.0.15",
         examples=["web-prod-01"],
+    )
+    at_time: Optional[str] = Field(
+        default=None,
+        description=(
+            "可选：按哪一时刻判断是否处于维护窗口，ISO8601 UTC，通常填被调查日志的时间。"
+            "不给则只返回维护窗口配置，不做命中判断"
+        ),
+        examples=["2026-10-29T18:10:00Z"],
     )
 
 
@@ -298,14 +382,25 @@ class RequestResponseRequest(BaseModel):
         description="本次调查案例编号，用于隔离证据归属（不同 case 的证据不可混用）",
         examples=["EVAL-CHAIN-001"],
     )
-    action: Literal["block_ip", "block_ip_short_term", "rate_limit", "none"] = Field(
-        description="处置动作白名单枚举：block_ip(封禁IP,高危)/block_ip_short_term(短时封禁,高危)/rate_limit(限速,低危)/none(无需处置)",
+    action: Literal[
+        "block_ip", "block_ip_short_term", "rate_limit", "none", "isolate_account"
+    ] = Field(
+        description=(
+            "处置动作枚举，权威定义见 config/response-policy.yaml#actions："
+            "block_ip(封禁IP,高危)/block_ip_short_term(短时封禁,高危)/"
+            "isolate_account(账号隔离,高危,需人工确认账号归属)/rate_limit(限速,低危)/none(无需处置)"
+        ),
         examples=["block_ip"],
     )
     target_ip: Optional[str] = Field(
         default=None,
-        description="处置目标 IP（action 为 block_ip/block_ip_short_term/rate_limit 时必填）",
+        description="处置目标 IP（action 为 block_ip/block_ip_short_term/rate_limit 时必填；isolate_account 时不填）",
         examples=["198.51.100.23"],
+    )
+    target_user: Optional[str] = Field(
+        default=None,
+        description="处置目标账号（仅 action=isolate_account 时必填）",
+        examples=["admin"],
     )
     evidence_log_ids: list[str] = Field(
         default_factory=list,
@@ -320,12 +415,28 @@ class RequestResponseRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _target_ip_required(self) -> "RequestResponseRequest":
-        """处置类动作必须有明确目标与证据；action=none 则两者都不应指定。"""
-        if self.action != "none" and not self.target_ip:
-            raise ValueError("action 为 block_ip/block_ip_short_term/rate_limit 时 target_ip 必填")
-        if self.action != "none" and not self.evidence_log_ids:
+    def _target_required(self) -> "RequestResponseRequest":
+        """处置类动作必须有明确目标与证据；action=none 则两者都不应指定。
+
+        目标按动作类型区分：IP 类动作要 ``target_ip``，账号类动作要 ``target_user``。
+        """
+        if self.action == "none":
+            return self
+        if self.action == "isolate_account":
+            if not self.target_user:
+                raise ValueError("action=isolate_account 时 target_user 必填（账号隔离需明确账号）")
+            if self.target_ip:
+                raise ValueError("action=isolate_account 不接受 target_ip，请改用 target_user")
+        else:
+            if not self.target_ip:
+                raise ValueError(
+                    f"action 为 {self.action} 时 target_ip 必填"
+                )
+            if self.target_user:
+                raise ValueError(f"action 为 {self.action} 不接受 target_user")
+        if not self.evidence_log_ids:
             raise ValueError("处置类动作必须提供至少一条 evidence_log_ids，无证据不得处置")
+        return self
         if self.action == "none" and self.target_ip:
             raise ValueError("action=none 表示无需处置，不应指定 target_ip")
         return self
