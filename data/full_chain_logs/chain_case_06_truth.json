@@ -1,0 +1,19 @@
+{
+  "case_id": "CHAIN-CASE-06",
+  "is_malicious": true,
+  "attack_type": "SSH_Brute_Force_Then_Compromise",
+  "risk_level": "HIGH",
+  "attacker_ip": "198.51.100.99",
+  "victim_asset": "nas-host-01",
+  "evidence_log_ids": [
+    "LOG-20261104-0602",
+    "LOG-20261104-0612",
+    "LOG-20261104-0613",
+    "LOG-20261104-0615",
+    "LOG-20261104-0617"
+  ],
+  "attack_chain_summary": "攻击源 198.51.100.99 于 02:10—02:12 对运维跳板机 nas-host-01（10.0.0.20）的 22 端口发起 6 轮 SSH 口令爆破，依次尝试 root、admin、oracle、test、ops 等账号，均返回 Failed password（LOG-20261104-0602 为首条失败记录，0612 为最后一次失败），Zeek 侧同步记录到 6 次针对 22 端口的短连接（conn_state=S0，无应用层数据）；02:13:10 第 7 次尝试使用 ops 账号爆破成功（0613），会话建立并保持 92 秒（0615）；跳板机失陷后于 02:15 主动向陌生公网 IP 45.77.128.203:9001 外发约 842KB（0617）。资产台账显示 nas-host-01 仅开放密钥登录、禁止密码认证，出现密码认证失败本身即为高危信号；因其资产类型为 host，按处置授权范围应选用短时封禁（block_ip_short_term）而非仅限 web 资产的长效 block_ip。",
+  "recommended_action": "block_ip_short_term",
+  "requires_human_approval": true,
+  "unknown_items": "跳板机已确认被爆破成功，但失陷后是否横向移动到 db-core-01 与该主机上被执行的具体命令，需结合主机侧进程与命令审计日志进一步确认。"
+}

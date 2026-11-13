@@ -1,0 +1,19 @@
+{
+  "case_id": "CHAIN-CASE-09",
+  "is_malicious": false,
+  "attack_type": "Authorized_Security_Scan",
+  "risk_level": "LOW",
+  "attacker_ip": "10.0.0.77",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261105-0901",
+    "LOG-20261105-0902",
+    "LOG-20261105-0904",
+    "LOG-20261105-0906",
+    "LOG-20261105-0913"
+  ],
+  "attack_chain_summary": "内网 IP 10.0.0.77 在 2026-11-05 14:00—14:30（UTC+8）的登记授权窗口内，使用 Acunetix 扫描器 UA 对 web-prod-01 发起 11 次探测（LOG-20261105-0901 为首次访问）：/.env 探测 404（0902）、/api/user?id=1' 触发 500（0904）、/comment.php 提交 <script>alert(1)</script> 测试 XSS（0906）、download.php ../../etc/passwd 返回 403、/backup.zip 与 /server-status 亦被拦截；Zeek 侧记录到一条 41 秒的 TLS 连接（0913）。全部行为命中资产登记的安全测试白名单：源 IP 属内网、与授权单一致、时段落在授权窗口内，探测后无 webshell 落地、无越权数据读取、无异常外连，故判定为合法授权安全扫描，不建议封禁。",
+  "recommended_action": "none",
+  "requires_human_approval": false,
+  "unknown_items": "授权单号与测试范围需人工与安全组复核。"
+}
