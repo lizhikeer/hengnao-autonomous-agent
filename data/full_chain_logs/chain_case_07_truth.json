@@ -1,0 +1,19 @@
+{
+  "case_id": "CHAIN-CASE-07",
+  "is_malicious": true,
+  "attack_type": "Vulnerability_Scanning_Attempt",
+  "risk_level": "MEDIUM",
+  "attacker_ip": "45.155.205.233",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261104-0702",
+    "LOG-20261104-0703",
+    "LOG-20261104-0706",
+    "LOG-20261104-0710",
+    "LOG-20261104-0714"
+  ],
+  "attack_chain_summary": "攻击源 45.155.205.233 在 20:05 的 23 秒内用 nuclei / nikto / dirsearch 三类扫描器 UA 连续探测 13 个敏感路径与 CVE 路径，包括 /.env、/.git/config、/actuator/env、/console、/phpunit eval-stdin、CVE-2021-41773 路径穿越等（LOG-20261104-0702、0703、0706、0710、0714），全部返回 404 / 403 / 400，无任何 200 成功响应，Zeek 侧仅见一次短连接（6.2 秒）。判定为自动化漏洞扫描探测，未发现失陷证据，处置以限速+封禁观察为主，不建议直接全网封 IP。",
+  "recommended_action": "rate_limit",
+  "requires_human_approval": false,
+  "unknown_items": ""
+}

@@ -1,0 +1,19 @@
+{
+  "case_id": "CHAIN-CASE-05",
+  "is_malicious": true,
+  "attack_type": "Path_Traversal_And_IDOR",
+  "risk_level": "HIGH",
+  "attacker_ip": "203.0.113.147",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261103-0503",
+    "LOG-20261103-0504",
+    "LOG-20261103-0506",
+    "LOG-20261103-0507",
+    "LOG-20261103-0510"
+  ],
+  "attack_chain_summary": "攻击源 203.0.113.147 于 14:41 先尝试 ../../../../etc/passwd 目录遍历被 403 拦截，改用 URL 编码的 ..%2f 绕过，成功读取 .env（LOG-20261103-0503，响应 781 字节）与 config/database.yml（0504）；随后批量修改 /api/order 的 user_id 参数（1001→1006）越权读取他人订单（0506、0507），并通过 /api/user 获取用户资料，Zeek 侧同步记录到对 .env 的编码遍历请求（0510）；期间另有一次对 /etc/shadow 的遍历被 403 拦截。整体为目录遍历读取配置 + 水平越权批量拖数据的组合攻击。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": ""
+}

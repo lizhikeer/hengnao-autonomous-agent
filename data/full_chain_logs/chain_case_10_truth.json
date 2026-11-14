@@ -1,0 +1,19 @@
+{
+  "case_id": "CHAIN-CASE-10",
+  "is_malicious": false,
+  "attack_type": "Normal_User_Login_Retry",
+  "risk_level": "LOW",
+  "attacker_ip": "10.0.0.52",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261106-1001",
+    "LOG-20261106-1002",
+    "LOG-20261106-1005",
+    "LOG-20261106-1006",
+    "LOG-20261106-1007"
+  ],
+  "attack_chain_summary": "办公网用户 zhangsan 于 08:20 与 08:21 两次在 /admin/login.php 输错口令（401，auth_log 同步记录 login_failure，LOG-20261106-1001、1002），间隔 69 秒——属人工输入节奏，非脚本高频探测；08:22:30 第三次使用正确口令登录成功（1005、1006）并建立会话 sess-3d81ee，随后按正常顺序浏览仪表盘、用户列表、订单列表，8 分钟内主动登出（1007 起）；期间无异常 URI 探测、无越权参数修改、无外连行为，源 IP 属办公网段且与账号历史登录 IP 一致，判定为偶发输错密码后正常登录，不构成暴力破解。",
+  "recommended_action": "none",
+  "requires_human_approval": false,
+  "unknown_items": ""
+}

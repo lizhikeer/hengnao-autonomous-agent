@@ -1,0 +1,20 @@
+{
+  "case_id": "CHAIN-CASE-04",
+  "is_malicious": true,
+  "attack_type": "Stored_XSS_Session_Hijacking",
+  "risk_level": "HIGH",
+  "attacker_ip": "198.51.100.61",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261103-0404",
+    "LOG-20261103-0405",
+    "LOG-20261103-0407",
+    "LOG-20261103-0409",
+    "LOG-20261103-0411",
+    "LOG-20261103-0412"
+  ],
+  "attack_chain_summary": "攻击源 198.51.100.61 先探测评论与反馈接口，随后在 09:14 分别向 /comment.php 与 /feedback.php 提交含 <script>document.cookie 与 <img onerror=fetch(...document.cookie)> 的存储型 XSS 载荷（LOG-20261103-0404、0405）；管理员 ops_li 于 09:16 访问被投毒页面（0407）触发脚本，其会话 sess-a91c 随即在 09:17 被同一 cookie 从未见过的外部 IP 198.51.100.61 复用（0409），并连续导出 users 表 88KB（0411）、把账号 1002 的角色改为 admin（0412），构成存储型 XSS 引发的会话劫持与越权操作。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": ""
+}

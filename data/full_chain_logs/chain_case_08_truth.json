@@ -1,0 +1,18 @@
+{
+  "case_id": "CHAIN-CASE-08",
+  "is_malicious": true,
+  "attack_type": "C2_Beacon_And_Data_Exfiltration",
+  "risk_level": "HIGH",
+  "attacker_ip": "91.219.236.7",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261105-0801",
+    "LOG-20261105-0803",
+    "LOG-20261105-0808",
+    "LOG-20261105-0809"
+  ],
+  "attack_chain_summary": "受感染主机 web-prod-01（10.0.0.15）于 03:00 起以 5 分钟为周期向 91.219.236.7:443 的 /api/v1/ping 发起信标（LOG-20261105-0801 为首个心跳，响应体恒为 128 字节、UA 为空），并周期性拉取 /api/v1/task 指令（0803）；03:21 起改用 POST /up.php 上传数据（0808，请求体 256KB），同时建立一条持续 420 秒、向该 IP 外发约 12MB 的 TLS 长连接（0809，orig_bytes=12582912），远超该主机日常外发基线；期间 CDN 回源、内网 MySQL、GitHub 拉取等连接时长与字节数均正常，判定为 C2 信标 + 数据外传。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "外传文件的具体内容与涉及的数据表尚无法确认，需结合主机侧进程审计进一步定位。"
+}
