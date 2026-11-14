@@ -9,7 +9,7 @@
 #   都必须落在本文件的键里，否则执行器拒绝执行。
 
 version: "1.0"
-updated: "2026-11-12"
+updated: "2026-11-15"
 
 # --- 动作枚举与授权 ------------------------------------------------
 #
@@ -88,14 +88,21 @@ allowlist:
     - ip: 127.0.0.1
       reason: 本机回环，非真实攻击源
       scope: 全部动作
+    - ip: 10.0.0.77
+      reason: 安全测试组授权扫描器，仅在授权窗口内对 web-prod-01 探测（CHAIN-CASE-09 负样本）
+      scope: [block_ip, block_ip_short_term, rate_limit]
   users:
     # 支持通配：ops_* 覆盖 ops_zhang / ops_li 等运维账号
     - user: ops_*
       reason: 运维账号，允许非常规时间登录
       scope: [isolate_account]   # 允许登录，但禁止被自动隔离
+      common_src_ips: [10.0.0.0/24, 10.0.0.66, 10.10.0.50]
+      allowed_assets: [web-prod-01, backup-01, nas-host-01]
     - user: ops
       reason: 通用运维账号
       scope: [isolate_account]
+      common_src_ips: [10.0.0.0/24, 10.0.0.66, 10.10.0.50]
+      allowed_assets: [web-prod-01, backup-01, nas-host-01]
   assets:
     - asset_id: db-core-01
       reason: 核心数据库，任何自动阻断都会造成业务中断

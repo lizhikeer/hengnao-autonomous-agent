@@ -12,7 +12,7 @@
 # 维护：窗口调整需负责人确认，夜间发布/备份变更要同步更新本文件。
 
 version: "1.0"
-updated: "2026-11-12"
+updated: "2026-11-15"
 timezone: Asia/Shanghai
 
 windows:
@@ -25,6 +25,15 @@ windows:
     allowed_actions: [deploy, backup, restart]
     # 即便在窗口内，以下行为仍然照常告警
     never_exempt: [sql_injection, malicious_upload, webshell_access]
+
+  - asset_id: web-prod-01
+    days: [wed]
+    start: "14:00"
+    end: "14:30"
+    activity: 安全测试组授权漏洞扫描（对应 CHAIN-CASE-09，授权源 IP 10.0.0.77）
+    allowed_actions: [vuln_scan, probe]
+    authorized_src_ips: [10.0.0.77]
+    never_exempt: [malicious_upload, webshell_access]
 
   - asset_id: db-core-01
     days: [sun]
