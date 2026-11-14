@@ -1,8 +1,9 @@
-# SecLog 工具服务运行时依赖（Week 1 骨架）
+# SecLog 工具服务运行时依赖（统一入口）
+#
+# 只保留这一份入口，实际内容分层放在 requirements/ 下，避免根目录与 requirements/ 各锁一套：
+#   requirements/base.txt  → ClickHouse / 配置 / 通用工具
+#   requirements/api.txt   → FastAPI + MCP + 检索客户端
+#
 # 安装：.venv/Scripts/python -m pip install -r requirements.txt
-fastapi==0.162.0
-uvicorn[standard]==0.54.0
-pydantic==2.14.1
-
-# MCP 官方 Python SDK（src/mcp_server 使用）
-mcp==1.30.0
+# 镜像：docker/api/Dockerfile 直接装 base.txt + api.txt，与本文件一致。
+-r requirements/runtime.txt

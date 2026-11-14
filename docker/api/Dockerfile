@@ -19,6 +19,14 @@ RUN pip install -i "${PIP_INDEX_URL}" -r /app/requirements/base.txt \
 
 COPY src/ /app/src/
 
+# 运行时配置（资产台账 / 维护窗口 / 处置授权 / 风险打分）
+# 缺了它 get_context 会因找不到 config/assets.yaml 直接 503
+COPY config/ /app/config/
+
+# 数据集回放与知识卡：未接 ClickHouse 时的回放来源，体积很小一并带上
+COPY data/full_chain_logs/ /app/data/full_chain_logs/
+COPY data/knowledge_cards/ /app/data/knowledge_cards/
+
 # 非 root 运行
 RUN useradd --create-home --uid 10001 seclog && chown -R seclog:seclog /app
 USER seclog

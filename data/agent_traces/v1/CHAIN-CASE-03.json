@@ -1,0 +1,18 @@
+{
+  "case_id": "CHAIN-CASE-03",
+  "is_malicious": false,
+  "attack_type": "insufficient_evidence",
+  "risk_level": "LOW",
+  "attacker_ip": "unknown",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261029-0301",
+    "LOG-20261029-0302",
+    "LOG-20261029-0318",
+    "LOG-20261029-0320"
+  ],
+  "attack_chain_summary": "未确认攻击成立，也未取得充分的授权依据，不判定为正常，交人工复核。",
+  "recommended_action": "none",
+  "requires_human_approval": true,
+  "unknown_items": "证据不足未定论。缺失项：授权核对未通过：来源授权范围、资产授权范围；配置未提供该账号的来源授权范围（allowlist 只是处置豁免），无法确认来源 ['10.0.0.66'] 是否被允许；配置未提供该账号的资产授权范围，无法确认 ['web-prod-01'] 是否属于授权资产"
+}
