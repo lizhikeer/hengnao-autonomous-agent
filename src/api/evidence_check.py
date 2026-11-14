@@ -75,7 +75,7 @@ class EvidenceRegistry:
         with self._lock:
             store = self._buckets.setdefault(bucket, {})
             for log_id in log_ids:
-                if not log_id:
+                if not isinstance(log_id, str) or not log_id.strip():
                     continue
                 if log_id in store:
                     continue
@@ -111,6 +111,9 @@ class EvidenceRegistry:
             own = self._buckets.get(bucket, {})
             all_buckets = {b: dict(s) for b, s in self._buckets.items()}
         for log_id in log_ids:
+            if not isinstance(log_id, str) or not log_id.strip():
+                unknown.append(log_id)
+                continue
             if case_id and case_id != UNSCOPED_BUCKET and log_id in own:
                 accepted.append(log_id)
                 continue

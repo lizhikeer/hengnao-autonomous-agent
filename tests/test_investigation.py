@@ -28,7 +28,18 @@ def test_partial_investigation_does_not_declare_safe(stage, max_rounds):
     assert 'request_response' not in [call.tool for call in session.calls]
 
 
-def _log(log_id: str, *, stage: str, src: str = "198.51.100.23", asset: str = "web-prod-01", user=None):
+def _log(
+    log_id: str,
+    *,
+    stage: str,
+    src: str = "198.51.100.23",
+    asset: str = "web-prod-01",
+    user=None,
+    ua: str = "Mozilla/5.0",
+    uri: str = "/admin/login.php",
+    payload: str = "username=admin",
+    dest_port=None,
+):
     return {
         "log_id": log_id,
         "trace_id": "CHAIN-ATTACK-01",
@@ -36,13 +47,14 @@ def _log(log_id: str, *, stage: str, src: str = "198.51.100.23", asset: str = "w
         "log_source": "nginx_access",
         "src_ip": src,
         "dest_ip": "10.0.0.15",
+        "dest_port": dest_port,
         "asset_id": asset,
         "user": user,
         "action_or_method": "POST",
-        "uri_or_target": "/admin/login.php",
-        "payload_summary": "x",
+        "uri_or_target": uri,
+        "payload_summary": payload,
         "status_code": 200,
-        "user_agent": "sqlmap/1.7.2",
+        "user_agent": ua,
         "attack_stage_hint": stage,
     }
 
@@ -57,11 +69,26 @@ def _fake_tools(query_results: list[list[dict[str, Any]]]):
         items = query_results[idx]
         return {"meta": {"total": len(items), "mock": True}, "items": items}
 
-    def get_context(_args):
+    def get_context(args):
+        """返回与该次请求匹配的上下文，使"良性流量"能通过授权核对。"""
+        user = args.get("user") or "admin"
         return {
             "meta": {"total": 2, "mock": True},
-            "user_profile": {"user": "admin", "failed_logins_24h": 0},
-            "asset_context": {"asset_id": "web-prod-01", "importance": "HIGH"},
+            "user_profile": {
+                "user": user,
+                "failed_logins_24h": 0,
+                "account_type": "legit_operator",
+                "common_src_ips": ["203.0.113.7", "10.0.0.66"],
+                "allowed_assets": ["web-prod-01"],
+            },
+            "asset_context": {
+                "asset_id": "web-prod-01",
+                "importance": "HIGH",
+                "maintenance_windows": [
+                    {"kind": "daily", "start": "00:00", "end": "23:59", "timezone": "Asia/Shanghai"}
+                ],
+                "in_maintenance_window": True,
+            },
         }
 
     def search_knowledge(_args):
@@ -84,10 +111,12 @@ def _fake_tools(query_results: list[list[dict[str, Any]]]):
 
 
 def test_full_chain_produces_malicious_conclusion():
+    # 语义变化：分类现在要求**行为证据**，阶段标签不再补阶段。
+    # 因此三段各自带上对应特征：爆破用 hydra UA、利用用 sqlmap+注入载荷、外连用可疑端口。
     chain = [
-        _log("LOG-20261027-0001", stage="brute_force", user="admin"),
-        _log("LOG-20261027-0008", stage="exploitation"),
-        _log("LOG-20261027-0022", stage="c2_callback", src="10.0.0.15"),
+        _log("LOG-20261027-0001", stage="brute_force", user="admin", ua="hydra/9.5"),
+        _log("LOG-20261027-0008", stage="exploitation", ua="sqlmap/1.7.2", payload="UNION SELECT sleep(5)"),
+        dict(_log("LOG-20261027-0022", stage="c2_callback", src="10.0.0.15", dest_port=4444), payload_summary="beacon;conn_state=SF"),
     ]
     session = InvestigationSession(
         case_id="EVAL-CHAIN-001",
@@ -100,7 +129,8 @@ def test_full_chain_produces_malicious_conclusion():
     tools_called = [c.tool for c in session.calls]
     assert tools_called == ["query_logs", "get_context", "search_knowledge"]
     assert final.is_malicious is True
-    assert final.attack_type.startswith("C2_Callback_After_SQL_Injection_After_Brute_Force")
+    assert "SQL_Injection" in final.attack_type
+    assert "C2_Exfiltration" not in final.attack_type  # 端口及心跳不足以证明恶意回连
     assert final.risk_level in {"HIGH", "CRITICAL"}
     assert final.requires_human_approval is True
     assert final.recommended_action == "block_ip"
@@ -166,7 +196,7 @@ def test_decision_depends_on_tool_result():
 
     with_exploit = [
         _log("LOG-20261027-0001", stage="brute_force", user="admin"),
-        _log("LOG-20261027-0008", stage="exploitation"),
+        _log("LOG-20261027-0008", stage="exploitation", ua="sqlmap/1.7.2", payload="UNION SELECT sleep(5)"),
     ]
     s2 = InvestigationSession(
         case_id="CASE-EXPLOIT", seed_trace_id="CHAIN-ATTACK-01", tools=_fake_tools([with_exploit])
@@ -187,7 +217,7 @@ def test_decision_depends_on_tool_result():
 def test_evidence_ids_are_subset_of_tool_output():
     chain = [
         _log("LOG-20261027-0001", stage="brute_force", user="admin"),
-        _log("LOG-20261027-0008", stage="exploitation"),
+        _log("LOG-20261027-0008", stage="exploitation", ua="sqlmap/1.7.2", payload="UNION SELECT sleep(5)"),
     ]
     session = InvestigationSession(
         case_id="CASE-EVID", seed_trace_id="CHAIN-ATTACK-01", tools=_fake_tools([chain])

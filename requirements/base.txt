@@ -1,7 +1,10 @@
 # 数据底座依赖（ClickHouse / 配置 / 通用工具）
 # 版本与老项目 log-ai-assistant 对齐，避免迁移后行为漂移
 clickhouse-connect==0.8.9
-pydantic==2.8.2
-python-dotenv==1.0.1
+python-dotenv==1.1.1
 requests==2.32.3
-PyYAML==6.0.2
+PyYAML==6.0.3
+
+# pydantic 由 mcp 1.30 的下限决定（要求 >=2.11）：旧的 2.8.x 会让 mcp 装不上，
+# 因此这里跟随 api.txt 的解析结果统一到 2.14.1。
+pydantic==2.14.1

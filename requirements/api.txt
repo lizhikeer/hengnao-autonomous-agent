@@ -1,6 +1,17 @@
 # SecLog FastAPI / MCP 服务依赖
-fastapi==0.111.0
-uvicorn[standard]==0.30.1
-httpx==0.27.0
-qdrant-client==1.12.1
-python-multipart==0.0.9
+#
+# 这几组版本互相咬合，不能单独升降：
+#   mcp 1.30.0  →  pydantic>=2.11、httpx>=0.27.1、uvicorn>=0.31.1、starlette>=0.27
+#   fastapi 0.162  →  starlette 1.x
+# 旧清单锁的 pydantic 2.8.2 / httpx 0.27.0 / uvicorn 0.30.1 会让 mcp 直接装不上。
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+httpx==0.28.1
+python-multipart==0.0.32
+
+# MCP 官方 Python SDK（src/mcp_server 与 src/api/service.py 的 /mcp、/investigation 入口）
+mcp==1.30.0
+
+# 知识检索的真实后端（src/api/knowledge_adapter 延迟导入 knowledge.search 时需要）；
+# 与 requirements/knowledge-base.txt 保持一致，避免两套 qdrant-client。
+qdrant-client==1.15.1

@@ -43,6 +43,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from . import asset_context, datasource, knowledge_adapter
 from .config import (
     HIGH_RISK_ACTIONS,
     LIMIT_DEFAULT,
@@ -81,6 +82,9 @@ MOCK_MODE = True  # 第一周骨架固定开启：所有查询走显式 Mock
 #: 参数错误状态码。Starlette 1.x 已把 HTTP_422_UNPROCESSABLE_ENTITY 标记弃用，
 #: 这里直接用字面量，避免依赖具体版本提供的枚举名。
 HTTP_422 = 422
+
+#: 后端不可用状态码：真实数据源/检索缺失时如实返回，绝不用 Mock 数据冒充成功。
+HTTP_503 = 503
 
 #: 置 1 表示"我要真实后端"。真实后端尚未接入，因此该开关打开后查询一律 503。
 _REAL_BACKEND_REQUESTED = os.getenv("SECLOG_REAL_BACKEND", "0").strip() in {"1", "true", "True"}
@@ -191,6 +195,32 @@ def _real_backend_guard() -> Optional[JSONResponse]:
     )
 
 
+# 数据源按模式缓存：数据集回放只在首次查询时读盘，后续复用内存索引。
+_SOURCE_CACHE: dict[str, Any] = {}
+
+
+def _log_source() -> Any:
+    """按 ``SECLOG_DATA_SOURCE`` 解析日志数据源（auto / clickhouse / dataset_replay / mock）。"""
+    mode = datasource.resolve_mode()
+    if mode not in _SOURCE_CACHE:
+        _SOURCE_CACHE[mode] = datasource.get_log_source(mode)
+    return _SOURCE_CACHE[mode]
+
+
+def reset_source_cache() -> None:
+    """清空数据源缓存。测试或运行时切换 ``SECLOG_DATA_SOURCE`` 后需要调用。"""
+    _SOURCE_CACHE.clear()
+
+
+def _asset_context_label() -> str:
+    """资产配置对外展示用相对路径，不把本机绝对路径写进响应。"""
+    path = asset_context.config_path()
+    try:
+        return str(path.relative_to(datasource.PROJECT_ROOT)).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
     """把 FastAPI 默认 422 转成项目统一的 ErrorBody(invalid_params)。"""
@@ -268,13 +298,11 @@ def health() -> HealthResponse:
     tags=["调查工具"],
 )
 def query_logs(req: QueryLogsRequest):
-    guard = _real_backend_guard()
-    if guard is not None:
-        return guard
-
-    # 至少一个过滤条件，避免无界全量查询
+    # 至少一个过滤条件，避免无界全量查询。
+    # case_id 若本身就是场景标识（CHAIN-xxx），等价于给了 trace_id。
     filters = [k for k in ("src_ip", "dest_ip", "trace_id") if getattr(req, k)]
-    if not filters and req.log_source == "all":
+    case_as_scenario = bool(req.case_id and req.case_id.upper().startswith("CHAIN-"))
+    if not filters and req.log_source == "all" and not case_as_scenario:
         return _error(
             HTTP_422,
             "invalid_params",
@@ -282,37 +310,128 @@ def query_logs(req: QueryLogsRequest):
             {"provided": req.model_dump(exclude_none=True)},
         )
 
-    try:
-        window_minutes = _resolve_window_minutes(req)
-    except ValueError as exc:
-        return _error(
-            HTTP_422,
-            "invalid_params",
-            str(exc),
-            {"time_window": req.time_window, "time_window_minutes": req.time_window_minutes},
-        )
+    # 绝对时间窗（复核历史场景）与相对回溯互斥
+    start_time = end_time = None
+    window: _dt.timedelta | None
+    if req.time_start or req.time_end:
+        if req.time_window or req.time_window_minutes:
+            return _error(
+                HTTP_422,
+                "invalid_params",
+                "time_start/time_end 与 time_window/time_window_minutes 互斥，请只用一种",
+                {"time_start": req.time_start, "time_window": req.time_window},
+            )
+        try:
+            start_time = _dt.datetime.fromisoformat(str(req.time_start).replace("Z", "+00:00"))
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=_dt.timezone.utc)
+            if req.time_end:
+                end_time = _dt.datetime.fromisoformat(str(req.time_end).replace("Z", "+00:00"))
+                if end_time.tzinfo is None:
+                    end_time = end_time.replace(tzinfo=_dt.timezone.utc)
+            else:
+                end_time = start_time + _dt.timedelta(hours=1)
+        except ValueError as exc:
+            return _error(
+                HTTP_422,
+                "invalid_params",
+                f"time_start/time_end 不是合法的 ISO8601 时间：{exc}",
+                {"time_start": req.time_start, "time_end": req.time_end},
+            )
+        if end_time <= start_time:
+            return _error(
+                HTTP_422,
+                "invalid_params",
+                "time_end 必须晚于 time_start",
+                {"time_start": req.time_start, "time_end": req.time_end},
+            )
+        window = None
+    else:
+        try:
+            window_minutes = _resolve_window_minutes(req)
+        except ValueError as exc:
+            return _error(
+                HTTP_422,
+                "invalid_params",
+                str(exc),
+                {"time_window": req.time_window, "time_window_minutes": req.time_window_minutes},
+            )
+        window = _dt.timedelta(minutes=window_minutes)
+        start_time = end_time = None
 
-    rows = query_mock_logs(
-        src_ip=req.src_ip,
-        dest_ip=req.dest_ip,
-        trace_id=req.trace_id,
-        log_source=req.log_source,
-        window_minutes=window_minutes,
+    try:
+        source = _log_source()
+    except ValueError as exc:
+        return _error(HTTP_422, "invalid_params", str(exc), {})
+
+    try:
+        result = source.query(
+            datasource.LogQuery(
+                case_id=req.case_id,
+                trace_id=req.trace_id,
+                src_ip=req.src_ip,
+                dest_ip=req.dest_ip,
+                log_source=req.log_source,
+                window=window,
+                start_time=start_time,
+                end_time=end_time,
+                limit=req.limit,
+            )
+        )
+    except datasource.BackendUnavailable as exc:
+        # 真实数据源不可用时如实报 503，绝不返回 Mock 数据冒充成功
+        _audit(
+            "query_logs:backend_unavailable",
+            {"backend": exc.backend, "reason": exc.reason, "case_id": req.case_id},
+        )
+        return _error(
+            HTTP_503,
+            "backend_unavailable",
+            str(exc),
+            {"backend": exc.backend, "reason": exc.reason, "backend_available": False, **exc.details},
+        )
+    except ValueError as exc:
+        return _error(HTTP_422, "invalid_params", str(exc), {})
+
+    # 整批校验成功后才登记，失败响应不能留下可引用证据。
+    try:
+        validated_items = [LogItem(**row) for row in result.items]
+        if any(not item.log_id.strip() for item in validated_items):
+            raise ValueError("日志编号不能为空白")
+    except ValueError as exc:
+        return _error(HTTP_503, "backend_unavailable", "日志后端返回无效记录", {"reason": str(exc)})
+
+    response = QueryLogsResponse(
+        meta=QueryMeta(
+            reference_time=result.reference_time,
+            total=result.total,
+            data_source=result.data_source,  # type: ignore[arg-type]
+            mock=result.data_source == "mock",
+            backend_available=result.data_source != "mock",
+            dataset=result.dataset,
+            time_base=result.time_base,
+            time_window_applied=result.time_window_applied,
+            scenarios=result.scenarios,
+            scenario_time_bases=result.scenario_time_bases,
+            notes=result.notes,
+        ),
+        items=validated_items,
     )
-    total_before_limit = len(rows)
-    rows = rows[: req.limit]
 
     # 登记证据：本次查询返回的 log_id 才能被后续处置引用
     registered = registry.register(
-        (r["log_id"] for r in rows),
+        (r["log_id"] for r in result.items if r.get("log_id")),
         case_id=req.case_id,
         query_params={
             "src_ip": req.src_ip,
             "dest_ip": req.dest_ip,
             "trace_id": req.trace_id,
             "log_source": req.log_source,
-            "window_minutes": window_minutes,
+            "window_minutes": int(window.total_seconds() // 60) if window else None,
+            "time_start": req.time_start,
+            "time_end": req.time_end,
             "limit": req.limit,
+            "data_source": result.data_source,
         },
     )
     _audit(
@@ -321,17 +440,17 @@ def query_logs(req: QueryLogsRequest):
             "case_id": req.case_id,
             "filters": {k: getattr(req, k) for k in filters},
             "log_source": req.log_source,
-            "window_minutes": window_minutes,
-            "returned": len(rows),
+            "window_minutes": int(window.total_seconds() // 60) if window else None,
+            "time_start": req.time_start,
+            "time_end": req.time_end,
+            "data_source": result.data_source,
+            "scenarios": result.scenarios,
+            "returned": len(result.items),
             "registered_new": registered,
         },
     )
 
-    return QueryLogsResponse(
-        meta=_mock_meta(total=total_before_limit).model_copy(
-            update={"reference_time": MOCK_REFERENCE_TIME.isoformat()}),
-        items=[LogItem(**row) for row in rows],
-    )
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -351,10 +470,6 @@ def query_logs(req: QueryLogsRequest):
     tags=["调查工具"],
 )
 def get_context(req: GetContextRequest):
-    guard = _real_backend_guard()
-    if guard is not None:
-        return guard
-
     if not req.user and not req.asset_id:
         return _error(
             HTTP_422,
@@ -363,13 +478,45 @@ def get_context(req: GetContextRequest):
             {},
         )
 
-    profile = MOCK_USER_PROFILE.get(req.user) if req.user else None
-    context = MOCK_ASSET_CONTEXT.get(req.asset_id) if req.asset_id else None
-    found = sum(1 for x in (profile, context) if x)
+    try:
+        profile = asset_context.get_user_profile(req.user) if req.user else None
+        context = (
+            asset_context.get_asset_context(req.asset_id, at_time=req.at_time)
+            if req.asset_id
+            else None
+        )
+        entities = asset_context.list_entities()
+    except asset_context.AssetContextUnavailable as exc:
+        _audit("get_context:unavailable", {"reason": exc.reason, "details": exc.details})
+        return _error(
+            HTTP_503,
+            "backend_unavailable",
+            str(exc),
+            {"backend": "asset_context", "reason": exc.reason, "backend_available": False, **exc.details},
+        )
 
-    _audit("get_context", {"user": req.user, "asset_id": req.asset_id, "found": found})
+    found = sum(1 for x in (profile, context) if x)
+    notes: list[str] = []
+    if req.user and profile is None:
+        notes.append(f"账号 {req.user} 不在资产上下文中（已配置账号：{', '.join(entities['users'])}）")
+    if req.asset_id and context is None:
+        notes.append(
+            f"资产 {req.asset_id} 未登记（已配置资产/IP：{', '.join(entities['assets'] + entities['hosts'])}）"
+        )
+
+    _audit(
+        "get_context",
+        {"user": req.user, "asset_id": req.asset_id, "at_time": req.at_time, "found": found},
+    )
     return GetContextResponse(
-        meta=_mock_meta(total=found),
+        meta=QueryMeta(
+            total=found,
+            data_source="asset_context",
+            mock=False,
+            backend_available=True,
+            dataset=_asset_context_label(),
+            notes=notes,
+        ),
         user_profile=profile,
         asset_context=context,
     )
@@ -392,20 +539,41 @@ def get_context(req: GetContextRequest):
     tags=["调查工具"],
 )
 def search_knowledge(req: SearchKnowledgeRequest):
-    guard = _real_backend_guard()
-    if guard is not None:
-        return guard
-
-    cards = search_mock_knowledge(req.query, req.attack_category)
-    total_before_limit = len(cards)
-    cards = cards[: req.limit]
+    try:
+        cards, meta = knowledge_adapter.search(
+            req.query, top_k=req.limit, attack_category=req.attack_category
+        )
+    except knowledge_adapter.KnowledgeUnavailable as exc:
+        # 缺模型/服务时如实报 503，不用固定答案冒充检索结果
+        _audit(
+            "search_knowledge:unavailable",
+            {"query": req.query, "reason": exc.reason, "details": exc.details},
+        )
+        return _error(
+            HTTP_503,
+            "backend_unavailable",
+            str(exc),
+            {"backend": "knowledge", "reason": exc.reason, "backend_available": False, **exc.details},
+        )
 
     _audit(
         "search_knowledge",
-        {"query": req.query, "attack_category": req.attack_category, "hits": len(cards)},
+        {
+            "query": req.query,
+            "attack_category": req.attack_category,
+            "hits": len(cards),
+            "retrieval_mode": meta.get("retrieval_mode"),
+        },
     )
     return SearchKnowledgeResponse(
-        meta=_mock_meta(total=total_before_limit),
+        meta=QueryMeta(
+            total=len(cards),
+            data_source="mock" if meta.get("mock") else "hybrid_search",
+            mock=bool(meta.get("mock")),
+            backend_available=True,
+            dataset=meta.get("backend"),
+            notes=[] if cards else ["检索未命中任何卡片"],
+        ),
         items=[KnowledgeCard(**c) for c in cards],
     )
 
@@ -476,8 +644,14 @@ def request_response(req: RequestResponseRequest):
     # 因此任何处置动作都只能登记为待审批。注意：模型自称"已审批"不进入此分支。
     approval_id = _next_approval_id()
     is_high_risk = req.action in HIGH_RISK_ACTIONS
+    target_desc = (
+        f"目标账号 {req.target_user}"
+        if req.action == "isolate_account"
+        else f"目标 IP {req.target_ip}"
+    )
     detail = (
-        f"动作 {req.action}（{'高危' if is_high_risk else '低危'}）已登记为待审批单 {approval_id}。"
+        f"动作 {req.action}（{'高危' if is_high_risk else '低危'}）{target_desc} "
+        f"已登记为待审批单 {approval_id}。"
         "权限网关与执行器本周未接入，**未执行任何真实封禁/限速动作**；"
         "证据真实性校验已通过，审批结论只能来自恒脑【交互节点】confirm_block 或权限服务的程序化回执。"
     )

@@ -32,13 +32,17 @@ MOCK_FLAG_KEY = "mock"
 DATA_SOURCE_MOCK = "mock"
 
 # --- 处置动作白名单（高危动作需人工审批，本周一律不产生真实副作用） ---
+#: 处置动作枚举。**权威来源是 ``config/response-policy.yaml`` 的 ``actions``**
+#: （见 config/README.md 硬规则 1）；此处必须与之保持一致，新增动作先改 YAML 再同步本元组。
+#: 知识卡里的 ``rate_limit_ip`` 是 ``rate_limit`` 的别名，已在 YAML 的 aliases 里登记。
 ALLOWED_RESPONSE_ACTIONS = (
-    "block_ip",            # 封禁 IP（高危，需审批；本周仅登记待审批）
-    "block_ip_short_term", # 短时封禁（高危，需审批）
-    "rate_limit",          # 限速（低危，可自动执行——但本周权限网关未接入，仍返回待审批状态）
-    "none",                # 无需处置
+    "none",                 # 无需处置
+    "rate_limit",           # 限速（低危可自动；本周权限网关未接入，仍返回待审批）
+    "block_ip_short_term",  # 短时封禁（高危，需审批）
+    "block_ip",             # 封禁 IP（高危，需审批；本周仅登记待审批）
+    "isolate_account",      # 隔离账号（高危，需审批）—— 与 PR #23 的 response-policy 对齐
 )
-HIGH_RISK_ACTIONS = frozenset({"block_ip", "block_ip_short_term"})
+HIGH_RISK_ACTIONS = frozenset({"block_ip", "block_ip_short_term", "isolate_account"})
 
 # --- 时间窗字符串解析（兼容 Issue #4 的 time_window 语义） ---
 

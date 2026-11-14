@@ -87,7 +87,10 @@ def seclog_health() -> dict[str, Any]:
         "查询全链路关联安全日志（认证日志/Web 访问/网络流）。"
         "至少提供 src_ip、dest_ip、trace_id 或 log_source 之一。"
         "返回的 log_id 是后续提交处置时可引用的唯一合法证据编号。"
-        "用于处置的查询必须带 case_id；省略时只查询、不登记证据。当前为 Mock 数据。"
+        "用于处置的查询必须带 case_id；省略时只查询、不登记证据。"
+        "复核历史场景请用 time_start/time_end（ISO8601 UTC 绝对时间窗，"
+        "与 time_window 互斥）；time_window 是从数据基准往回数，查不到久远数据。"
+        "实际数据源见返回的 meta.data_source。"
     ),
 )
 def seclog_query_logs(
@@ -97,6 +100,8 @@ def seclog_query_logs(
     trace_id: Optional[str] = None,
     log_source: str = "all",
     time_window: Optional[str] = None,
+    time_start: Optional[str] = None,
+    time_end: Optional[str] = None,
     limit: int = 50,
 ) -> dict[str, Any]:
     req = QueryLogsRequest(
@@ -106,6 +111,8 @@ def seclog_query_logs(
         trace_id=trace_id,
         log_source=log_source,  # type: ignore[arg-type]
         time_window=time_window,
+        time_start=time_start,
+        time_end=time_end,
         limit=limit,
     )
     return _unwrap(api_app.query_logs(req))
@@ -114,15 +121,19 @@ def seclog_query_logs(
 @mcp.tool(
     name="seclog_get_context",
     description=(
-        "查询目标账号的行为基线（活跃时段、常用源 IP、24h 登录失败次数）"
+        "查询目标账号的行为基线（活跃时段、常用源 IP、账号类型）"
         "与目标资产的上下文（重要性等级、维护窗口、是否白名单）。user 与 asset_id 至少填一项。"
+        "asset_id 也可填资产 IP。at_time 填被调查日志的时间，用于判断是否落在维护窗口内。"
     ),
 )
 def seclog_get_context(
     user: Optional[str] = None,
     asset_id: Optional[str] = None,
+    at_time: Optional[str] = None,
 ) -> dict[str, Any]:
-    return _unwrap(api_app.get_context(GetContextRequest(user=user, asset_id=asset_id)))
+    return _unwrap(
+        api_app.get_context(GetContextRequest(user=user, asset_id=asset_id, at_time=at_time))
+    )
 
 
 @mcp.tool(
@@ -144,7 +155,7 @@ def seclog_search_knowledge(
 @mcp.tool(
     name="seclog_request_response",
     description=(
-        "提交处置动作（block_ip / block_ip_short_term / rate_limit / none）及其证据。"
+        "提交处置动作（block_ip / block_ip_short_term / rate_limit / isolate_account / none）及其证据。"
         "evidence_log_ids 必须来自本次调查经 seclog_query_logs 真实返回的编号，"
         "伪造或跨任务引用会被拒绝。高危动作只登记为待审批单，不产生真实封禁副作用。"
     ),
@@ -155,11 +166,13 @@ def seclog_request_response(
     evidence_log_ids: list[str],
     reason: str,
     target_ip: Optional[str] = None,
+    target_user: Optional[str] = None,
 ) -> dict[str, Any]:
     req = RequestResponseRequest(
         case_id=case_id,
         action=action,  # type: ignore[arg-type]
         target_ip=target_ip,
+        target_user=target_user,
         evidence_log_ids=evidence_log_ids,
         reason=reason,
     )
