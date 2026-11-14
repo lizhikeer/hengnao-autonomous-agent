@@ -27,7 +27,7 @@ windows:
     never_exempt: [sql_injection, malicious_upload, webshell_access]
 
   - asset_id: web-prod-01
-    days: [wed]
+    days: [thu]
     start: "14:00"
     end: "14:30"
     activity: 安全测试组授权漏洞扫描（对应 CHAIN-CASE-09，授权源 IP 10.0.0.77）
