@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 import sys
+import ipaddress
 from dataclasses import dataclass, field
 import datetime as _dt
 from typing import Any, Callable, Optional
@@ -45,6 +46,21 @@ MAX_ROUNDS_DEFAULT = 8
 #: 普通业务账号（application_admin 等）不在此列，避免给正常访问强加运维约束。
 WINDOW_REQUIRED_ACCOUNT_TYPES = {"legit_operator", "service"}
 MAX_EMPTY_STREAK = 2  # 连续两轮零新增证据即收束
+
+
+def _ip_matches_scope(address: str, scopes: list[str]) -> bool:
+    """按 IP 或 CIDR 检查来源地址；无效配置项不匹配。"""
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    for scope in scopes:
+        try:
+            if ip in ipaddress.ip_network(scope, strict=False):
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 @dataclass
@@ -522,9 +538,10 @@ class InvestigationSession:
                     checks["来源授权范围"] = False
                     notes.append("账号画像的来源授权范围为空，不能视为不限范围")
                 else:
-                    checks["来源 IP 符合授权范围"] = srcs <= set(allowed_src)
-                    if not checks["来源 IP 符合授权范围"]:
-                        notes.append(f"来源 IP {sorted(srcs - set(allowed_src))} 不在授权范围")
+                    outside = sorted(src for src in srcs if not _ip_matches_scope(src, allowed_src))
+                    checks["来源 IP 符合授权范围"] = not outside
+                    if outside:
+                        notes.append(f"来源 IP {outside} 不在授权范围")
 
             # 资产：同理，必须来自配置的账号-资产范围；未提供就不能判"未越权"。
             targets = {log.get("asset_id") for log in account_logs if log.get("asset_id")}

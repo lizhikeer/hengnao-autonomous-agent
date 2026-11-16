@@ -652,6 +652,22 @@ def test_authorized_when_scope_configured():
     assert final.attack_type == "none"
 
 
+def test_cidr_source_scope_authorizes_member_address():
+    """账号授权范围中的 CIDR 应按网段匹配，而非当作单个 IP 字符串。"""
+    profile = _profile(common_src_ips=["10.0.0.0/24"])
+    log = _log("L-CIDR", src_ip="10.0.0.67", attack_stage_hint="benign")
+    final = _session([log], profile=profile, asset=_asset()).run()
+    assert final.attack_type == "none"
+
+
+def test_cidr_source_scope_rejects_address_outside_network():
+    profile = _profile(common_src_ips=["10.0.0.0/24"])
+    log = _log("L-CIDR-OUT", src_ip="10.0.1.67", attack_stage_hint="benign")
+    final = _session([log], profile=profile, asset=_asset()).run()
+    assert final.attack_type == "insufficient_evidence"
+    assert "不在授权范围" in final.unknown_items
+
+
 def test_missing_source_scope_is_uncertain():
     """缺来源授权范围（只有处置豁免名单）时不能判正常。"""
     profile = {

@@ -1,0 +1,31 @@
+{
+  "case_id": "CHAIN-CASE-06",
+  "is_malicious": false,
+  "attack_type": "insufficient_evidence",
+  "risk_level": "LOW",
+  "attacker_ip": "198.51.100.99",
+  "victim_asset": "nas-host-01",
+  "evidence_log_ids": [
+    "LOG-20261104-0601",
+    "LOG-20261104-0602",
+    "LOG-20261104-0603",
+    "LOG-20261104-0604",
+    "LOG-20261104-0605",
+    "LOG-20261104-0606",
+    "LOG-20261104-0607",
+    "LOG-20261104-0608",
+    "LOG-20261104-0609",
+    "LOG-20261104-0610",
+    "LOG-20261104-0611",
+    "LOG-20261104-0612",
+    "LOG-20261104-0613",
+    "LOG-20261104-0614",
+    "LOG-20261104-0615",
+    "LOG-20261104-0616",
+    "LOG-20261104-0617"
+  ],
+  "attack_chain_summary": "未确认攻击成立，也未取得充分的授权依据，不判定为正常，交人工复核。",
+  "recommended_action": "none",
+  "requires_human_approval": true,
+  "unknown_items": "证据不足未定论。缺失项：授权核对未通过：账号唯一；同一批日志出现多个账号：admin, ops, oracle, root, test，无法用单一画像批准；17 条日志存在未解释的行为（阶段标注 brute_force, c2_callback, exploitation，但无攻击载荷特征），不能据此确认攻击成立，也不能判为正常"
+}

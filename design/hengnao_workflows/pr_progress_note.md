@@ -54,6 +54,20 @@ uv pip install -r requirements/runtime.txt --python "$TEMP/w2verify311/Scripts/p
 **没有暂存**：`data/agent_traces/legacy/`（历史归档）、`docs/superpowers/`（无关临时文档）、
 无 `.env` / 凭据 / 日志。
 
+---
+
+## 本地续作进度（2026-11-16）
+
+基于最新 `origin/main`（`e581305`）新建分支 `feature/w2-account-scope-v1-traces`。本轮将 `response-policy.yaml` 中 `ops_*` / `ops` 的来源与资产范围接入账号画像；CIDR 形式来源范围按网段匹配。处置豁免仍与行为授权分开。
+
+CASE-03 回放现为 `none` / `LOW`，证据 4 条。CASE-01～CASE-10 已全部重跑并生成轨迹；10 案例评测摘要：Recall 100%、FPR 50%、弃权率 30%、诊断准确率 14.3%、风险等级一致率 85.7%、平均证据召回率 49.0%、高危审批合规率 100%。CASE-06、CASE-08 恶意场景弃权，CASE-09 授权扫描误报；结果保留原样，供后续错题复盘。
+
+验证：`pytest tests/ -q` → **268 passed**；`git diff --check` 通过。
+
+仍未完成的 Issue #18 外部联调：本次访问 `https://seclog.91666.icu:18443/health` TCP 超时；检索依赖、BGE 权重、Qdrant 与知识库未就绪；本地未发现 ClickHouse DSN。因此没有验证 ClickHouse 实库、真实混合检索或恒脑平台执行。Issue #18 仍不能整体关闭。
+
+本轮对应产物见 `data/agent_traces/v1/`，验收记录见 `design/hengnao_workflows/week2_acceptance.md` 第十轮。
+
 ### 前一轮修复（2026-11-12 晚）
 
 **1. MCP 历史时间窗不一致**

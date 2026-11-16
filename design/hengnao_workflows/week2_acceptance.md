@@ -15,6 +15,34 @@
 
 ---
 
+# 第十轮：接入账号授权范围并补齐 10 案例 V1（2026-11-16）
+
+## 1. 授权范围接入
+
+最新 `main` 的 `config/response-policy.yaml#allowlist.users` 已为 `ops_*` 和 `ops` 配置 `common_src_ips` 与 `allowed_assets`。`get_user_profile()` 现将这两项作为行为授权范围传给调查器，同时继续单独标记 `disposition_exempt`，不再把处置豁免与行为授权混为一谈。`common_src_ips` 支持单 IP 和 CIDR；无效 IP 或配置项不匹配授权范围。
+
+CASE-03 重新回放后判定为 `none`，风险 `LOW`，4 条证据，2 轮；来源 `10.0.0.66`、目标 `web-prod-01` 均命中授权范围，行为落在配置的维护窗口内。
+
+## 2. V1 轨迹与 10 案例算分
+
+`tests/run_v1_traces.py` 已对 CASE-01～CASE-10 全部重跑。结果 JSON、轨迹 JSON、`SUMMARY.md` 与 `EVALUATION.md` 均由程序生成；truth 只用于独立评测，未参与调查。全部 10 个结果通过 AgentResults 契约校验，所有引用证据均已登记。
+
+主要指标：检测 Recall 100%、正常业务误报率 50%、弃权率 30%、诊断准确率 14.3%、风险等级一致率 85.7%、平均证据召回率 49.0%、高危动作审批合规率 100%。CASE-06 与 CASE-08 对恶意场景弃权；CASE-09 将授权扫描误判为恶意。以上差异保留在产物中，后续应作为错题分析输入，不按 truth 直接改写调查结论。
+
+产物位置：`data/agent_traces/v1/`。本轮来源为本地 `dataset_replay`，控制器为 `rule_based_v1_controller`，不是恒脑平台模型运行结果。
+
+## 3. 回归与外部依赖
+
+全量测试：`268 passed`；`git diff --check` 通过。
+
+真实检索检查仍缺 `sentence-transformers`、`qdrant-client`、NumPy、BGE 权重、可用 Qdrant 服务和 SQLite 知识库。本轮对 `https://seclog.91666.icu:18443/health` 的 TCP 连接超时；未能验证该中转上的应用、ClickHouse 数据源或恒脑平台工作流。工作区没有 `CLICKHOUSE_DSN` 等本地连接配置，因此没有发起真实 ClickHouse 查询。
+
+## 4. 当前交付边界
+
+已完成本地授权范围接入、CIDR 匹配、CASE-03 回放、CASE-01～CASE-10 轨迹生成和 10 案例算分。恒脑平台联调、ClickHouse 实库和真实混合检索仍未完成；Issue #18 不应据此标记为整体验收通过。
+
+---
+
 # 第九轮：运行时依赖修复 + 干净环境验证 + 暂存整理（2026-11-12 深夜）
 
 ## 1. 依赖冲突（已修）

