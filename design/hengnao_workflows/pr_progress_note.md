@@ -154,3 +154,11 @@ CASE-02 的 `C2_Exfiltration` 仍未计入：`_c2_signal` 要求 payload 含明�
 **测试**：258 passed。**V1**：CASE-01 16/0.833、CASE-02 6/0.667、CASE-03 insufficient/0.4。
 
 </details>
+
+## PR #27 补充：评审问题修复（2026-11-17）
+
+已处理 PR #26 指向控制器的两项错题：授权扫描须逐条通过扫描器、资产、授权源 IP、授权时间窗、允许动作及禁止豁免类别核验；同源同资产时窗的 Zeek 连接记录归入调查证据。纯扫描结论降为 `MEDIUM` 并推荐 `rate_limit`，控制器仅生成建议、不实际执行处置。CASE-09 回放为 `none` / `LOW`（truth 恶意判定一致，13 条证据覆盖 truth，证据召回 100%）；CASE-07 为 `Scan` / `MEDIUM` / `rate_limit`。
+
+验证：上下文测试 46 passed；全量测试 271 passed；10 案例重跑后 Recall 100%、FPR 0%、弃权率 30%、诊断准确率 28.6%、风险一致率 100%、平均证据召回 69.0%。详细结果见 `week2_acceptance.md` 第十一轮及 `data/agent_traces/v1/`。
+
+平台连通信息更正：较早的本机 `/health` 超时记录不代表现状。`docs/架构变更说明_2026-11-12.md` 记录的新链路为固定域名 → 国内公网 IPv4 中转 → NAS frpc → Caddy TLS → FastAPI，并记录平台调试通过。本轮未重跑线上检查，因此没有把此前超时当成现行阻塞，也没有声称本轮已完成平台复验。真实 ClickHouse、混合检索与修改后恒脑工作流仍未验证。

@@ -1,9 +1,9 @@
 {
   "case_id": "CHAIN-CASE-07",
   "run": {
-    "run_id": "20261116T154125Z",
-    "started_at": "2026-11-16T15:41:25.014471+00:00",
-    "finished_at": "2026-11-16T15:41:25.015488+00:00",
+    "run_id": "20261116T162101Z",
+    "started_at": "2026-11-16T16:21:01.108522+00:00",
+    "finished_at": "2026-11-16T16:21:01.109650+00:00",
     "duration_ms": 1,
     "controller": "rule_based_v1_controller",
     "env": {
@@ -11,7 +11,7 @@
       "search_mode": "auto"
     },
     "code_version": {
-      "commit": "e581305",
+      "commit": "32a51b6",
       "branch": "feature/w2-account-scope-v1-traces",
       "dirty_worktree": true
     },
@@ -585,51 +585,54 @@
   "result": {
     "case_id": "CHAIN-CASE-07",
     "is_malicious": true,
-    "attack_type": "Path_Traversal_Privilege_After_Malicious_Upload_After_Scan",
+    "attack_type": "Scan",
     "risk_level": "MEDIUM",
     "attacker_ip": "45.155.205.233",
     "victim_asset": "web-prod-01",
     "evidence_log_ids": [
+      "LOG-20261104-0701",
+      "LOG-20261104-0702",
       "LOG-20261104-0703",
+      "LOG-20261104-0704",
+      "LOG-20261104-0705",
+      "LOG-20261104-0706",
       "LOG-20261104-0707",
       "LOG-20261104-0708",
       "LOG-20261104-0709",
       "LOG-20261104-0710",
       "LOG-20261104-0711",
       "LOG-20261104-0712",
-      "LOG-20261104-0713"
+      "LOG-20261104-0713",
+      "LOG-20261104-0714",
+      "LOG-20261104-0718"
     ],
-    "attack_chain_summary": "攻击源 45.155.205.233 对 web-prod-01 实施：扫描探测 7 次，目录遍历/越权访问 1 次，恶意上传或 webshell 访问 1 次。",
-    "recommended_action": "block_ip_short_term",
-    "requires_human_approval": true,
-    "unknown_items": "部分分类同时命中，时序不确定；主分类外的类别保留在 conclusion_basis；处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；未调用知识检索工具。"
+    "attack_chain_summary": "攻击源 45.155.205.233 对 web-prod-01 实施：扫描探测 15 次。",
+    "recommended_action": "rate_limit",
+    "requires_human_approval": false,
+    "unknown_items": "仅生成限速建议；本调查器未调用处置工具；未调用知识检索工具。"
   },
   "conclusion_basis": {
     "attack_type": {
-      "value": "Path_Traversal_Privilege_After_Malicious_Upload_After_Scan",
+      "value": "Scan",
       "segments": [
         {
           "code": "Scan",
           "log_ids": [
+            "LOG-20261104-0701",
+            "LOG-20261104-0702",
             "LOG-20261104-0703",
+            "LOG-20261104-0704",
+            "LOG-20261104-0705",
+            "LOG-20261104-0706",
             "LOG-20261104-0707",
             "LOG-20261104-0708",
             "LOG-20261104-0709",
             "LOG-20261104-0710",
             "LOG-20261104-0711",
-            "LOG-20261104-0712"
-          ]
-        },
-        {
-          "code": "Path_Traversal_Privilege",
-          "log_ids": [
-            "LOG-20261104-0713"
-          ]
-        },
-        {
-          "code": "Malicious_Upload",
-          "log_ids": [
-            "LOG-20261104-0712"
+            "LOG-20261104-0712",
+            "LOG-20261104-0713",
+            "LOG-20261104-0714",
+            "LOG-20261104-0718"
           ]
         }
       ]
@@ -638,35 +641,47 @@
       "value": "MEDIUM",
       "rule": "存在强攻击特征但请求未被受理/无响应",
       "log_ids": [
+        "LOG-20261104-0701",
+        "LOG-20261104-0702",
         "LOG-20261104-0703",
+        "LOG-20261104-0704",
+        "LOG-20261104-0705",
+        "LOG-20261104-0706",
         "LOG-20261104-0707",
         "LOG-20261104-0708",
         "LOG-20261104-0709",
         "LOG-20261104-0710",
         "LOG-20261104-0711",
         "LOG-20261104-0712",
-        "LOG-20261104-0713"
+        "LOG-20261104-0713",
+        "LOG-20261104-0714",
+        "LOG-20261104-0718"
       ]
     },
     "attacker_ip": {
       "value": "45.155.205.233",
       "log_ids": [
+        "LOG-20261104-0701",
+        "LOG-20261104-0702",
         "LOG-20261104-0703",
+        "LOG-20261104-0704",
+        "LOG-20261104-0705",
+        "LOG-20261104-0706",
         "LOG-20261104-0707",
         "LOG-20261104-0708",
         "LOG-20261104-0709",
         "LOG-20261104-0710",
         "LOG-20261104-0711",
         "LOG-20261104-0712",
-        "LOG-20261104-0713"
+        "LOG-20261104-0713",
+        "LOG-20261104-0714",
+        "LOG-20261104-0718"
       ]
     },
     "summary": {
-      "text": "攻击源 45.155.205.233 对 web-prod-01 实施：扫描探测 7 次，目录遍历/越权访问 1 次，恶意上传或 webshell 访问 1 次。",
+      "text": "攻击源 45.155.205.233 对 web-prod-01 实施：扫描探测 15 次。",
       "stage_counts": {
-        "Scan": 7,
-        "Malicious_Upload": 1,
-        "Path_Traversal_Privilege": 1
+        "Scan": 15
       }
     }
   },
@@ -675,11 +690,11 @@
     "schema_valid": true,
     "verify_ok": true,
     "verify_problems": [],
-    "evidence_count": 8,
+    "evidence_count": 15,
     "evidence_all_registered": true,
     "unregistered_evidence": [],
-    "requires_human_approval": true,
-    "recommended_action": "block_ip_short_term"
+    "requires_human_approval": false,
+    "recommended_action": "rate_limit"
   },
   "evaluation": {
     "truth_case_id": "CHAIN-CASE-07",
@@ -691,8 +706,8 @@
     "attack_type_exact_match": false,
     "attack_type_covers_truth": false,
     "attacker_ip_match": true,
-    "evidence_recall": 0.4,
-    "evidence_hit": 2,
+    "evidence_recall": 1.0,
+    "evidence_hit": 5,
     "evidence_truth_total": 5,
     "note": "仅作独立评测对照，未参与调查过程"
   }
