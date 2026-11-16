@@ -1,0 +1,16 @@
+{
+  "case_id": "CHAIN-CASE-09",
+  "is_malicious": true,
+  "attack_type": "Path_Traversal_Privilege_After_XSS",
+  "risk_level": "HIGH",
+  "attacker_ip": "unknown",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261105-0906",
+    "LOG-20261105-0907"
+  ],
+  "attack_chain_summary": "攻击源 未确定 对 web-prod-01 实施：跨站脚本尝试 1 次，目录遍历/越权访问 1 次；攻击请求得到响应（未确认利用成功）。",
+  "recommended_action": "none",
+  "requires_human_approval": true,
+  "unknown_items": "处置目标未能定位，交人工复核，不建议封禁；处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；未调用知识检索工具。"
+}

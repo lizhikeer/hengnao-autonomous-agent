@@ -1,0 +1,22 @@
+{
+  "case_id": "CHAIN-CASE-07",
+  "is_malicious": true,
+  "attack_type": "Path_Traversal_Privilege_After_Malicious_Upload_After_Scan",
+  "risk_level": "MEDIUM",
+  "attacker_ip": "45.155.205.233",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261104-0703",
+    "LOG-20261104-0707",
+    "LOG-20261104-0708",
+    "LOG-20261104-0709",
+    "LOG-20261104-0710",
+    "LOG-20261104-0711",
+    "LOG-20261104-0712",
+    "LOG-20261104-0713"
+  ],
+  "attack_chain_summary": "攻击源 45.155.205.233 对 web-prod-01 实施：扫描探测 7 次，目录遍历/越权访问 1 次，恶意上传或 webshell 访问 1 次。",
+  "recommended_action": "block_ip_short_term",
+  "requires_human_approval": true,
+  "unknown_items": "部分分类同时命中，时序不确定；主分类外的类别保留在 conclusion_basis；处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；未调用知识检索工具。"
+}
