@@ -1,0 +1,193 @@
+[
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-017",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "内网主机异常端口扫描与横向探测识别",
+    "summary": "通过防火墙、网络流量和主机连接日志，识别内部主机对多个目标发起的异常连接探测行为。",
+    "attack_category": "Discovery",
+    "mitre_id": "T1046",
+    "applicable_log_sources": [
+      "firewall_log",
+      "zeek_conn",
+      "ids_alert",
+      "endpoint_network_log"
+    ],
+    "keywords": [
+      "端口扫描",
+      "内网探测",
+      "横向移动",
+      "异常连接",
+      "网络发现"
+    ],
+    "key_indicators": [
+      "单一内部源地址在短时间内连接多个内部目标主机",
+      "同一来源对多个目标的多个服务端口发起连接并出现大量失败记录",
+      "网络连接行为与该主机的正常业务通信模式明显不符",
+      "扫描行为发生后，相关目标主机出现异常认证或服务访问记录"
+    ],
+    "investigation_steps": [
+      "提取异常时间段的网络连接记录，统计来源主机、目标主机、端口和连接结果",
+      "结合资产清单确认来源主机是否具有合法的网络扫描或运维职责",
+      "关联终端告警、认证日志和目标主机日志，判断是否存在后续异常访问",
+      "确认异常行为涉及的网络范围及受影响资产，并记录事件时间线"
+    ],
+    "recommended_action": "rate_limit",
+    "error_revision_note": "对未授权且明显自动化的端口探测来源限速；授权扫描器、运维巡检和资产发现任务应先核验。",
+    "source_reference": "MITRE ATT&CK T1046 Network Service Discovery；OWASP Web Security Testing Guide v4.2",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-018",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "WebShell相关异常出站连接与长连接识别",
+    "summary": "通过Web服务器进程行为、文件变更和网络连接记录，识别WebShell风险及其可能引发的异常远程通信。",
+    "attack_category": "Command_and_Control",
+    "mitre_id": "T1505.003",
+    "applicable_log_sources": [
+      "web_server_log",
+      "endpoint_process_log",
+      "endpoint_network_log",
+      "firewall_log",
+      "file_integrity_log"
+    ],
+    "keywords": [
+      "WebShell",
+      "异常出站连接",
+      "长连接",
+      "Web服务器进程",
+      "命令与控制"
+    ],
+    "key_indicators": [
+      "Web服务器进程出现与正常业务无关的异常外部网络连接",
+      "Web目录出现来源不明或未经授权的可执行脚本文件",
+      "Web服务进程启动异常子进程并伴随网络连接行为",
+      "同一Web服务器出现异常文件变更、进程行为和出站通信等多类告警"
+    ],
+    "investigation_steps": [
+      "核对Web目录文件变更记录，确认可疑文件的创建时间和来源",
+      "检查Web服务进程树及其子进程，确认是否存在异常进程行为",
+      "关联防火墙和终端网络日志，分析异常连接的目的地址、持续时间和通信频率",
+      "结合业务部署记录和资产责任人确认相关文件及连接是否经过授权"
+    ],
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "仅在确认 WebShell 或恶意进程与异常外连关联后申请短时封禁/隔离；按目标资产类型和响应策略执行人工审批并保全证据。",
+    "source_reference": "MITRE ATT&CK T1505.003 Web Shell；MITRE ATT&CK Command and Control",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-019",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "周期性HTTP与DNS异常Beacon通信识别",
+    "summary": "通过网络连接时间间隔、DNS查询和流量特征，识别可能与命令控制基础设施通信的周期性网络行为。",
+    "attack_category": "Command_and_Control",
+    "mitre_id": "T1071.001",
+    "applicable_log_sources": [
+      "zeek_conn",
+      "zeek_dns",
+      "proxy_log",
+      "firewall_log",
+      "dns_log"
+    ],
+    "keywords": [
+      "Beacon",
+      "周期性通信",
+      "HTTP通信",
+      "DNS异常",
+      "命令与控制"
+    ],
+    "key_indicators": [
+      "单一主机在较长时间内以相似时间间隔持续访问同一外部目的地址",
+      "内部主机对低信誉或未经授权的域名持续发起DNS查询",
+      "HTTP请求在时间、流量大小和目标地址方面表现出异常重复特征",
+      "异常通信发生时缺少对应的正常用户操作或业务请求"
+    ],
+    "investigation_steps": [
+      "统计相关主机的连接时间间隔、目标地址和流量大小，建立通信时间线",
+      "检查DNS解析记录及域名信誉，确认目标域名是否属于授权业务服务",
+      "关联代理日志和终端进程记录，确定发起通信的应用程序或进程",
+      "结合威胁情报、资产用途和历史基线判断是否属于异常远程通信"
+    ],
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "仅在终端进程、DNS/HTTP 流量及威胁情报共同支持恶意 Beacon 后申请短时封禁；周期性通信本身不足以定性。",
+    "source_reference": "MITRE ATT&CK T1071.001 Web Protocols；MITRE ATT&CK Command and Control",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-020",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "异常数据库访问与大规模数据外传识别",
+    "summary": "关联数据库审计、代理和网络流量记录，识别非正常批量数据读取及疑似数据外传行为。",
+    "attack_category": "Exfiltration",
+    "mitre_id": "T1041",
+    "applicable_log_sources": [
+      "database_audit_log",
+      "firewall_log",
+      "proxy_log",
+      "zeek_conn",
+      "dlp_alert"
+    ],
+    "keywords": [
+      "数据外传",
+      "数据库审计",
+      "批量读取",
+      "异常流量",
+      "数据泄露"
+    ],
+    "key_indicators": [
+      "非业务高峰时段出现明显超出历史基线的大量数据库读取行为",
+      "数据库访问账户在短时间内读取大量非日常业务所需的数据",
+      "内部主机向未经授权的外部目的地址发送异常规模的数据流量",
+      "数据库批量读取事件与代理、网络流量或DLP告警在时间上高度关联"
+    ],
+    "investigation_steps": [
+      "检查数据库审计记录，确认访问账户、数据范围、查询时间和读取规模",
+      "结合业务审批记录核实批量数据访问是否具有合法业务原因",
+      "关联防火墙、代理和网络流量记录，确认是否存在异常外部传输",
+      "评估可能涉及的数据类型、资产范围和业务影响，并建立完整事件时间线"
+    ],
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "仅在数据库审计与网络/DLP 证据确认未授权外传后申请短时封禁；同时通知数据责任人并核查账户，所有高危动作须人工审批。",
+    "source_reference": "MITRE ATT&CK T1041 Exfiltration Over C2 Channel；MITRE ATT&CK Exfiltration",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  }
+]

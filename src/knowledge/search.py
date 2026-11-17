@@ -17,6 +17,20 @@ from .qdrant_client import VectorStore
 from .schema import CardValidator, canonical_hash, normalize_card, utc_now
 from .text import match_query, sections, terms
 
+# 调查分类关联现有知识卡类别，保留已入库卡片原有标签和版本。
+_RELATED_CATEGORIES = {
+    "Scan": ("Information_Gathering", "Discovery"),
+    "Brute_Force": ("Credential_Access",),
+    "XSS": ("XSS_RCE",),
+    "Path_Traversal_Privilege": (
+        "File_Upload_Traversal",
+        "Authorization_Failure",
+        "Privilege_Escalation",
+    ),
+    "Malicious_Upload": ("File_Upload_Traversal",),
+    "C2_Exfiltration": ("Command_and_Control", "Exfiltration"),
+}
+
 
 def reciprocal_rank_fusion(rankings: list[list[str]]) -> list[tuple[str, float]]:
     """按名次融合，避免直接相加含义不同的余弦距离与 BM25 原始分数。"""
@@ -179,6 +193,7 @@ class KnowledgeService:
         category = filters.get("attack_category")
         if category is not None and not isinstance(category, str):
             raise ValueError("attack_category 必须是字符串")
+        categories = (category, *_RELATED_CATEGORIES.get(category, ())) if category else ()
         if filters.get("exclude_investigation_id") is not None and not isinstance(
             filters["exclude_investigation_id"], str
         ):
@@ -199,7 +214,7 @@ class KnowledgeService:
                 profile=profile,
                 now=now,
                 limit=depth,
-                category=category,
+                categories=categories,
             )
             lexical = self.store.keyword_search(
                 match_query(query),
@@ -207,7 +222,7 @@ class KnowledgeService:
                 profile=profile,
                 now=now,
                 limit=depth * 2,
-                category=category,
+                categories=categories,
             )
             dense_ids, lexical_ids, candidates = [], [], {}
             for hit in dense:

@@ -811,7 +811,7 @@
             "backend": "knowledge",
             "reason": "导入 src.knowledge.search 失败（通常缺 sentence-transformers / qdrant-client 依赖）",
             "backend_available": false,
-            "error": "ModuleNotFoundError: No module named 'qdrant_client'",
+            "error": "ModuleNotFoundError: No module named 'jieba'",
             "stage": "import"
           }
         }

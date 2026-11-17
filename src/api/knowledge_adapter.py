@@ -18,7 +18,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -38,7 +38,7 @@ class KnowledgeUnavailable(RuntimeError):
         self.details = details or {}
 
 
-def resolve_mode(mode: Optional[str] = None) -> str:
+def resolve_mode(mode: str | None = None) -> str:
     return (mode or os.getenv("SECLOG_SEARCH_MODE", "auto")).strip().lower()
 
 
@@ -50,18 +50,23 @@ def _ensure_project_root_on_path() -> None:
 
 
 def map_card(raw: dict[str, Any]) -> dict[str, Any]:
-    """把检索返回的原始卡片收敛到 ``KnowledgeCard`` 的字段。
-
-    只做字段映射与类型兜底，不改写内容——检索到什么就返回什么。
-    """
+    """保留完整命中规则和对应来源，避免把整张历史案例带入调查。"""
     card_type = raw.get("card_type")
     if card_type not in _CARD_TYPES:
         card_type = "security_knowledge"
     indicators = raw.get("key_indicators") or []
     if isinstance(indicators, str):
         indicators = [indicators]
+    rules = raw.get("analysis_rules") or []
+    section = raw.get("matched_section")
+    matched = [rule for rule in rules if section == f"analysis_rules.{rule['rule_id']}"]
+    selected = (matched or rules)[:1]
+    data_ids = {item for rule in selected for item in rule["data_ids"]}
+    source_ids = {item for rule in selected for item in rule["source_ids"]}
+    case = raw.get("case_details") or {}
     return {
         "card_id": str(raw.get("card_id") or ""),
+        "version": raw.get("version"),
         "card_type": card_type,
         "title": str(raw.get("title") or ""),
         "attack_category": raw.get("attack_category"),
@@ -69,6 +74,16 @@ def map_card(raw: dict[str, Any]) -> dict[str, Any]:
         "key_indicators": [str(x) for x in indicators],
         "recommended_action": raw.get("recommended_action"),
         "score": float(raw.get("score") or 0.0),
+        "investigation_steps": (raw.get("investigation_steps") or [])[:5],
+        "analysis_rules": selected,
+        "required_data": [
+            item for item in raw.get("required_data", []) if item["data_id"] in data_ids
+        ],
+        "source_reference": raw.get("source_reference"),
+        "sources": [item for item in raw.get("sources", []) if item["source_id"] in source_ids],
+        "applicability_limits": (raw.get("applicability_limits") or [])[:3],
+        "error_revision_note": raw.get("error_revision_note") or None,
+        "corrected_steps": (case.get("corrected_steps") or [])[:5],
     }
 
 
@@ -76,9 +91,9 @@ def search(
     query: str,
     *,
     top_k: int = 5,
-    attack_category: Optional[str] = None,
-    filters: Optional[dict[str, Any]] = None,
-    mode: Optional[str] = None,
+    attack_category: str | None = None,
+    filters: dict[str, Any] | None = None,
+    mode: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """执行检索，返回 ``(cards, meta)``。
 

@@ -50,7 +50,7 @@ mcp = FastMCP(
         "SecLog 安全日志调查工具集。先用 seclog_query_logs 拉取关联日志并拿到 log_id，"
         "再用 seclog_get_context 查账号基线与资产重要性、seclog_search_knowledge 查处置知识，"
         "最后用 seclog_request_response 提交处置（必须附带真实查询得到的证据编号）。"
-        "当前全部为 Mock 数据（meta.mock=true），不得当作真实生产证据。"
+        "工具返回的数据来源以各自的 meta 为准。"
     ),
 )
 
@@ -140,15 +140,18 @@ def seclog_get_context(
     name="seclog_search_knowledge",
     description=(
         "检索安全知识卡与已确认的正/反案例卡（OWASP/MITRE 处置基准、错题修订经验）。"
-        "用于给研判结论找处置依据。零命中返回空列表。当前为 Mock 关键词匹配。"
+        "返回调查步骤、判定规则和来源。零命中返回空列表。"
     ),
 )
 def seclog_search_knowledge(
     query: str,
     attack_category: Optional[str] = None,
     limit: int = 5,
+    case_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    req = SearchKnowledgeRequest(query=query, attack_category=attack_category, limit=limit)
+    req = SearchKnowledgeRequest(
+        query=query, attack_category=attack_category, limit=limit, case_id=case_id
+    )
     return _unwrap(api_app.search_knowledge(req))
 
 

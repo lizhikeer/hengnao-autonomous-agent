@@ -533,15 +533,19 @@ def get_context(req: GetContextRequest):
     summary="检索安全知识卡与已确认正反案例卡（RAG 混合检索入口）",
     description=(
         "调用知识库检索：返回 OWASP/MITRE 安全知识卡、已确认正确案例卡、错误修订卡。"
-        "当前为 Mock 关键词匹配（score 为演示值），真实 BGE 向量 + 关键词混合检索由知识库模块提供。"
+        "返回调查步骤、命中规则与来源，运行模式以 meta.mock 为准。"
         "零命中返回 200 且 items=[]。"
     ),
     tags=["调查工具"],
 )
 def search_knowledge(req: SearchKnowledgeRequest):
+    # 当前案例的经验与答案必须留在评测或审核端。
+    scope = None
+    if req.case_id:
+        scope = {"exclude_investigation_id": req.case_id, "exclude_scenario_ids": [req.case_id]}
     try:
         cards, meta = knowledge_adapter.search(
-            req.query, top_k=req.limit, attack_category=req.attack_category
+            req.query, top_k=req.limit, attack_category=req.attack_category, filters=scope
         )
     except knowledge_adapter.KnowledgeUnavailable as exc:
         # 缺模型/服务时如实报 503，不用固定答案冒充检索结果
