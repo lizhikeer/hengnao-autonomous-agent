@@ -5,7 +5,7 @@
     2. 低危且 auto_execute → EXECUTED，并追加执行审计；
     3. 高危 → PENDING_APPROVAL，不落盘；
     4. 审批单 6 项必填字段校验（approve 缺字段直接拒绝）；
-    5. on_timeout: reject 的超时自动拒批；
+    5. 审批单有效期统一 30 分钟，on_timeout: reject 的超时自动拒批；
     6. 审计落盘字段完整性（ts / action / target_type / target / evidence_log_ids / policy_reason）。
 
 状态机跑真实 ``config/response-policy.yaml``（唯一权威枚举，config/README.md 硬规则 1），
@@ -24,6 +24,7 @@ import pytest
 from operations.response_executor import (
     BLOCKED,
     BLOCKED_BY_POLICY,
+    DEFAULT_APPROVAL_TIMEOUT_MINUTES,
     EXECUTED,
     NO_ACTION,
     PENDING_APPROVAL,
@@ -215,6 +216,29 @@ def test_reject_executes_nothing():
 # ---------------------------------------------------------------------------
 # 3. 超时自动拒批（approval.on_timeout: reject）
 # ---------------------------------------------------------------------------
+def test_approval_timeout_is_unified_30_minutes():
+    """审批单有效期统一 30 分钟：deadline 恰为创建时刻 + 30 分钟，到期即结算。
+
+    锁定统一有效期，防止后续被写死成别的值：5/31/45 分钟用例只验证相对行为，
+    默认值漂移时它们仍会通过，本用例直接断言默认值与精确到期时刻。
+    """
+    assert DEFAULT_APPROVAL_TIMEOUT_MINUTES == 30
+
+    created = datetime(2026, 11, 17, 2, 0, tzinfo=timezone.utc)
+    pending = evaluate_action(
+        "block_ip", "web", ATTACKER_IP, "", EVIDENCE, case_id="CASE-W3-0001", now=created
+    )
+
+    assert datetime.fromisoformat(pending["deadline"]) == created + timedelta(minutes=30)
+    # 到期前 1 分钟仍在审批窗口内；第 30 分钟整即按 on_timeout=reject 自动拒批
+    assert expire_pending(now=created + timedelta(minutes=29)) == []
+    settled = expire_pending(now=created + timedelta(minutes=30))
+    assert [item["approval_id"] for item in settled] == [pending["approval_id"]]
+    assert settled[0]["status"] == REJECTED
+    assert settled[0]["rejected_by"] == "SYSTEM_TIMEOUT"
+    assert _read_records() == []
+
+
 def test_pending_expires_to_rejected_on_timeout():
     """超过有效期未审批：自动转为 REJECTED，不执行、不落盘。"""
     created = datetime(2026, 11, 17, 2, 0, tzinfo=timezone.utc)

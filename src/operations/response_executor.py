@@ -517,7 +517,7 @@ def _build_record(
 # ---------------------------------------------------------------------------
 # 状态机：NO_ACTION / EXECUTED / PENDING_APPROVAL / REJECTED / BLOCKED
 # ---------------------------------------------------------------------------
-#: 审批单默认有效期（分钟）；到期按 ``approval.on_timeout`` 处理
+#: 审批单有效期（分钟）：统一 30 分钟，不写死其他值；到期按 ``approval.on_timeout`` 处理
 DEFAULT_APPROVAL_TIMEOUT_MINUTES = 30
 
 #: 进程内待审批表 {approval_id: 审批单}。审批单本身是运行时状态，不落 jsonl；
