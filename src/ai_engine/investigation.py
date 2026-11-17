@@ -156,7 +156,7 @@ class InvestigationSession:
         ):
             return ToolCall(
                 "search_knowledge",
-                {"query": self._knowledge_query(), "limit": 5},
+                {"query": self._knowledge_query(), "limit": 5, "case_id": self.case_id},
                 "已出现利用/外连阶段，检索知识卡与已确认案例作为处置依据",
             )
 

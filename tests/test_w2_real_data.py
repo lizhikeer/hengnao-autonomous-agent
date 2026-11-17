@@ -67,7 +67,7 @@ def test_replay_filters_by_src_ip_across_scenarios(replay_backend, client):
     r = client.post("/tools/query_logs", json={"src_ip": "10.0.0.66", "limit": 200})
     body = r.json()
     assert body["meta"]["total"] > 0
-    assert body["meta"]["scenarios"] == ["CHAIN-CASE-03"]
+    assert body["meta"]["scenarios"] == ["CHAIN-CASE-03", "CHAIN-CASE-06", "CHAIN-CASE-09"]
     assert all(i["src_ip"] == "10.0.0.66" for i in body["items"])
 
 

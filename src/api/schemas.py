@@ -315,7 +315,7 @@ class GetContextResponse(BaseModel):
 
 
 class SearchKnowledgeRequest(BaseModel):
-    """安全知识卡 / 已确认案例卡混合检索请求（Qdrant 后端，当前 Mock）。"""
+    """安全知识卡与已确认案例卡的混合检索请求。"""
 
     query: str = Field(
         min_length=2,
@@ -335,12 +335,16 @@ class SearchKnowledgeRequest(BaseModel):
         description="返回知识卡数量上限，1 ~ 20，默认 5",
         examples=[5],
     )
+    case_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=64, description="当前调查编号，用于排除同场景案例"
+    )
 
 
 class KnowledgeCard(BaseModel):
-    """知识卡（结构对齐 docs/project design/项目分工与前期架构设计.md 5.2）。"""
+    """供当前调查使用的知识正文和来源定位。"""
 
     card_id: str = Field(description="卡片唯一编号", examples=["KB-OWASP-SQLI-001"])
+    version: Optional[int] = Field(default=None, description="卡片发布版本")
     card_type: Literal["security_knowledge", "verified_correct_case", "verified_error_revision"] = Field(
         description="卡片类型：安全知识/已确认正确案例/已确认错误修订案例",
         examples=["security_knowledge"],
@@ -351,6 +355,14 @@ class KnowledgeCard(BaseModel):
     key_indicators: list[str] = Field(default_factory=list, description="关键判别特征列表")
     recommended_action: Optional[str] = Field(default=None, description="推荐处置动作", examples=["block_ip_short_term"])
     score: float = Field(description="检索相关度得分 0~1", examples=[0.87])
+    investigation_steps: list[str] = Field(default_factory=list, description="调查步骤")
+    analysis_rules: list[dict[str, Any]] = Field(default_factory=list, description="命中的判定规则")
+    required_data: list[dict[str, Any]] = Field(default_factory=list, description="规则所需日志及字段")
+    source_reference: Optional[str] = Field(default=None, description="卡片来源")
+    sources: list[dict[str, Any]] = Field(default_factory=list, description="规则引用的来源")
+    applicability_limits: list[str] = Field(default_factory=list, description="规则适用限制")
+    error_revision_note: Optional[str] = Field(default=None, description="已确认的误判原因")
+    corrected_steps: list[str] = Field(default_factory=list, description="已确认的修订步骤")
 
 
 class SearchKnowledgeResponse(BaseModel):

@@ -12,7 +12,7 @@ from qdrant_client import QdrantClient, models
 
 from src.knowledge.config import PROJECT_ROOT, KnowledgeConfig
 from src.knowledge.embedding import check_vectors
-from src.knowledge.loader import parse_cards
+from src.knowledge.loader import SourceManifest, parse_cards
 from src.knowledge.qdrant_client import VectorStore
 from src.knowledge.schema import CardValidator, normalize_card
 from src.knowledge.search import reciprocal_rank_fusion
@@ -196,16 +196,17 @@ def test_source_outside_root_and_duplicate_ids_are_rejected(tmp_path, card):
         manifest.read(paths[0], "default")
 
 
-def test_all_twenty_existing_cards_validate():
+def test_all_manifest_cards_validate():
     validator = CardValidator()
-    count = 0
-    for path in sorted((PROJECT_ROOT / "data/knowledge_cards").glob("*.json")):
-        if path.name == "manifest.json":
-            continue
-        for card in json.loads(path.read_text(encoding="utf-8")):
+    folder = PROJECT_ROOT / "data/knowledge_cards"
+    manifest_path = folder / "manifest.json"
+    manifest = SourceManifest(manifest_path, PROJECT_ROOT)
+    files = set(folder.glob("*.json")) - {manifest_path}
+    assert files
+    assert files == {PROJECT_ROOT / name for name in manifest.files}
+    for path in sorted(files):
+        for card in manifest.read(path, "default"):
             validator.validate(normalize_card(card, tenant_id="default"))
-            count += 1
-    assert count == 20
 
 
 def test_markdown_front_matter_and_json_block(card):
@@ -247,6 +248,32 @@ def test_keyword_only_retrieves_exact_mitre_identifier(service, card, tmp_path, 
     import_cards(service, tmp_path, [card])
     monkeypatch.setattr(service.vectors, "search", lambda *args, **kwargs: [])
     assert service.search("T1110.001")[0]["card_id"] == card["card_id"]
+
+
+def test_scan_filter_matches_wstg_and_attack_categories_in_both_retrievers(
+    service, card, tmp_path, monkeypatch
+):
+    cards = [
+        {
+            **card,
+            "card_id": f"KB-{category}",
+            "attack_category": category,
+            "title": f"扫描调查 {category}",
+        }
+        for category in ("Information_Gathering", "Discovery", "Brute_Force")
+    ]
+    import_cards(service, tmp_path, cards)
+    expected = {"Information_Gathering", "Discovery"}
+    filters = {"attack_category": "Scan"}
+    with monkeypatch.context() as patch:
+        patch.setattr(service.store, "keyword_search", lambda *args, **kwargs: [])
+        assert {
+            hit["attack_category"] for hit in service.search("扫描调查", filters=filters)
+        } == expected
+    monkeypatch.setattr(service.vectors, "search", lambda *args, **kwargs: [])
+    assert {
+        hit["attack_category"] for hit in service.search("扫描调查", filters=filters)
+    } == expected
 
 
 def test_same_content_under_another_id_reuses_existing_entry(service, card, tmp_path):

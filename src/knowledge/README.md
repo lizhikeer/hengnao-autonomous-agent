@@ -58,6 +58,8 @@ items = hybrid_search("密码爆破后如何查证", top_k=5, filters={"attack_c
 
 保留基础设施约定的函数签名。`filters` 支持 attack_category、log_sources、exclude_investigation_id、exclude_scenario_ids；tenant_id 只允许与后台配置相同。范围由接口负责人根据认证上下文传入。返回原卡片字段、版本、完整调查步骤、来源、匹配章节与 RRF 排名分；score 是归一化排名分，不是结论正确概率。
 
+REST 和 MCP 可传 `case_id` 排除当前调查及同场景案例。工具返回卡片版本、调查步骤、命中规则及其数据要求和来源。七类调查分类可用于过滤，`Scan` 同时匹配 `Information_Gathering` 和 `Discovery` 卡片。
+
 复用实例时使用 `KnowledgeService`，每个实例串行调用并在结束时 close。当前 API/MCP 路由仍由接口负责人接线，本模块不修改其 Mock 路由。
 
 ## 配置与验证
