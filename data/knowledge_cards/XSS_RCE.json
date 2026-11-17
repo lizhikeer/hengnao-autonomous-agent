@@ -1,16 +1,18 @@
-
 [
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-XSS-001",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "反射型与存储型XSS异常访问识别",
     "summary": "关联 Web 访问日志、请求参数和应用安全审计，识别可能的跨站脚本异常输入，并核实是否存在未经正确编码处理的用户输入。",
     "attack_category": "XSS_RCE",
     "mitre_id": null,
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
     "keywords": [
       "XSS",
       "Cross-Site Scripting",
@@ -25,7 +27,14 @@
       "User-Agent",
       "request_uri",
       "HTTP 200",
-      "HTTP 403"
+      "HTTP 403",
+      "Reflected XSS",
+      "Stored XSS",
+      "request_method",
+      "status",
+      "body_bytes_sent",
+      "反射型XSS",
+      "存储型XSS"
     ],
     "key_indicators": [
       "nginx_access 中 request_uri 或请求参数出现脚本相关标记、HTML 标签特征或经过 URL 编码的可疑内容",
@@ -41,8 +50,8 @@
       "结合应用安全审计记录核实用户输入的存储、输出编码和过滤处理情况",
       "区分正常富文本编辑、代码展示和经过授权的安全测试行为"
     ],
-    "recommended_action": "monitor_only",
-    "error_revision_note": "富文本编辑器、代码展示页面和正常业务输入也可能包含脚本相关字符。不能仅凭关键词判定 XSS，应结合输入来源、输出位置、编码处理和应用侧证据判断。",
+    "recommended_action": "rate_limit_ip",
+    "error_revision_note": "富文本编辑器、代码展示页面和正常业务输入也可能包含脚本相关字符。不能仅凭关键词判定 XSS，应结合输入来源、输出位置、编码处理和应用侧证据判断。 仅对重复、明显自动化的可疑探测请求建议限速；单独出现脚本字符或正常富文本内容不构成攻击确认。",
     "source_reference": "OWASP Cross Site Scripting Prevention Cheat Sheet; OWASP Web Security Testing Guide",
     "review_status": "pending",
     "reviewed_by": null,
@@ -51,19 +60,22 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-17T03:09:42.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-XSS-002",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "OS命令注入异常请求识别与调查",
     "summary": "关联 Web 请求、应用审计和服务器进程记录，判断是否存在未经授权的系统命令调用及其影响范围。",
     "attack_category": "XSS_RCE",
     "mitre_id": "T1059",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
     "keywords": [
       "OS Command Injection",
       "Command Injection",
@@ -79,7 +91,11 @@
       "HTTP 500",
       "request_uri",
       "request_method",
-      "异常进程"
+      "异常进程",
+      "Process Creation",
+      "status",
+      "body_bytes_sent",
+      "异常子进程"
     ],
     "key_indicators": [
       "同一接口短时间内收到多次结构相似的异常参数请求，request_uri 和请求参数明显偏离正常业务模式",
@@ -106,19 +122,22 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-17T03:09:42.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-XSS-003",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "文件包含与路径遍历异常访问行为识别",
     "summary": "通过分析异常 URI 路径、请求参数和服务器文件访问审计，识别可能的路径遍历及未授权文件访问行为。",
     "attack_category": "XSS_RCE",
     "mitre_id": "T1190",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
     "keywords": [
       "Path Traversal",
       "Directory Traversal",
@@ -134,7 +153,12 @@
       "HTTP 403",
       "HTTP 404",
       "HTTP 500",
-      "request_uri"
+      "request_uri",
+      "Local File Inclusion",
+      "Remote File Inclusion",
+      "/.env",
+      "/.git/config",
+      "status"
     ],
     "key_indicators": [
       "nginx_access 中 request_uri 出现 ../ 或其 URL 编码形式，且访问目标偏离正常业务路由",
@@ -160,13 +184,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-17T03:09:42.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-XSS-004",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "远程代码执行异常行为与日志研判",
     "summary": "关联 Web 访问、网络连接和服务器进程审计记录，判断是否存在未经授权的代码执行及异常外部通信。",
@@ -191,7 +215,12 @@
       "TCP Connection",
       "HTTP 200",
       "HTTP 500",
-      "异常子进程"
+      "异常子进程",
+      "Zeek conn.log",
+      "id.orig_h",
+      "id.resp_h",
+      "id.resp_p",
+      "duration"
     ],
     "key_indicators": [
       "异常 Web 请求之后，zeek_conn 出现与服务器正常业务基线不一致的外部连接",
@@ -218,6 +247,6 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-17T03:09:42.000Z"
   }
 ]

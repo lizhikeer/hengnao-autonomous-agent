@@ -1,16 +1,18 @@
-
 [
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-SQLI-001",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "SQL注入异常请求的日志识别与调查",
     "summary": "关联 Nginx 访问日志与 Zeek HTTP 记录，分析请求参数、请求方法、状态码、响应大小及来源行为，判断是否存在 SQL 注入探测或利用迹象。",
     "attack_category": "SQL_Injection",
     "mitre_id": "T1190",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
     "keywords": [
       "SQLi",
       "SQL Injection",
@@ -26,7 +28,10 @@
       "HTTP 500",
       "request_uri",
       "request_method",
-      "User-Agent"
+      "User-Agent",
+      "status",
+      "body_bytes_sent",
+      "SQL注入"
     ],
     "key_indicators": [
       "同一来源 IP 在短时间内多次访问同一接口，request_uri 查询参数反复出现数据库语法相关特征",
@@ -52,19 +57,22 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-17T03:09:42.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-SQLI-002",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "SQL盲注相关异常访问行为识别",
     "summary": "通过比较相似请求的响应时间、状态码和响应大小，并关联应用日志，识别可能的时间型或布尔型 SQL 盲注探测行为。",
     "attack_category": "SQL_Injection",
     "mitre_id": "T1190",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
     "keywords": [
       "Blind SQL Injection",
       "Time-based SQLi",
@@ -79,7 +87,10 @@
       "HTTP 200",
       "HTTP 500",
       "响应延迟",
-      "重复请求"
+      "重复请求",
+      "Boolean-based SQLi",
+      "status",
+      "body_bytes_sent"
     ],
     "key_indicators": [
       "同一来源 IP 在短时间内对同一接口发送大量相似请求，request_uri 参数内容存在重复或细微变化",
@@ -105,19 +116,22 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-17T03:09:42.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-SQLI-003",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "数据库异常文件导出行为的关联调查",
     "summary": "将 Web 请求、数据库审计和服务器文件完整性记录进行时间关联，确认是否发生未经授权的数据库文件写入或导出。",
     "attack_category": "SQL_Injection",
     "mitre_id": "T1190",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
     "keywords": [
       "SQL Injection",
       "SQLi",
@@ -131,7 +145,14 @@
       "数据库审计",
       "Web 目录",
       "HTTP 200",
-      "HTTP 500"
+      "HTTP 500",
+      "Database Audit",
+      "File Integrity Monitoring",
+      "request_uri",
+      "request_method",
+      "status",
+      "body_bytes_sent",
+      "未授权文件导出"
     ],
     "key_indicators": [
       "nginx_access 或 zeek_http 中出现与数据库文件写入或导出相关的请求参数特征，例如 INTO OUTFILE、INTO DUMPFILE",
@@ -158,19 +179,22 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-17T03:09:42.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-SQLI-004",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "SQL自动化扫描工具访问特征识别",
     "summary": "通过分析来源 IP、请求频率、请求路径、User-Agent 和响应状态，识别自动化 SQL 注入扫描行为，并核实是否属于授权测试。",
     "attack_category": "SQL_Injection",
     "mitre_id": "T1595",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
     "keywords": [
       "SQL Scanner",
       "SQL Injection Scanner",
@@ -184,7 +208,13 @@
       "HTTP 500",
       "批量探测",
       "自动化请求",
-      "异常请求频率"
+      "异常请求频率",
+      "Automated Scanning",
+      "request_uri",
+      "request_method",
+      "src_ip",
+      "自动化探测",
+      "SQL扫描"
     ],
     "key_indicators": [
       "同一来源 IP 在较短时间内连续访问多个带查询参数或表单输入的接口，request_uri 呈现批量探测特征",
@@ -210,6 +240,6 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-17T03:09:42.000Z"
   }
 ]

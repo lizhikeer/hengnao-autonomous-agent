@@ -1,4 +1,3 @@
-
 [
   {
     "schema_version": "1.0",
@@ -35,8 +34,8 @@
       "关联终端告警、认证日志和目标主机日志，判断是否存在后续异常访问",
       "确认异常行为涉及的网络范围及受影响资产，并记录事件时间线"
     ],
-    "recommended_action": "对异常来源主机开展终端安全检查，必要时由网络管理员实施临时网络隔离；核实合法运维活动后调整检测规则，并持续监测相关目标资产。",
-    "error_revision_note": "",
+    "recommended_action": "rate_limit",
+    "error_revision_note": "对未授权且明显自动化的端口探测来源限速；授权扫描器、运维巡检和资产发现任务应先核验。",
     "source_reference": "MITRE ATT&CK T1046 Network Service Discovery；OWASP Web Security Testing Guide v4.2",
     "review_status": "pending",
     "reviewed_by": null,
@@ -83,8 +82,8 @@
       "关联防火墙和终端网络日志，分析异常连接的目的地址、持续时间和通信频率",
       "结合业务部署记录和资产责任人确认相关文件及连接是否经过授权"
     ],
-    "recommended_action": "对疑似受影响的Web服务器进行事件隔离和证据保全；由安全人员核查可疑文件、进程及访问凭据，完成清理和漏洞修复后再恢复服务。",
-    "error_revision_note": "",
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "仅在确认 WebShell 或恶意进程与异常外连关联后申请短时封禁/隔离；按目标资产类型和响应策略执行人工审批并保全证据。",
     "source_reference": "MITRE ATT&CK T1505.003 Web Shell；MITRE ATT&CK Command and Control",
     "review_status": "pending",
     "reviewed_by": null,
@@ -131,8 +130,8 @@
       "关联代理日志和终端进程记录，确定发起通信的应用程序或进程",
       "结合威胁情报、资产用途和历史基线判断是否属于异常远程通信"
     ],
-    "recommended_action": "对可疑主机开展终端检测与网络行为分析；经确认存在恶意通信后，由安全人员阻断相关目的地址并排查主机持久化风险。",
-    "error_revision_note": "",
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "仅在终端进程、DNS/HTTP 流量及威胁情报共同支持恶意 Beacon 后申请短时封禁；周期性通信本身不足以定性。",
     "source_reference": "MITRE ATT&CK T1071.001 Web Protocols；MITRE ATT&CK Command and Control",
     "review_status": "pending",
     "reviewed_by": null,
@@ -179,8 +178,8 @@
       "关联防火墙、代理和网络流量记录，确认是否存在异常外部传输",
       "评估可能涉及的数据类型、资产范围和业务影响，并建立完整事件时间线"
     ],
-    "recommended_action": "立即通知数据资产责任人和安全响应人员；根据事件严重程度暂停可疑账户或限制相关数据传输，保留审计证据并启动数据泄露事件响应流程。",
-    "error_revision_note": "",
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "仅在数据库审计与网络/DLP 证据确认未授权外传后申请短时封禁；同时通知数据责任人并核查账户，所有高危动作须人工审批。",
     "source_reference": "MITRE ATT&CK T1041 Exfiltration Over C2 Channel；MITRE ATT&CK Exfiltration",
     "review_status": "pending",
     "reviewed_by": null,

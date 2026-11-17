@@ -1,4 +1,3 @@
-
 [
   {
     "schema_version": "1.0",
@@ -36,8 +35,8 @@
       "核对目标地址是否属于业务允许访问的外部服务范围",
       "结合请求频率、用户身份和历史行为判断是否存在自动化探测特征"
     ],
-    "recommended_action": "对异常请求进行隔离调查，核实服务端出站访问目标；由维护人员检查URL校验、目标地址限制和出站访问策略，必要时限制非业务必需的出站连接。",
-    "error_revision_note": "",
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "仅在确认请求利用 SSRF 访问未授权目标后，才申请短时封禁来源；应先核对业务回调、Webhook 和合法 URL 抓取功能，并经人工审批。",
     "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190",
     "review_status": "pending",
     "reviewed_by": null,
@@ -83,8 +82,8 @@
       "关联同一来源的其他请求，判断是否存在主动探测和信息收集行为",
       "核对应用程序的异常处理配置，确认生产环境是否向客户端返回详细错误信息"
     ],
-    "recommended_action": "保留相关日志并评估泄露范围；由开发人员统一处理异常响应，对外返回通用错误信息，同时将详细错误记录在受控的服务端日志中。",
-    "error_revision_note": "",
+    "recommended_action": "none",
+    "error_revision_note": "错误信息与堆栈泄露应由开发人员修复响应处理和日志配置；单独信息泄露探测不触发封禁，故推荐动作为 none。",
     "source_reference": "OWASP Web Security Testing Guide v4.2，4.8 Error Handling；OWASP Error Handling Cheat Sheet",
     "review_status": "pending",
     "reviewed_by": null,
@@ -130,8 +129,8 @@
       "分析请求来源、参数变化和访问频率，识别自动化探测行为",
       "结合正常业务基线排除数据库负载升高、网络波动和正常慢查询等因素"
     ],
-    "recommended_action": "对可疑请求进行限流和持续监测；通知开发人员检查数据库查询参数化处理、输入校验和慢查询情况，并在确认风险后修复相关接口。",
-    "error_revision_note": "",
+    "recommended_action": "rate_limit",
+    "error_revision_note": "对具有重复自动化特征的盲注探测请求限速；响应延迟还可能由慢查询、负载或网络问题造成，需关联数据库审计。",
     "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190",
     "review_status": "pending",
     "reviewed_by": null,
@@ -179,8 +178,8 @@
       "核对异常请求发生后是否出现非预期DNS解析、出站连接或服务异常",
       "结合资产清单确认受影响服务的业务重要程度，并交由安全人员进一步验证"
     ],
-    "recommended_action": "对疑似受影响服务进行风险评估，通知维护人员核查组件版本并应用官方安全更新；限制非必要出站访问，持续监测异常请求和服务端行为。",
-    "error_revision_note": "",
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "仅在确认漏洞利用成功或出现关联的异常进程/出站通信后申请短时封禁；漏洞探测请求本身不足以确认入侵，必须人工审批。",
     "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190",
     "review_status": "pending",
     "reviewed_by": null,

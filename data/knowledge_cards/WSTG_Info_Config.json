@@ -1,4 +1,3 @@
-
 [
   {
     "schema_version": "1.0",
@@ -34,8 +33,8 @@
       "由授权人员检查文件是否包含源代码、配置或其他敏感信息",
       "关联 WAF、Web 服务和主机日志，判断是否存在后续异常访问"
     ],
-    "recommended_action": "确认文件不应公开后，限制其外部访问并移除不必要的公开副本；评估是否需要轮换可能暴露的凭据",
-    "error_revision_note": "正常业务下载、静态资源访问和授权备份任务也可能产生类似日志。不能仅凭文件名或单次 HTTP 200 判定信息泄露，应结合文件实际内容、访问权限和业务用途确认。",
+    "recommended_action": "none",
+    "error_revision_note": "正常业务下载、静态资源访问和授权备份任务也可能产生类似日志。不能仅凭文件名或单次 HTTP 200 判定信息泄露，应结合文件实际内容、访问权限和业务用途确认。 该场景的主要修复是由维护人员关闭备份文件公开访问并核查凭据；知识卡不直接修改服务器配置，故推荐动作为 none。",
     "source_reference": "OWASP Web Security Testing Guide v4.2 - Configuration and Deployment Management Testing",
     "review_status": "pending",
     "reviewed_by": null,
@@ -82,8 +81,8 @@
       "关联主机和应用日志，确认是否存在后续异常访问",
       "核实可能暴露的信息范围及相关凭据是否仍然有效"
     ],
-    "recommended_action": "确认敏感配置对外暴露后，立即限制访问并修复部署配置；对可能泄露的凭据进行轮换并记录影响范围",
-    "error_revision_note": "部分路径可能由正常业务功能提供，访问日志也不能直接证明敏感内容已被读取。需要结合响应内容、权限配置和业务用途核实。",
+    "recommended_action": "none",
+    "error_revision_note": "部分路径可能由正常业务功能提供，访问日志也不能直接证明敏感内容已被读取。需要结合响应内容、权限配置和业务用途核实。 该场景的主要修复是限制配置文件访问并轮换可能泄露的凭据；这些变更需由资产维护人员执行，故推荐动作为 none。",
     "source_reference": "OWASP Web Security Testing Guide v4.2 - Review Webserver Metafiles for Information Leakage",
     "review_status": "pending",
     "reviewed_by": null,
@@ -130,8 +129,8 @@
       "关联 WAF 和 Web 服务日志，检查是否存在后续漏洞探测行为",
       "结合资产清单确认被访问服务及其技术栈信息是否属于正常公开内容"
     ],
-    "recommended_action": "对确认的异常自动化信息收集行为进行告警和风险分级；按需减少不必要的版本信息暴露，并持续监测后续请求",
-    "error_revision_note": "搜索引擎、监控系统和授权资产扫描也可能产生类似访问行为。User-Agent 可以被伪造，不能单独作为攻击判定依据。",
+    "recommended_action": "rate_limit",
+    "error_revision_note": "搜索引擎、监控系统和授权资产扫描也可能产生类似访问行为。User-Agent 可以被伪造，不能单独作为攻击判定依据。 仅在确认来源为未授权自动化枚举且请求频率异常时限速；正常爬虫、资产盘点和授权测试应排除。",
     "source_reference": "OWASP Web Security Testing Guide v4.2 - Fingerprint Web Application Framework",
     "review_status": "pending",
     "reviewed_by": null,
@@ -177,8 +176,8 @@
       "关联 WAF 与应用日志，判断是否存在其他异常请求",
       "核实相关接口是否存在不必要的访问权限"
     ],
-    "recommended_action": "依据业务需求禁用不必要的 HTTP 方法，并限制相关接口的访问权限；复核配置变更后持续观察日志",
-    "error_revision_note": "部分 API、跨域请求和正常业务组件可能使用特殊 HTTP 方法。不能仅凭方法名称判定攻击，应结合接口定义、访问权限和响应行为综合判断。",
+    "recommended_action": "none",
+    "error_revision_note": "部分 API、跨域请求和正常业务组件可能使用特殊 HTTP 方法。不能仅凭方法名称判定攻击，应结合接口定义、访问权限和响应行为综合判断。 HTTP 方法配置应由维护人员按业务需求整改；仅凭方法探测不触发封禁或账户隔离，故推荐动作为 none。",
     "source_reference": "OWASP Web Security Testing Guide v4.2 - Test HTTP Methods",
     "review_status": "pending",
     "reviewed_by": null,

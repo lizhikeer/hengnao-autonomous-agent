@@ -4,7 +4,7 @@
   "excluded_scenario_ids": [],
   "files": {
     "data/knowledge_cards/Brute_Force.json": {
-      "sha256": "bd3ce9245bf4b324bdcfe11895f99e266657c7a8346c070da95e16265c5e1823",
+      "sha256": "3b26a6276be76d057d49d1015e5bbee1ca1dfeb75785c90cd10d9a99cf9062ee",
       "tenant_id": "default",
       "dataset_split": "knowledge",
       "scenario_ids": [],
@@ -16,7 +16,7 @@
       ]
     },
     "data/knowledge_cards/C2_Exfiltration.json": {
-      "sha256": "9e7043cfb06d85267e059160e363f81fe1831317c702aef4b421eec43064d0ac",
+      "sha256": "c24e709bee375a029136c1b53d2b34339a0cec18273459ea077db852d63bfa2d",
       "tenant_id": "default",
       "dataset_split": "knowledge",
       "scenario_ids": [],
@@ -28,7 +28,7 @@
       ]
     },
     "data/knowledge_cards/File_Upload_Traversal.json": {
-      "sha256": "c969cf4fd8e8ec539cd8d0e21d1d5dd7c2e72aaf8be3526e5fc45588cc0092d9",
+      "sha256": "d68e12c64948340c694f2ffd13fed0437451a5a34cd4331da65958efb6a897e6",
       "tenant_id": "default",
       "dataset_split": "knowledge",
       "scenario_ids": [],
@@ -40,7 +40,7 @@
       ]
     },
     "data/knowledge_cards/SQL_Injection.json": {
-      "sha256": "7e5c346781f157371e7d8142c0e3e662579afaa73df7d052c768de03bc8e5948",
+      "sha256": "46afc2bc43fc43e3efcd43fd35f175ea17d0456d486aabf5f63c7e617637ac5c",
       "tenant_id": "default",
       "dataset_split": "knowledge",
       "scenario_ids": [],
@@ -51,8 +51,68 @@
         "KB-SQLI-004"
       ]
     },
+    "data/knowledge_cards/WSTG_Authorization_Session.json": {
+      "sha256": "d6f5d24d127c7cfe911c14617bc6f139a9c0984aae41aadf4981e97d1e248004",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-WSTG-009",
+        "KB-WSTG-010",
+        "KB-WSTG-011",
+        "KB-WSTG-012"
+      ]
+    },
+    "data/knowledge_cards/WSTG_Identity_Authentication.json": {
+      "sha256": "cd7262518fcf98c32865b71fc3427c3a6ef56b742982b59507fdbce630adebed",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-WSTG-005",
+        "KB-WSTG-006",
+        "KB-WSTG-007",
+        "KB-WSTG-008"
+      ]
+    },
+    "data/knowledge_cards/WSTG_Info_Config.json": {
+      "sha256": "614cedd62cea3d77637c1a80280426abe97a710c662349e7b4d0c37f4af8f9f1",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-WSTG-001",
+        "KB-WSTG-002",
+        "KB-WSTG-003",
+        "KB-WSTG-004"
+      ]
+    },
+    "data/knowledge_cards/WSTG_Input_Validation.json": {
+      "sha256": "2a387df209218190c1021d0219f97ab13b8ca6e7d58c4ddb6daf597e0549815f",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-WSTG-013",
+        "KB-WSTG-014",
+        "KB-WSTG-015",
+        "KB-WSTG-016"
+      ]
+    },
+    "data/knowledge_cards/WSTG_Network_C2_Exfiltration.json": {
+      "sha256": "90eee2107f2517f2800f5daa976ea18ce73f78ee5ee5a51997c7117a2d24eb0a",
+      "tenant_id": "default",
+      "dataset_split": "knowledge",
+      "scenario_ids": [],
+      "card_ids": [
+        "KB-WSTG-017",
+        "KB-WSTG-018",
+        "KB-WSTG-019",
+        "KB-WSTG-020"
+      ]
+    },
     "data/knowledge_cards/XSS_RCE.json": {
-      "sha256": "c01f9cf78a823dca62e5be93693dc76ddf1eab8941b13e5f3eaff35f88d37978",
+      "sha256": "f3b2295fe34924a9ab5a9ee088b6289732b85e7ee73c5fa735a3a71fbf8b36ca",
       "tenant_id": "default",
       "dataset_split": "knowledge",
       "scenario_ids": [],

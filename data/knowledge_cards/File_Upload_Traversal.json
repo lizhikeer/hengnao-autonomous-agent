@@ -1,22 +1,39 @@
-
 [
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-FUT-001",
-    "version": 2,
+    "version": 3,
     "card_type": "security_knowledge",
     "title": "Web应用可疑文件上传行为识别与调查",
     "attack_category": "File_Upload_Traversal",
     "mitre_id": "T1505.003",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
-    "keywords": ["文件上传", "异常扩展名", "Content-Type", "上传后访问", "可疑文件", "Web Shell"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "keywords": [
+      "文件上传",
+      "异常扩展名",
+      "Content-Type",
+      "上传后访问",
+      "可疑文件",
+      "Web Shell",
+      "Unrestricted File Upload",
+      "Multipart Upload",
+      "HTTP POST",
+      "request_uri",
+      "request_method",
+      "status",
+      "body_bytes_sent",
+      "User-Agent"
+    ],
     "key_indicators": [
-      "文件上传接口在短时间内出现异常集中的请求",
-      "上传请求的文件名、扩展名或Content-Type与业务允许范围不一致",
-      "上传请求后出现对新上传资源的异常访问",
-      "上传请求的响应状态码、响应字节数与正常上传行为存在明显差异",
-      "上传成功后出现对新增服务器端资源的异常请求或访问行为"
+      "nginx_access 中同一 src_ip 在短时间内对上传 request_uri 发起异常密集的 POST 请求，request_method 与业务上传流程不符",
+      "上传审计中的文件名扩展名、Content-Type、文件大小与业务允许类型或历史分布不一致",
+      "上传响应 status、body_bytes_sent 或 request_time 偏离同一上传接口正常基线，需与应用上传结果核对",
+      "上传成功后出现对新资源 URI 的访问，访问时间、来源 IP 或 User-Agent 与正常文件访问模式不符",
+      "文件完整性审计显示 Web 可访问目录出现未经授权的新文件，且创建时间与上传请求时间吻合"
     ],
     "investigation_steps": [
       "检索nginx访问日志，统计上传接口的请求来源、请求频率、状态码和访问路径",
@@ -25,8 +42,8 @@
       "结合应用侧文件审核记录，确认上传文件是否符合业务类型和安全策略",
       "在授权的安全检测环境中核实上传文件是否被服务器当作可执行资源处理，并检查相关访问审计记录"
     ],
-    "recommended_action": "monitor_only",
-    "error_revision_note": "正常业务可能上传压缩包、图片或其他特殊格式文件。不能仅凭文件扩展名或Content-Type判定为恶意文件，应结合业务白名单、上传后的访问行为和安全审核结果判断。T1505.003仅适用于有证据支持Web Shell行为的情况。",
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "正常业务可能上传压缩包、图片或其他特殊格式文件。不能仅凭文件扩展名或Content-Type判定为恶意文件，应结合业务白名单、上传后的访问行为和安全审核结果判断。T1505.003仅适用于有证据支持Web Shell行为的情况。 仅在确认恶意文件已上传并可被服务器执行，或存在 WebShell 证据后，才申请短时封禁；需保全文件、进程和访问证据并经人工审批。",
     "source_reference": "MITRE ATT&CK T1505.003 Web Shell; OWASP File Upload Cheat Sheet",
     "review_status": "pending",
     "reviewed_by": null,
@@ -35,26 +52,45 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T03:09:42.000Z",
     "summary": "通过上传接口日志、文件审核记录和上传后访问行为识别可疑文件上传及潜在Web Shell风险。"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-FUT-002",
-    "version": 2,
+    "version": 3,
     "card_type": "security_knowledge",
     "title": "敏感目录与备份文件异常探测识别",
     "attack_category": "File_Upload_Traversal",
     "mitre_id": "T1083",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
-    "keywords": ["目录探测", "备份文件", "敏感路径", "资源枚举", "404", "异常访问"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "keywords": [
+      "目录探测",
+      "备份文件",
+      "敏感路径",
+      "资源枚举",
+      "404",
+      "异常访问",
+      "Directory Enumeration",
+      "Sensitive File Discovery",
+      "Backup File Exposure",
+      "HTTP 403",
+      "HTTP 404",
+      "request_uri",
+      "request_method",
+      "src_ip",
+      "status"
+    ],
     "key_indicators": [
-      "同一来源IP在短时间内连续请求多个非公开或不常见资源路径",
-      "请求路径集中出现备份文件、配置文件或管理资源相关关键词",
-      "大量请求返回404或403，且访问路径具有明显规律性",
-      "同一来源IP持续访问多个无关目录，访问频率明显偏离正常用户行为",
-      "探测请求中出现成功访问敏感资源的记录"
+      "nginx_access 中同一 src_ip 在短时间内请求多个不同的敏感路径，request_uri 包含备份、配置或管理资源名称",
+      "同一来源连续请求大量不存在或禁止访问的 URI，status 集中出现 404/403，且路径枚举规律明显",
+      "请求的 request_method、User-Agent 和请求间隔高度重复，偏离正常浏览器访问行为",
+      "相同 src_ip 对多个无关目录持续探测，URI 数量和请求频率显著高于正常用户基线",
+      "探测序列中出现 status=200 或异常 body_bytes_sent，需确认敏感资源是否实际返回内容"
     ],
     "investigation_steps": [
       "检索nginx访问日志，统计异常来源IP访问的路径数量、请求频率和状态码分布",
@@ -73,26 +109,44 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T03:09:42.000Z",
     "summary": "通过异常路径访问、状态码分布和资源访问结果识别敏感目录及备份文件探测行为。"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-FUT-003",
-    "version": 2,
+    "version": 3,
     "card_type": "security_knowledge",
     "title": "路径穿越异常请求识别与调查",
     "attack_category": "File_Upload_Traversal",
     "mitre_id": "T1190",
-    "applicable_log_sources": ["nginx_access", "zeek_http"],
-    "keywords": ["路径穿越", "Path Traversal", "异常路径", "文件读取", "URL编码", "未授权访问"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http"
+    ],
+    "keywords": [
+      "路径穿越",
+      "Path Traversal",
+      "异常路径",
+      "文件读取",
+      "URL编码",
+      "未授权访问",
+      "Directory Traversal",
+      "Local File Access",
+      "URL Encoding",
+      "HTTP 403",
+      "HTTP 404",
+      "request_uri",
+      "status",
+      "src_ip"
+    ],
     "key_indicators": [
-      "请求路径或参数中出现异常的目录跳转及路径规范化特征",
-      "同一来源IP对文件读取或下载接口发起连续异常请求",
-      "相关请求出现集中403、404或异常5xx响应",
-      "请求响应字节数与对应资源的正常响应情况存在明显差异",
-      "应用审计记录显示请求访问了超出授权范围的文件资源"
+      "nginx_access 的 request_uri 或参数中出现目录跳转及其 URL 编码变体，且不符合应用正常路由格式",
+      "同一 src_ip 连续访问文件读取/下载 URI，request_method、路径变化和时间间隔呈现自动化特征",
+      "异常路径请求集中出现 status=403/404/500，或在失败序列后出现 status=200 的可疑访问",
+      "相关请求的 body_bytes_sent 与同一资源正常响应大小明显不同，需结合响应内容审计核实",
+      "文件访问审计显示请求时间附近读取了应用授权范围之外的文件资源"
     ],
     "investigation_steps": [
       "检索nginx访问日志，定位包含异常路径特征的请求并统计来源IP、请求路径和状态码",
@@ -111,26 +165,44 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T03:09:42.000Z",
     "summary": "通过HTTP请求路径、应用解析结果和文件访问审计识别疑似路径穿越及未授权文件访问。"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-FUT-004",
-    "version": 2,
+    "version": 3,
     "card_type": "security_knowledge",
     "title": "Slowloris异常连接与服务资源耗尽识别",
     "attack_category": "File_Upload_Traversal",
     "mitre_id": "T1499.001",
-    "applicable_log_sources": ["nginx_access", "zeek_conn"],
-    "keywords": ["Slowloris", "异常连接", "连接耗尽", "并发连接", "服务可用性", "响应延迟"],
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_conn"
+    ],
+    "keywords": [
+      "Slowloris",
+      "异常连接",
+      "连接耗尽",
+      "并发连接",
+      "服务可用性",
+      "响应延迟",
+      "HTTP DoS",
+      "Connection Exhaustion",
+      "Concurrent Connections",
+      "connection_duration",
+      "active_connections",
+      "request_time",
+      "HTTP timeout",
+      "慢速连接"
+    ],
     "key_indicators": [
-      "服务器同时维持的连接数量明显高于正常业务基线",
-      "部分客户端连接持续时间异常，连接释放速度明显下降",
-      "服务器响应延迟增加，正常请求出现超时或响应失败",
-      "连接数量和持续时间异常与业务访问量增长不匹配",
-      "异常连接集中出现期间，服务器资源占用和服务可用性指标同步恶化"
+      "Web 服务 active_connections 或并发连接数持续高于正常业务基线，且与正常请求量增长不匹配",
+      "连接日志显示部分客户端连接 duration 异常增长，连接释放速度下降且请求处理未正常完成",
+      "nginx_access 的 request_time 或 upstream_response_time 持续升高，正常请求出现超时或 5xx 响应",
+      "同一 src_ip 或少量来源维持大量长连接，连接建立与请求完成数量明显失衡",
+      "异常连接时间窗口内 CPU、内存、文件描述符或服务可用性指标同步恶化"
     ],
     "investigation_steps": [
       "检索zeek_conn连接记录，统计来源IP、连接持续时间和并发连接变化",
@@ -149,7 +221,7 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T03:09:42.000Z",
     "summary": "通过网络连接持续时间、并发连接数量和服务器资源指标识别疑似Slowloris及服务资源耗尽风险。"
   }
 ]

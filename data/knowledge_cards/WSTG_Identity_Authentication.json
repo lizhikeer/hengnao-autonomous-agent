@@ -1,4 +1,3 @@
-
 [
   {
     "schema_version": "1.0",
@@ -36,8 +35,8 @@
       "对照用户正常登录行为，判断是否存在异常身份使用",
       "核实相关活动是否属于用户授权设备或正常业务操作"
     ],
-    "recommended_action": "对确认存在身份冒用风险的账户启动人工核查，必要时要求重新认证并按照账户安全流程保护相关账户",
-    "error_revision_note": "用户使用 VPN、移动网络或更换设备可能造成登录地点和客户端变化。不能仅凭地理位置变化判定账户被盗用。",
+    "recommended_action": "isolate_account",
+    "error_revision_note": "用户使用 VPN、移动网络或更换设备可能造成登录地点和客户端变化。不能仅凭地理位置变化判定账户被盗用。 仅在确认账户身份被冒用或存在未授权使用风险后申请账户隔离；需核实账户归属并经人工审批。",
     "source_reference": "OWASP Web Security Testing Guide v4.2 - Identity Management Testing",
     "review_status": "pending",
     "reviewed_by": null,
@@ -84,8 +83,8 @@
       "通过授权安全审计确认是否仍有默认凭据或弱口令风险",
       "核实相关账户是否属于业务必需账户及其实际使用情况"
     ],
-    "recommended_action": "要求相关账户修改不符合安全策略的凭据，禁用不再使用的默认账户，并落实最小权限和凭据管理要求",
-    "error_revision_note": "认证失败可能由用户输错密码、客户端配置错误或密码过期造成。不能仅凭失败次数认定存在弱口令。",
+    "recommended_action": "isolate_account",
+    "error_revision_note": "认证失败可能由用户输错密码、客户端配置错误或密码过期造成。不能仅凭失败次数认定存在弱口令。 仅在确认默认/弱凭据账户存在实际未授权使用风险时申请账户隔离；凭据轮换和默认账户清理由维护人员执行并经人工确认。",
     "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism and Default Credentials",
     "review_status": "pending",
     "reviewed_by": null,
@@ -134,8 +133,8 @@
       "确认连续失败后是否出现成功登录以及后续敏感操作",
       "核对相关来源是否属于授权安全测试、企业代理或正常运维任务"
     ],
-    "recommended_action": "对确认存在异常认证行为的来源实施适当的登录频率限制，并根据风险要求相关账户重新认证；涉及账户保护的处置应经过人工确认",
-    "error_revision_note": "共享网络出口、企业代理和用户集中登录可能导致同一来源出现较多认证失败。不能仅凭失败次数判定暴力破解，应结合账户数量、时间分布和后续成功登录行为。",
+    "recommended_action": "rate_limit",
+    "error_revision_note": "共享网络出口、企业代理和用户集中登录可能导致同一来源出现较多认证失败。不能仅凭失败次数判定暴力破解，应结合账户数量、时间分布和后续成功登录行为。 对确认的异常登录频率可限速；不得仅因用户输错密码或共享出口 IP 触发账户隔离。",
     "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism; MITRE ATT&CK T1110 Brute Force",
     "review_status": "pending",
     "reviewed_by": null,
@@ -183,8 +182,8 @@
       "检查异常会话是否访问账户资料或其他敏感业务资源",
       "排除日志延迟、会话缓存和分布式系统时间不同步等因素"
     ],
-    "recommended_action": "对确认异常的会话按照应用安全流程执行失效处理，并检查会话生命周期和敏感操作的重新认证要求",
-    "error_revision_note": "分布式应用、缓存同步延迟和日志采集时间差可能造成会话记录不一致。应结合认证服务和应用审计日志综合判断。",
+    "recommended_action": "none",
+    "error_revision_note": "分布式应用、缓存同步延迟和日志采集时间差可能造成会话记录不一致。应结合认证服务和应用审计日志综合判断。 会话失效与生命周期修复由应用维护人员执行；无明确被盗账户证据时不触发账户隔离，故推荐动作为 none。",
     "source_reference": "OWASP Web Security Testing Guide v4.2 - Session Management Testing",
     "review_status": "pending",
     "reviewed_by": null,
