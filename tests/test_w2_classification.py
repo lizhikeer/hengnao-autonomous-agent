@@ -283,11 +283,12 @@ def test_trace_keeps_decision_evidence_not_ellipsis():
         assert first.get(key) not in (None, "", "…"), f"{key} 被脱敏掉了"
     assert evidence.get("evaluated_at"), "必须保留窗口判断所用时间"
     assert isinstance(evidence.get("per_log_in_window"), dict) and evidence["per_log_in_window"]
-    # 语义变化：config/ 未提供账号-来源/资产授权范围，
-    # 依据里要如实标 scope_provided=False，而不是伪造一个"允许列表"
+    # 最新 main 已为 ops_* 配置明确的来源与资产行为授权范围。
     assert evidence.get("observed_src_ips")
-    assert evidence.get("source_scope_provided") is False
-    assert evidence.get("asset_scope_provided") is False
+    assert evidence.get("source_scope_provided") is True
+    assert evidence.get("asset_scope_provided") is True
+    assert "10.0.0.0/24" in evidence.get("allowed_src_ips", [])
+    assert "web-prod-01" in evidence.get("allowed_assets", [])
 
     # 成功 / 零命中 / 失败仍可区分
     statuses = {s["status"] for s in trace["trace"]["steps"]}

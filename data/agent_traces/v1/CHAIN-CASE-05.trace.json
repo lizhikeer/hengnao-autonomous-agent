@@ -1,18 +1,18 @@
 {
   "case_id": "CHAIN-CASE-05",
   "run": {
-    "run_id": "20261116T064306Z",
-    "started_at": "2026-11-16T06:43:06.610580+00:00",
-    "finished_at": "2026-11-16T06:43:06.625676+00:00",
-    "duration_ms": 15,
+    "run_id": "20261116T162100Z",
+    "started_at": "2026-11-16T16:21:00.917087+00:00",
+    "finished_at": "2026-11-16T16:21:00.918971+00:00",
+    "duration_ms": 1,
     "controller": "rule_based_v1_controller",
     "env": {
       "data_source_mode": "dataset_replay",
       "search_mode": "auto"
     },
     "code_version": {
-      "commit": "e581305",
-      "branch": "feature/agent-traces-v1-w2",
+      "commit": "32a51b6",
+      "branch": "feature/w2-account-scope-v1-traces",
       "dirty_worktree": true
     },
     "dataset": "data/full_chain_logs",
@@ -487,9 +487,19 @@
             "allowlist_scope": [
               "isolate_account"
             ],
-            "source_scope_provided": false,
-            "asset_scope_provided": false,
-            "authorization_source": "config/response-policy.yaml#allowlist.users（仅处置豁免；未提供账号-来源/账号-资产授权范围）",
+            "common_src_ips": [
+              "10.0.0.0/24",
+              "10.0.0.66",
+              "10.10.0.50"
+            ],
+            "allowed_assets": [
+              "web-prod-01",
+              "backup-01",
+              "nas-host-01"
+            ],
+            "source_scope_provided": true,
+            "asset_scope_provided": true,
+            "authorization_source": "config/response-policy.yaml#allowlist.users",
             "config_source": "config/response-policy.yaml#allowlist.users"
           },
           "asset_context": {
@@ -592,7 +602,7 @@
             "backend": "knowledge",
             "reason": "导入 src.knowledge.search 失败（通常缺 sentence-transformers / qdrant-client 依赖）",
             "backend_available": false,
-            "error": "ModuleNotFoundError: No module named 'jieba'",
+            "error": "ModuleNotFoundError: No module named 'qdrant_client'",
             "stage": "import"
           }
         }

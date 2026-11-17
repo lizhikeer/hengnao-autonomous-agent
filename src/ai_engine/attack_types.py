@@ -45,7 +45,7 @@ ATTACK_TYPES: tuple[AttackType, ...] = (
         zh="扫描探测",
         mitre=("T1046",),
         knowledge_category=None,
-        indicators=("dirsearch", "nikto", "nmap", "masscan", "robots.txt", ".git/", "敏感路径探测"),
+        indicators=("dirsearch", "nikto", "nmap", "masscan", "nuclei", "acunetix", "nessus", "robots.txt", ".git/", "敏感路径探测"),
     ),
     AttackType(
         code="Brute_Force",
@@ -231,7 +231,7 @@ def catalog() -> list[dict[str, object]]:
 
 #: **强特征**：这些字符串在正常业务里基本不会出现，可作为攻击成立的支撑。
 STRONG_INDICATORS: dict[str, tuple[str, ...]] = {
-    "Scan": ("dirsearch", "nikto", "nmap", "masscan", "/.git/config", "/phpmyadmin/"),
+    "Scan": ("dirsearch", "nikto", "nmap", "masscan", "nuclei", "acunetix", "nessus", "/.git/config", "/phpmyadmin/"),
     "Brute_Force": (
         "hydra",
         "medusa",

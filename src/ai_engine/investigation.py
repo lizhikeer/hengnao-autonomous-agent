@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 import sys
+import ipaddress
 from dataclasses import dataclass, field
 import datetime as _dt
 from typing import Any, Callable, Optional
@@ -45,6 +46,25 @@ MAX_ROUNDS_DEFAULT = 8
 #: 普通业务账号（application_admin 等）不在此列，避免给正常访问强加运维约束。
 WINDOW_REQUIRED_ACCOUNT_TYPES = {"legit_operator", "service"}
 MAX_EMPTY_STREAK = 2  # 连续两轮零新增证据即收束
+VULNERABILITY_SCANNER_MARKERS = (
+    "acunetix", "nuclei/", "nikto", "dirsearch", "masscan", "nmap", "nessus",
+    "openvas", "burp", "owasp zap", "qualys", "arachni", "w3af",
+)
+
+
+def _ip_matches_scope(address: str, scopes: list[str]) -> bool:
+    """按 IP 或 CIDR 检查来源地址；无效配置项不匹配。"""
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    for scope in scopes:
+        try:
+            if ip in ipaddress.ip_network(scope, strict=False):
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 @dataclass
@@ -348,6 +368,7 @@ class InvestigationSession:
         responded: list[dict[str, Any]] = []
         leads: list[dict[str, Any]] = []
         unexplained: list[dict[str, Any]] = []
+        authorized_scans: list[dict[str, Any]] = []
         kinds: list[str] = []
         #: 每条日志各自命中的类别，供分类/摘要/证据回溯
         log_kinds: dict[str, list[str]] = {}
@@ -364,10 +385,23 @@ class InvestigationSession:
             c2 = self._c2_signal(log)
 
             strong = [k for k in signals["strong"] if k not in {"Brute_Force", "C2_Exfiltration"}]
+            scanner = self._is_authorized_scan_candidate(log)
+            if scanner and not strong:
+                strong.append("Scan")
             if log.get("log_id") in brute_ids or any(tool in text.lower() for tool in ("hydra", "medusa")):
                 strong.append("Brute_Force")
             if c2 and "C2_Exfiltration" not in strong:
                 strong.append("C2_Exfiltration")
+
+            policy_window = self._authorized_scan_window(log, strong) if scanner else None
+            if policy_window:
+                authorized_scans.append({"log": log, "window": policy_window})
+                leads.append(log)
+                continue
+            # 扫描器收到明确拒绝/未命中响应时，只能证明发生了探测；不能把被拒绝的
+            # 利用载荷当成已成立的 XSS、遍历或上传攻击。
+            if scanner and isinstance(status, int) and 400 <= status < 500:
+                strong = ["Scan"]
 
             if strong:
                 attack.append(log)
@@ -377,7 +411,10 @@ class InvestigationSession:
                     log_kinds[str(log_id)] = strong
                 if c2 and "conn_state=sf" in [part.strip() for part in str(log.get("payload_summary") or "").lower().split(";")]:
                     c2_logs.append(log)
-                elif 200 <= status < 300:
+                elif 200 <= status < 300 and any(
+                    kind in strong
+                    for kind in {"SQL_Injection", "XSS", "Path_Traversal_Privilege", "Malicious_Upload"}
+                ):
                     # 强特征 + 2xx：说明攻击请求得到了响应，**不等于利用成功**
                     responded.append(log)
             elif signals["weak"]:
@@ -395,6 +432,7 @@ class InvestigationSession:
             "responded": responded,
             "leads": leads,
             "unexplained": unexplained,
+            "authorized_scans": authorized_scans,
             "kinds": kinds,
             "log_kinds": log_kinds,
             "has_attack": bool(attack),
@@ -407,11 +445,8 @@ class InvestigationSession:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _in_window(asset: dict[str, Any], timestamp: Optional[str]) -> bool:
-        """按日志时间判断是否落在资产的维护窗口内（固定 UTC+8）。"""
-        windows = asset.get("maintenance_windows") or []
-        if not windows:
-            return False
+    def _window_matches(window: dict[str, Any], timestamp: Optional[str]) -> bool:
+        """按日志时间检查单个窗口（配置时区为 Asia/Shanghai，即 UTC+8）。"""
         if not timestamp:
             return False
         try:
@@ -423,26 +458,108 @@ class InvestigationSession:
             dt = dt.replace(tzinfo=_dt.timezone.utc)
         local = dt.astimezone(_dt.timezone(_dt.timedelta(hours=8)))
         weekday = local.strftime("%a").lower()[:3]
-        for window in windows:
-            # 兼容两种写法：config/maintenance-windows.yaml 用 days，早期自建配置用 weekdays
-            days = [
-                str(d).lower()[:3]
-                for d in (window.get("days") or window.get("weekdays") or [])
-            ]
-            if days and weekday not in days:
+        days = [
+            str(d).lower()[:3]
+            for d in (window.get("days") or window.get("weekdays") or [])
+        ]
+        if days and weekday not in days:
+            return False
+        try:
+            sh, sm = (int(x) for x in str(window.get("start", "00:00")).split(":"))
+            eh, em = (int(x) for x in str(window.get("end", "00:00")).split(":"))
+        except ValueError:
+            return False
+        start = local.replace(hour=sh, minute=sm, second=0, microsecond=0)
+        end = local.replace(hour=eh, minute=em, second=0, microsecond=0)
+        if end <= start:
+            end += _dt.timedelta(days=1)
+        return start <= local <= end
+
+    @classmethod
+    def _in_window(cls, asset: dict[str, Any], timestamp: Optional[str]) -> bool:
+        """按日志时间判断是否落在资产的任一维护窗口内。"""
+        return any(
+            cls._window_matches(window, timestamp)
+            for window in (asset.get("maintenance_windows") or [])
+        )
+
+    @staticmethod
+    def _is_vulnerability_scanner(log: dict[str, Any]) -> bool:
+        user_agent = str(log.get("user_agent") or "").lower()
+        return any(marker in user_agent for marker in VULNERABILITY_SCANNER_MARKERS)
+
+    def _is_authorized_scan_candidate(self, log: dict[str, Any]) -> bool:
+        if self._is_vulnerability_scanner(log):
+            return True
+        return log.get("log_source") == "zeek_conn" and any(
+            self._is_vulnerability_scanner(other)
+            and other.get("src_ip") == log.get("src_ip")
+            for other in self.logs
+        )
+
+    def _authorized_scan_window(
+        self, log: dict[str, Any], signal_codes: list[str]
+    ) -> Optional[dict[str, Any]]:
+        """只有资产、扫描源、时间窗和扫描动作同时匹配，才认可授权扫描。"""
+        asset = ((self.findings.get("context") or {}).get("asset_context") or {})
+        if not asset or log.get("asset_id") != asset.get("asset_id"):
+            return None
+        never_exempt_codes = {
+            "sql_injection": "SQL_Injection",
+            "malicious_upload": "Malicious_Upload",
+            "webshell_access": "Malicious_Upload",
+            "suspicious_outbound": "C2_Exfiltration",
+            "failed_login_spike": "Brute_Force",
+            "brute_force": "Brute_Force",
+            "lateral_movement": "Lateral_Movement",
+        }
+        signals = set(signal_codes)
+        for window in asset.get("maintenance_windows") or []:
+            actions = set(window.get("allowed_actions") or [])
+            if not actions.intersection({"vuln_scan", "probe"}):
                 continue
-            try:
-                sh, sm = (int(x) for x in str(window.get("start", "00:00")).split(":"))
-                eh, em = (int(x) for x in str(window.get("end", "00:00")).split(":"))
-            except ValueError:
+            if window.get("asset_id") != log.get("asset_id"):
                 continue
-            start = local.replace(hour=sh, minute=sm, second=0, microsecond=0)
-            end = local.replace(hour=eh, minute=em, second=0, microsecond=0)
-            if end <= start:
-                end += _dt.timedelta(days=1)
-            if start <= local <= end:
-                return True
-        return False
+            if not _ip_matches_scope(
+                str(log.get("src_ip") or ""),
+                list(window.get("authorized_src_ips") or []),
+            ):
+                continue
+            if not self._window_matches(window, log.get("timestamp")):
+                continue
+            blocked = {
+                never_exempt_codes[item]
+                for item in (window.get("never_exempt") or [])
+                if item in never_exempt_codes
+            }
+            if signals.intersection(blocked):
+                continue
+            return window
+        return None
+
+    def _scan_authorization_decisions(self) -> list[dict[str, Any]]:
+        decisions = []
+        for log in self.logs:
+            if not self._is_authorized_scan_candidate(log):
+                continue
+            text = " ".join(
+                str(log.get(key) or "")
+                for key in ("uri_or_target", "payload_summary", "user_agent")
+            )
+            signals = attack_types.classify_signals(text)["strong"]
+            if not signals:
+                signals = ["Scan"]
+            decisions.append({
+                "log_id": log.get("log_id"),
+                "src_ip": log.get("src_ip"),
+                "asset_id": log.get("asset_id"),
+                "timestamp": log.get("timestamp"),
+                "window": self._authorized_scan_window(
+                    log,
+                    [kind for kind in signals if kind not in {"Brute_Force", "C2_Exfiltration"}],
+                ),
+            })
+        return decisions
 
     def _authorization(self) -> dict[str, Any]:
         """核对账号、来源、目标资产与维护窗口。
@@ -477,7 +594,26 @@ class InvestigationSession:
             notes.append("实际资产与上下文不匹配，不能复用其他资产窗口")
         if profile and profile.get("is_service_account") and any(self._interactive_login(log) for log in account_logs):
             notes.append("服务账号交互式登录不在授权范围")
+        scan_decisions = self._scan_authorization_decisions()
         if not account_logs:
+            if scan_decisions and all(item["window"] for item in scan_decisions):
+                return {
+                    "available": True,
+                    "authorized": True,
+                    "checks": {
+                        "扫描源匹配授权范围": True,
+                        "扫描资产与配置一致": True,
+                        "扫描时间处于授权窗口": True,
+                        "扫描行为未命中禁止豁免类别": True,
+                    },
+                    "failed": [],
+                    "notes": [],
+                    "subjects": [],
+                    "evidence": {
+                        "authorized_scan_logs": scan_decisions,
+                        "maintenance_windows": (asset or {}).get("maintenance_windows") or [],
+                    },
+                }
             return {
                 "available": True,
                 "authorized": False,
@@ -522,9 +658,10 @@ class InvestigationSession:
                     checks["来源授权范围"] = False
                     notes.append("账号画像的来源授权范围为空，不能视为不限范围")
                 else:
-                    checks["来源 IP 符合授权范围"] = srcs <= set(allowed_src)
-                    if not checks["来源 IP 符合授权范围"]:
-                        notes.append(f"来源 IP {sorted(srcs - set(allowed_src))} 不在授权范围")
+                    outside = sorted(src for src in srcs if not _ip_matches_scope(src, allowed_src))
+                    checks["来源 IP 符合授权范围"] = not outside
+                    if outside:
+                        notes.append(f"来源 IP {outside} 不在授权范围")
 
             # 资产：同理，必须来自配置的账号-资产范围；未提供就不能判"未越权"。
             targets = {log.get("asset_id") for log in account_logs if log.get("asset_id")}
@@ -574,6 +711,13 @@ class InvestigationSession:
         else:
             notes.append("未取得目标资产上下文")
 
+        if scan_decisions:
+            scans_authorized = all(item["window"] for item in scan_decisions)
+            checks["所有扫描源、资产、时间窗和行为均在扫描授权范围"] = scans_authorized
+            if not scans_authorized:
+                denied = [str(item.get("log_id") or "unknown") for item in scan_decisions if not item["window"]]
+                notes.append("扫描日志未匹配授权扫描范围：" + ", ".join(denied))
+
         authorized = bool(checks) and all(checks.values()) and not notes
         return {
             "available": True,
@@ -595,6 +739,7 @@ class InvestigationSession:
                 "observed_assets": sorted({log.get("asset_id") for log in account_logs if log.get("asset_id")}),
                 "evaluated_at": self._focus_time(),
                 "maintenance_windows": (asset or {}).get("maintenance_windows") or [],
+                "authorized_scan_logs": scan_decisions,
                 "per_log_in_window": (
                     {
                         str(log.get("timestamp")): self._in_window(asset or {}, log.get("timestamp"))
@@ -624,10 +769,19 @@ class InvestigationSession:
 
         if auth["authorized"] and not unresolved:
             basis = "、".join(k for k, v in auth["checks"].items() if v) or "账号/来源/资产/窗口"
-            summary = (
-                f"未发现攻击载荷或外连迹象；账号 {', '.join(auth.get('subjects') or []) or '-'} "
-                f"经上下文核对（{basis}）与授权范围一致，判定为授权运维/业务行为。"
-            )
+            authorized_scan_logs = (auth.get("evidence") or {}).get("authorized_scan_logs") or []
+            if authorized_scan_logs:
+                scanner_sources = sorted({str(item.get("src_ip")) for item in authorized_scan_logs})
+                summary = (
+                    f"漏洞扫描源 {', '.join(scanner_sources)} 对已登记资产进行探测；"
+                    f"逐条核对来源、目标、授权时间窗及禁止行为（{basis}），"
+                    "未发现需告警的利用或禁止行为，判定为授权安全测试。"
+                )
+            else:
+                summary = (
+                    f"未发现攻击载荷或外连迹象；账号 {', '.join(auth.get('subjects') or []) or '-'} "
+                    f"经上下文核对（{basis}）与授权范围一致，判定为授权运维/业务行为。"
+                )
             self._record_conclusion_basis(
                 facts, attack_type="none", risk="LOW", summary=summary, attacker_ip=attacker_ip
             )
@@ -698,6 +852,13 @@ class InvestigationSession:
         attack_ids = [log["log_id"] for log in facts["attack"] if log.get("log_id")]
         if attack_ids:
             return attack_ids
+        authorized_scan_ids = [
+            item["log"]["log_id"]
+            for item in facts.get("authorized_scans", [])
+            if item.get("log", {}).get("log_id")
+        ]
+        if authorized_scan_ids:
+            return authorized_scan_ids
         unexplained_ids = [log["log_id"] for log in facts["unexplained"] if log.get("log_id")]
         if unexplained_ids:
             return unexplained_ids
@@ -736,12 +897,19 @@ class InvestigationSession:
             )
 
         # 字节量只能说明传输规模，不能证明数据外泄。
-        if facts["c2"] or facts["responded"]:
+        scan_only = set(facts.get("kinds") or []) == {"Scan"}
+        if scan_only:
+            risk = "MEDIUM"
+        elif facts["c2"] or facts["responded"]:
             risk = "HIGH"
         else:
             risk = "MEDIUM"
 
-        action = "block_ip" if risk in {"HIGH", "CRITICAL"} else "block_ip_short_term"
+        action = (
+            "rate_limit"
+            if scan_only
+            else "block_ip" if risk in {"HIGH", "CRITICAL"} else "block_ip_short_term"
+        )
         attack_type = self._attack_type(facts)
         summary = self._chain_summary(facts, attacker_ip, victim_asset)
         self._record_conclusion_basis(
@@ -763,7 +931,7 @@ class InvestigationSession:
             evidence_log_ids=self._evidence_ids(facts),
             attack_chain_summary=summary,
             recommended_action=action,  # type: ignore[arg-type]
-            requires_human_approval=True,  # 封禁类动作一律需人工审批
+            requires_human_approval=action != "rate_limit",
             unknown_items=self._unknown_items(facts=facts),
         )
 
@@ -979,7 +1147,10 @@ class InvestigationSession:
         if len(facts.get("kinds", [])) > 1 and (len(set(times)) < len(times) or any(len(kinds) > 1 for kinds in facts["log_kinds"].values())):
             missing.append("部分分类同时命中，时序不确定；主分类外的类别保留在 conclusion_basis")
         if facts["has_attack"]:
-            missing.append("处置建议尚未经过人工审批，未提交处置申请")
+            if set(facts.get("kinds") or []) == {"Scan"}:
+                missing.append("仅生成限速建议；本调查器未调用处置工具")
+            else:
+                missing.append("处置建议尚未经过人工审批，未提交处置申请")
         # 标签带来的、但没有行为证据支撑的疑点，单独列出而不是计入结论
         unbacked = [
             stage
