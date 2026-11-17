@@ -1,0 +1,198 @@
+
+[
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-005",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "用户身份识别异常行为调查",
+    "summary": "通过身份认证日志、账户标识和访问行为识别异常身份使用情况，判断是否存在账户冒用或身份识别配置问题。",
+    "attack_category": "Authentication_Failure",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "application_auth",
+      "nginx_access",
+      "identity_provider"
+    ],
+    "keywords": [
+      "身份识别",
+      "用户账户",
+      "账户标识",
+      "身份认证",
+      "账户冒用",
+      "异常登录"
+    ],
+    "key_indicators": [
+      "同一账户在短时间内出现来自不同地区或异常网络环境的登录记录",
+      "同一会话或账户标识在多个不符合正常业务规律的客户端之间重复出现",
+      "认证日志中的用户标识与应用访问日志中的账户身份无法正常对应",
+      "账户信息变更后出现异常访问或权限使用行为"
+    ],
+    "investigation_steps": [
+      "核对认证日志中的用户标识、登录时间、来源地址和客户端信息",
+      "关联身份提供方与应用访问日志，确认账户身份映射关系",
+      "检查账户资料变更记录及相关管理操作",
+      "对照用户正常登录行为，判断是否存在异常身份使用",
+      "核实相关活动是否属于用户授权设备或正常业务操作"
+    ],
+    "recommended_action": "对确认存在身份冒用风险的账户启动人工核查，必要时要求重新认证并按照账户安全流程保护相关账户",
+    "error_revision_note": "用户使用 VPN、移动网络或更换设备可能造成登录地点和客户端变化。不能仅凭地理位置变化判定账户被盗用。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Identity Management Testing",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-006",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "弱口令与默认凭据风险识别",
+    "summary": "通过认证失败记录、账户配置和安全审计信息识别弱口令及默认凭据风险，辅助判断账户安全状况。",
+    "attack_category": "Credential_Access",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "application_auth",
+      "identity_provider",
+      "security_audit"
+    ],
+    "keywords": [
+      "弱口令",
+      "默认凭据",
+      "默认账户",
+      "密码策略",
+      "认证失败",
+      "账户安全"
+    ],
+    "key_indicators": [
+      "安全审计发现系统仍存在未修改的默认账户或初始凭据",
+      "多个账户出现相似的异常认证失败行为",
+      "新建账户或长期未使用账户出现异常认证活动",
+      "认证系统记录显示账户密码策略不符合组织安全要求"
+    ],
+    "investigation_steps": [
+      "检查账户清单，识别默认账户、长期未使用账户及异常账户",
+      "核对身份认证系统的密码复杂度和密码管理策略",
+      "检查认证失败记录，分析是否存在集中或重复的异常认证行为",
+      "通过授权安全审计确认是否仍有默认凭据或弱口令风险",
+      "核实相关账户是否属于业务必需账户及其实际使用情况"
+    ],
+    "recommended_action": "要求相关账户修改不符合安全策略的凭据，禁用不再使用的默认账户，并落实最小权限和凭据管理要求",
+    "error_revision_note": "认证失败可能由用户输错密码、客户端配置错误或密码过期造成。不能仅凭失败次数认定存在弱口令。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism and Default Credentials",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-007",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "异常登录频率与账户破解风险识别",
+    "summary": "关联认证日志和网络访问记录，识别短时间内大量认证失败、账户枚举迹象及异常登录成功事件。",
+    "attack_category": "Credential_Access",
+    "mitre_id": "T1110",
+    "applicable_log_sources": [
+      "application_auth",
+      "nginx_access",
+      "identity_provider"
+    ],
+    "keywords": [
+      "暴力破解",
+      "Brute Force",
+      "异常登录",
+      "认证失败",
+      "账户枚举",
+      "登录频率",
+      "T1110"
+    ],
+    "key_indicators": [
+      "同一来源 IP 在短时间内对单个账户产生大量认证失败记录",
+      "同一来源 IP 在短时间内尝试访问多个不同账户",
+      "同一账户在短时间内出现大量来自不同来源的认证失败记录",
+      "连续认证失败后出现异常登录成功事件",
+      "认证请求频率明显偏离正常用户登录行为基线"
+    ],
+    "investigation_steps": [
+      "按时间窗口统计来源 IP、账户标识和认证结果",
+      "区分针对单个账户的高频尝试与针对多个账户的异常尝试",
+      "关联 Web 访问日志，检查请求频率和客户端行为",
+      "确认连续失败后是否出现成功登录以及后续敏感操作",
+      "核对相关来源是否属于授权安全测试、企业代理或正常运维任务"
+    ],
+    "recommended_action": "对确认存在异常认证行为的来源实施适当的登录频率限制，并根据风险要求相关账户重新认证；涉及账户保护的处置应经过人工确认",
+    "error_revision_note": "共享网络出口、企业代理和用户集中登录可能导致同一来源出现较多认证失败。不能仅凭失败次数判定暴力破解，应结合账户数量、时间分布和后续成功登录行为。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism; MITRE ATT&CK T1110 Brute Force",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-008",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "认证机制与会话管理异常识别",
+    "summary": "通过认证状态、会话生命周期和应用访问记录识别认证流程及会话管理异常，辅助发现未经授权的会话使用。",
+    "attack_category": "Authentication_Failure",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "application_auth",
+      "nginx_access",
+      "application_audit"
+    ],
+    "keywords": [
+      "会话管理",
+      "Session Management",
+      "认证机制",
+      "会话过期",
+      "会话失效",
+      "身份验证"
+    ],
+    "key_indicators": [
+      "已退出登录或已失效的会话标识仍然产生成功访问记录",
+      "同一会话标识在异常客户端或不符合正常业务规律的环境中重复使用",
+      "敏感业务操作发生时缺少对应的有效认证记录",
+      "会话创建、更新和失效时间之间存在明显不合理的关系",
+      "认证状态与应用访问权限记录不一致"
+    ],
+    "investigation_steps": [
+      "核对认证日志中的登录、退出和重新认证事件",
+      "检查会话创建时间、有效期、失效时间及相关访问记录",
+      "关联应用审计日志，确认敏感操作是否具备有效认证状态",
+      "检查异常会话是否访问账户资料或其他敏感业务资源",
+      "排除日志延迟、会话缓存和分布式系统时间不同步等因素"
+    ],
+    "recommended_action": "对确认异常的会话按照应用安全流程执行失效处理，并检查会话生命周期和敏感操作的重新认证要求",
+    "error_revision_note": "分布式应用、缓存同步延迟和日志采集时间差可能造成会话记录不一致。应结合认证服务和应用审计日志综合判断。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Session Management Testing",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  }
+]
