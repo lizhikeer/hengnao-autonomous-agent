@@ -1,0 +1,20 @@
+{
+  "case_id": "CHAIN-CASE-02",
+  "is_malicious": true,
+  "attack_type": "Path_Traversal_Privilege_After_Malicious_Upload",
+  "risk_level": "HIGH",
+  "attacker_ip": "203.0.113.45",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261028-0206",
+    "LOG-20261028-0207",
+    "LOG-20261028-0208",
+    "LOG-20261028-0209",
+    "LOG-20261028-0210",
+    "LOG-20261028-0213"
+  ],
+  "attack_chain_summary": "攻击源 203.0.113.45 对 web-prod-01 实施：目录遍历/越权访问 1 次，恶意上传或 webshell 访问 6 次；攻击请求得到响应（未确认利用成功）。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "部分分类同时命中，时序不确定；主分类外的类别保留在 conclusion_basis；处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、exploitation、c2_callback 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索调用失败：知识检索不可用：导入 src.knowledge.search 失败（通常缺 sentence-transformers / qdrant-client 依赖）。"
+}

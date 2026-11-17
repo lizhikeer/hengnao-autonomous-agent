@@ -1,0 +1,26 @@
+{
+  "case_id": "CHAIN-CASE-08",
+  "is_malicious": false,
+  "attack_type": "insufficient_evidence",
+  "risk_level": "LOW",
+  "attacker_ip": "unknown",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261105-0801",
+    "LOG-20261105-0802",
+    "LOG-20261105-0803",
+    "LOG-20261105-0804",
+    "LOG-20261105-0805",
+    "LOG-20261105-0806",
+    "LOG-20261105-0807",
+    "LOG-20261105-0808",
+    "LOG-20261105-0809",
+    "LOG-20261105-0810",
+    "LOG-20261105-0814",
+    "LOG-20261105-0816"
+  ],
+  "attack_chain_summary": "未确认攻击成立，也未取得充分的授权依据，不判定为正常，交人工复核。",
+  "recommended_action": "none",
+  "requires_human_approval": true,
+  "unknown_items": "证据不足未定论。缺失项：授权核对未通过：账号已登记；日志中未出现账号信息，无法核对授权；12 条日志存在未解释的行为（阶段标注 c2_callback，但无攻击载荷特征），不能据此确认攻击成立，也不能判为正常"
+}
