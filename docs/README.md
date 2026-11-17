@@ -8,7 +8,7 @@
 | :--- | :--- |
 | [项目分工与前期架构设计.md](./project%20design/项目分工与前期架构设计.md) | **核心纲领**：技术路线决策（RAG+案例记忆+提示词工程）、五保五砍边界裁切、六人角色分工与目录边界、五周里程碑排期及三大核心 JSON 数据契约 |
 | [全链路日志统一字段规范.md](./project%20design/全链路日志统一字段规范.md) | **W1 冻结基准**：18 个契约字段字典、5 类 `log_source`、6 种攻击阶段枚举、Nginx/auth/Zeek 三源字段映射表、`log_id` 确定性生成规则、脱敏规则与清洗脚本校验清单 |
-| [响应执行器网关与审计日志规范.md](./project%20design/响应执行器网关与审计日志规范.md) | **W3 确认约定**：Pre-flight ABAC 网关契约（check_action、四类拦截原因码、missing_evidence、fail-closed）与审计日志字段顺序（ts/action/target_type/target/evidence_log_ids/policy_reason）；状态机不在范围内 |
+| [响应执行器网关与审计日志规范.md](./project%20design/响应执行器网关与审计日志规范.md) | **W3 确认约定**：Pre-flight ABAC 网关契约（check_action、四类拦截原因码、missing_evidence、fail-closed）、审计日志字段顺序（ts/action/target_type/target/evidence_log_ids/policy_reason）与审批单有效期统一 30 分钟（PR #38 测试锁定，区别于 max_duration_minutes）；状态机实现不在 PR #37 范围 |
 | [技术链.md](./project%20design/技术链.md) | 总体链路、数据链路、Agent 调查与受控处置链路、案例记忆与知识更新方案及原项目复用说明 |
 | [mcp.md](./project%20design/mcp.md) | 现成 MCP 工具选型与自建 SecLog MCP / FastAPI 服务接口清单 |
 | [知识库总体设计.md](./project%20design/database/知识库总体设计.md) | 日志与攻击分类、知识库参考资料和调查评测方法 |
