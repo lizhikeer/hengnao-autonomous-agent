@@ -1,0 +1,191 @@
+[
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-001",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "Web 备份文件暴露识别与调查",
+    "summary": "通过 Web 访问日志识别备份文件异常访问，结合文件内容和访问权限核实是否存在敏感信息泄露。",
+    "attack_category": "Information_Disclosure",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "nginx_access",
+      "web_error",
+      "waf"
+    ],
+    "keywords": [
+      "backup file",
+      "备份文件",
+      "信息泄露",
+      "敏感文件暴露",
+      "异常文件访问"
+    ],
+    "key_indicators": [
+      "访问日志中出现对备份文件或历史副本的异常请求",
+      "同一来源 IP 在短时间内请求多个疑似备份文件资源",
+      "服务器对非预期备份文件请求返回 HTTP 200",
+      "相关请求的响应大小明显偏离同类正常资源访问基线"
+    ],
+    "investigation_steps": [
+      "核对请求路径、请求时间、来源 IP 和响应状态码",
+      "确认相关文件是否属于正常公开的业务资源",
+      "由授权人员检查文件是否包含源代码、配置或其他敏感信息",
+      "关联 WAF、Web 服务和主机日志，判断是否存在后续异常访问"
+    ],
+    "recommended_action": "none",
+    "error_revision_note": "正常业务下载、静态资源访问和授权备份任务也可能产生类似日志。不能仅凭文件名或单次 HTTP 200 判定信息泄露，应结合文件实际内容、访问权限和业务用途确认。 该场景的主要修复是由维护人员关闭备份文件公开访问并核查凭据；知识卡不直接修改服务器配置，故推荐动作为 none。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Configuration and Deployment Management Testing",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-002",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "敏感配置文件意外公开识别与调查",
+    "summary": "结合 Web 访问日志和配置文件访问权限，识别环境配置、版本控制元数据等敏感资源的意外公开风险。",
+    "attack_category": "Information_Disclosure",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "nginx_access",
+      "web_error",
+      "waf"
+    ],
+    "keywords": [
+      "敏感配置",
+      "环境变量",
+      "配置文件暴露",
+      "凭据泄露",
+      "版本控制元数据",
+      "信息泄露"
+    ],
+    "key_indicators": [
+      "访问日志中出现对非公开配置资源或版本控制元数据的请求",
+      "同一来源 IP 连续访问多个配置相关资源",
+      "相关请求返回成功状态码，且响应内容可能包含敏感配置",
+      "访问时间与其他异常资源探测行为存在关联"
+    ],
+    "investigation_steps": [
+      "核对请求路径、来源 IP、访问时间和响应状态码",
+      "确认相关资源是否属于公开业务内容，避免仅凭文件名判定风险",
+      "由授权人员检查文件是否包含密钥、令牌、数据库连接信息或内部地址",
+      "关联主机和应用日志，确认是否存在后续异常访问",
+      "核实可能暴露的信息范围及相关凭据是否仍然有效"
+    ],
+    "recommended_action": "none",
+    "error_revision_note": "部分路径可能由正常业务功能提供，访问日志也不能直接证明敏感内容已被读取。需要结合响应内容、权限配置和业务用途核实。 该场景的主要修复是限制配置文件访问并轮换可能泄露的凭据；这些变更需由资产维护人员执行，故推荐动作为 none。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Review Webserver Metafiles for Information Leakage",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-003",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "Web 应用技术栈指纹异常识别",
+    "summary": "通过 Web 访问行为、请求头和响应特征识别自动化技术栈信息收集活动，并结合业务基线判断风险。",
+    "attack_category": "Information_Gathering",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "nginx_access",
+      "zeek_http",
+      "waf"
+    ],
+    "keywords": [
+      "技术栈识别",
+      "Web 指纹",
+      "服务枚举",
+      "信息收集",
+      "User-Agent",
+      "自动化扫描"
+    ],
+    "key_indicators": [
+      "单一来源 IP 在短时间内请求大量不同的站点资源或技术特征页面",
+      "请求集中访问可能暴露服务器类型、框架版本或组件信息的资源",
+      "访问路径和请求频率明显偏离正常用户浏览行为",
+      "相同来源在完成技术信息收集后继续出现异常接口访问"
+    ],
+    "investigation_steps": [
+      "统计来源 IP 在指定时间窗口内的请求数量和资源类型",
+      "检查请求路径、User-Agent、请求频率和响应状态码",
+      "判断相关请求是否属于授权扫描或正常运维任务",
+      "关联 WAF 和 Web 服务日志，检查是否存在后续漏洞探测行为",
+      "结合资产清单确认被访问服务及其技术栈信息是否属于正常公开内容"
+    ],
+    "recommended_action": "rate_limit",
+    "error_revision_note": "搜索引擎、监控系统和授权资产扫描也可能产生类似访问行为。User-Agent 可以被伪造，不能单独作为攻击判定依据。 仅在确认来源为未授权自动化枚举且请求频率异常时限速；正常爬虫、资产盘点和授权测试应排除。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Fingerprint Web Application Framework",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-004",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "异常 HTTP 方法与服务配置风险识别",
+    "summary": "通过 Web 访问日志识别非预期 HTTP 方法请求，结合应用接口定义和服务器配置判断是否存在安全配置问题。",
+    "attack_category": "Security_Misconfiguration",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "nginx_access",
+      "web_error",
+      "waf"
+    ],
+    "keywords": [
+      "HTTP 方法",
+      "请求方法异常",
+      "服务配置",
+      "安全配置错误",
+      "请求方法限制"
+    ],
+    "key_indicators": [
+      "日志中出现业务未使用或未授权的 HTTP 方法请求",
+      "同一来源 IP 在短时间内尝试多种不同请求方法",
+      "非预期请求方法获得成功响应或返回异常详细信息",
+      "相关请求集中访问管理接口或其他敏感业务路径"
+    ],
+    "investigation_steps": [
+      "统计异常 HTTP 方法的出现频率、来源 IP 和请求路径",
+      "对照应用接口文档确认相关方法是否属于正常业务行为",
+      "检查 Web 服务器和应用框架的请求方法配置",
+      "关联 WAF 与应用日志，判断是否存在其他异常请求",
+      "核实相关接口是否存在不必要的访问权限"
+    ],
+    "recommended_action": "none",
+    "error_revision_note": "部分 API、跨域请求和正常业务组件可能使用特殊 HTTP 方法。不能仅凭方法名称判定攻击，应结合接口定义、访问权限和响应行为综合判断。 HTTP 方法配置应由维护人员按业务需求整改；仅凭方法探测不触发封禁或账户隔离，故推荐动作为 none。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Test HTTP Methods",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z"
+  }
+]
