@@ -1,112 +1,155 @@
+
 [
   {
+    "schema_version": "1.0",
+    "tenant_id": "default",
     "card_id": "KB-C2-001",
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "异常外连与疑似恶意矿池通信识别",
     "attack_category": "C2_Exfiltration",
     "mitre_id": "T1071",
-    "applicable_log_sources": [
-      "zeek_conn",
-      "zeek_http"
-    ],
+    "applicable_log_sources": ["zeek_conn", "zeek_http"],
+    "keywords": ["异常外连", "周期性通信", "恶意矿池", "C2通信", "网络基线", "未知目的地址"],
     "key_indicators": [
       "同一内部主机持续连接少量固定外部地址，连接时间呈现周期性规律",
       "外连目标域名或IP不属于已登记的业务服务和运维资产",
       "连接持续时间、上下行流量或连接频率明显偏离该主机历史基线",
-      "同一主机在异常外连前后出现其他可疑网络访问记录"
+      "同一主机在异常外连前后出现其他可疑网络访问记录",
+      "外连目标与已知威胁情报中的可疑基础设施存在匹配记录"
     ],
     "investigation_steps": [
       "检索异常时间窗口内的zeek_conn记录，统计源IP、目的IP、目的端口和连接持续时间",
       "关联zeek_http记录，核对请求域名、URI、User-Agent及响应状态",
       "查询该主机历史网络连接基线，判断外连频率和流量是否存在明显偏差",
-      "结合资产清单和业务负责人确认外部目标是否属于合法业务通信"
+      "结合资产清单和业务负责人确认外部目标是否属于合法业务通信",
+      "结合威胁情报和终端安全告警，核实是否存在恶意软件或异常资源使用证据"
     ],
     "recommended_action": "monitor_only",
-    "error_revision_note": "云服务、软件更新、合法代理和远程运维也可能产生周期性外连。不能仅凭连接频率或单一目的IP判定恶意通信，应结合资产归属、业务用途和历史基线综合判断。",
-    "source_reference": "MITRE ATT&CK T1071；Zeek Network Security Monitoring Documentation",
-    "review_status": "approved"
+    "error_revision_note": "云服务、软件更新、合法代理和远程运维也可能产生周期性外连。不能仅凭连接频率或单一目的IP判定恶意通信，应结合资产归属、业务用途和历史基线综合判断。矿池通信需要结合目标信誉、主机进程和资源使用情况进一步确认。",
+    "source_reference": "MITRE ATT&CK T1071 Application Layer Protocol; Zeek Network Security Monitoring Documentation",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z",
+    "summary": "通过周期性外连、网络流量偏差、资产信息和威胁情报识别疑似恶意矿池通信及C2活动。"
   },
   {
+    "schema_version": "1.0",
+    "tenant_id": "default",
     "card_id": "KB-C2-002",
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "Web服务器异常外连与远程控制通信调查",
     "attack_category": "C2_Exfiltration",
     "mitre_id": "T1071.001",
-    "applicable_log_sources": [
-      "nginx_access",
-      "zeek_conn",
-      "zeek_http"
-    ],
+    "applicable_log_sources": ["nginx_access", "zeek_conn", "zeek_http"],
+    "keywords": ["Web服务器", "异常外连", "远程控制", "C2通信", "HTTP通信", "第三方API"],
     "key_indicators": [
       "Web服务器在非正常业务时段出现新的外部网络连接",
       "异常外连发生前，访问日志中存在来源异常或访问频率突增的请求",
       "服务器与未知外部地址之间出现持续或重复的网络通信",
-      "服务器异常外连时间与Web访问异常时间存在明显关联"
+      "服务器异常外连时间与Web访问异常时间存在明显关联",
+      "外连目标与已登记的第三方服务、更新服务或业务回调地址不一致"
     ],
     "investigation_steps": [
       "检索nginx_access日志，确定异常请求发生的时间、来源IP、访问路径和状态码",
       "关联zeek_conn记录，检查Web服务器同期是否出现未知目的地址的外连",
       "结合zeek_http记录核对通信域名、请求方法和流量变化",
-      "检查服务器资产用途和近期变更记录，交由管理员进一步核实异常通信原因"
+      "检查服务器资产用途和近期变更记录，交由管理员进一步核实异常通信原因",
+      "关联终端进程和应用审计记录，确认外连是否由合法业务组件发起"
     ],
     "recommended_action": "monitor_only",
-    "error_revision_note": "Web服务器可能因调用第三方API、更新服务或业务回调产生正常外连。应结合服务器角色、业务调用关系和变更记录判断，避免将合法通信误判为远程控制。",
-    "source_reference": "MITRE ATT&CK T1071.001；OWASP Logging Cheat Sheet",
-    "review_status": "approved"
+    "error_revision_note": "Web服务器可能因调用第三方API、更新服务或业务回调产生正常外连。应结合服务器角色、业务调用关系和变更记录判断，避免将合法通信误判为远程控制。T1071.001描述的是Web协议通信，不能仅凭HTTP外连直接确认C2活动。",
+    "source_reference": "MITRE ATT&CK T1071.001 Web Protocols; OWASP Logging Cheat Sheet",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z",
+    "summary": "关联Web访问日志、网络连接记录和应用审计信息，识别Web服务器疑似远程控制通信。"
   },
   {
+    "schema_version": "1.0",
+    "tenant_id": "default",
     "card_id": "KB-C2-003",
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "异常大流量外传与数据泄露风险识别",
     "attack_category": "C2_Exfiltration",
     "mitre_id": "T1041",
-    "applicable_log_sources": [
-      "zeek_conn",
-      "zeek_http"
-    ],
+    "applicable_log_sources": ["zeek_conn", "zeek_http"],
+    "keywords": ["数据外传", "异常大流量", "数据泄露", "上下行字节数", "敏感数据", "网络流量基线"],
     "key_indicators": [
       "内部主机向非业务目的地址发送的数据量明显高于历史平均水平",
       "短时间内出现大量持续时间较长的外部连接",
       "外传流量集中发生在非正常业务时段",
-      "同一主机在异常流量出现前存在敏感业务系统的访问记录"
+      "同一主机在异常流量出现前存在敏感业务系统的访问记录",
+      "大流量传输目标与业务登记的文件同步或备份服务不一致"
     ],
     "investigation_steps": [
       "检索zeek_conn日志，统计异常主机的连接次数、持续时间和上下行字节数",
-      "关联zeek_http记录，检查目标域名、请求路径和响应数据规模",
+      "关联zeek_http记录，检查目标域名、请求路径和流量变化",
       "结合资产信息确认主机是否具有访问敏感数据的业务权限",
-      "对照正常业务流量基线，核实大流量传输是否具有合理业务原因"
+      "对照正常业务流量基线，核实大流量传输是否具有合理业务原因",
+      "关联文件访问审计和数据访问记录，确认是否存在未经授权的数据读取或传输"
     ],
     "recommended_action": "monitor_only",
-    "error_revision_note": "数据备份、文件同步、系统更新和批量业务处理都可能产生大流量。不能仅依据流量大小认定数据泄露，应结合目标地址、数据访问权限、业务时段和传输背景综合研判。",
-    "source_reference": "MITRE ATT&CK T1041；Zeek Network Security Monitoring Documentation",
-    "review_status": "approved"
+    "error_revision_note": "数据备份、文件同步、系统更新和批量业务处理都可能产生大流量。不能仅依据流量大小认定数据泄露，应结合目标地址、数据访问权限、业务时段和传输背景综合研判。T1041需要有证据支持通过C2通道外传数据。",
+    "source_reference": "MITRE ATT&CK T1041 Exfiltration Over C2 Channel; Zeek Network Security Monitoring Documentation",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z",
+    "summary": "通过网络流量、敏感数据访问记录和业务基线识别疑似异常数据外传行为。"
   },
   {
+    "schema_version": "1.0",
+    "tenant_id": "default",
     "card_id": "KB-C2-004",
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "合法运维通信与疑似C2活动区分",
     "attack_category": "C2_Exfiltration",
     "mitre_id": "T1071",
-    "applicable_log_sources": [
-      "auth_log",
-      "zeek_conn",
-      "zeek_http"
-    ],
+    "applicable_log_sources": ["auth_log", "zeek_conn", "zeek_http"],
+    "keywords": ["合法运维", "C2活动", "异常账户登录", "远程管理", "变更工单", "网络通信关联"],
     "key_indicators": [
       "主机出现与日常运维目标不一致的外部连接",
       "异常网络通信与非预期的账户登录记录在时间上接近",
       "外连目标、通信频率或连接时间与已登记运维行为存在差异",
-      "同一账户或主机在短时间内出现多个异常访问事件"
+      "同一账户或主机在短时间内出现多个异常访问事件",
+      "网络连接与运维工单、授权账户或维护时间无法对应"
     ],
     "investigation_steps": [
       "检索auth_log，核对相关账户的登录时间、来源地址和认证结果",
       "关联zeek_conn记录，分析登录事件前后主机的外部连接变化",
       "查询zeek_http记录，核实通信目标和请求行为是否符合已知运维业务",
-      "联系运维人员核对变更工单、维护时间和目标地址，形成最终研判结论"
+      "联系运维人员核对变更工单、维护时间和目标地址，形成最终研判结论",
+      "结合终端进程、资产信息和安全告警判断通信是否具有合法业务来源"
     ],
     "recommended_action": "monitor_only",
     "error_revision_note": "合法运维工具、VPN、远程管理平台和自动化任务可能产生类似异常通信。应优先核对运维工单、授权账户、资产清单和操作时间，不应仅凭单一网络指标采取封禁措施。",
-    "source_reference": "MITRE ATT&CK T1071；NIST SP 800-61 Computer Security Incident Handling Guide",
-    "review_status": "approved"
+    "source_reference": "MITRE ATT&CK T1071 Application Layer Protocol; NIST SP 800-61 Computer Security Incident Handling Guide",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-17T01:20:33.000Z",
+    "summary": "关联账户认证、网络连接和运维变更记录，区分合法远程管理通信与疑似C2活动。"
   }
 ]
