@@ -133,7 +133,7 @@ class VectorStore:
         profile: str,
         now: str,
         limit: int,
-        category: str | None = None,
+        categories: tuple[str, ...] = (),
     ) -> list[Any]:
         """两集合分别召回；有效期、租户与审核过滤由后台固定添加。"""
         check_vectors([vector], 1)
@@ -163,10 +163,10 @@ class VectorStore:
                 ]
             )
         )
-        if category:
+        if categories:
             conditions.append(
                 models.FieldCondition(
-                    key="attack_category", match=models.MatchValue(value=category)
+                    key="attack_category", match=models.MatchAny(any=list(categories))
                 )
             )
         hits = []
