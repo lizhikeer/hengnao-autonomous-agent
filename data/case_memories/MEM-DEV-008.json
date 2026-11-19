@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 1,
+  "card_id": "MEM-DEV-008",
+  "card_type": "verified_error_revision",
+  "title": "缺少 HTTP 正文时用连接周期和流量方向核查可疑回连",
+  "summary": "周期联络和随后的上传请求支持可疑外连判断。流量字段方向及传输内容需另行核实。",
+  "investigation_goal": "缺少 HTTP 正文时用连接周期和流量方向核查可疑回连",
+  "trigger_conditions": [
+    "缺少 HTTP 正文时用连接周期和流量方向核查可疑回连"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "涉事资产的时间序列与授权记录",
+      "log_sources": [
+        "zeek_conn",
+        "zeek_http"
+      ],
+      "fields": [
+        "timestamp",
+        "src_ip",
+        "dest_ip",
+        "action_or_method",
+        "asset_id"
+      ],
+      "purpose": "按资产和外部目的地址排列连接时间，比较周期、持续时间和业务基线。",
+      "if_missing": "记录缺失字段及其影响，只报告已有证据支持的阶段。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1"
+      ],
+      "condition": "同一资产周期访问同一外部目的地，随后向该目的地提交上传请求并建立长连接。",
+      "conclusion": "周期联络和随后的上传请求支持可疑外连判断。流量字段方向及传输内容需另行核实。",
+      "next_step": "关联同目的地上传与长连接，核实发送字节的方向和来源。记录尚未证实的数据范围。",
+      "source_ids": [
+        "SRC1"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "需核实当前资产和账号的授权，历史案例只能提供调查方法。"
+  ],
+  "attack_category": "C2_Exfiltration",
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "zeek_conn",
+    "zeek_http"
+  ],
+  "keywords": [
+    "Zeek",
+    "周期外连",
+    "信标",
+    "流量方向"
+  ],
+  "key_indicators": [
+    "缺少 HTTP 正文时用连接周期和流量方向核查可疑回连"
+  ],
+  "investigation_steps": [
+    "按资产和外部目的地址排列连接时间，比较周期、持续时间和业务基线。",
+    "关联同目的地上传与长连接，核实发送字节的方向和来源。记录尚未证实的数据范围。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "原调查弃权。缺少应用正文时，仍应报告已观察到的周期联络和后续传输，并区分线索与已证实的影响。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-08.json",
+  "sources": [
+    {
+      "source_id": "SRC1",
+      "title": "开发场景 V1 回放",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-08.json",
+      "locator": "attack_type、evidence_log_ids 与场景日志",
+      "accessed_at": "2026-11-19T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-19T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-19T00:00:00.000Z",
+  "updated_at": "2026-11-19T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-08",
+    "investigation_id": "CHAIN-CASE-08",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-08",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-08"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E801",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261105-0801",
+      "locator": "data/full_chain_logs/chain_case_08_c2_exfiltration.json#LOG-20261105-0801",
+      "observed_at": "2026-11-05T03:00:05.000Z",
+      "snapshot_summary": "2026-11-05T03:00:05Z zeek_http web-prod-01 GET None 10.0.0.15 91.219.236.7",
+      "snapshot_sha256": "ca853cd85da3cf6c7daa775ba73051588f0edff7b27568d8f4f60f459b92915a"
+    },
+    {
+      "evidence_id": "E802",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261105-0802",
+      "locator": "data/full_chain_logs/chain_case_08_c2_exfiltration.json#LOG-20261105-0802",
+      "observed_at": "2026-11-05T03:05:05.000Z",
+      "snapshot_summary": "2026-11-05T03:05:05Z zeek_http web-prod-01 GET None 10.0.0.15 91.219.236.7",
+      "snapshot_sha256": "3e76259123aefc8d7dffc1e00750e86897f26a83ee235ba17ba9d671c24aca99"
+    },
+    {
+      "evidence_id": "E803",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261105-0803",
+      "locator": "data/full_chain_logs/chain_case_08_c2_exfiltration.json#LOG-20261105-0803",
+      "observed_at": "2026-11-05T03:10:05.000Z",
+      "snapshot_summary": "2026-11-05T03:10:05Z zeek_http web-prod-01 GET None 10.0.0.15 91.219.236.7",
+      "snapshot_sha256": "4cf49b3c453bf9daf6a05af5e871bbd5d20861926d1799bd8539a538c9dfed63"
+    },
+    {
+      "evidence_id": "E808",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261105-0808",
+      "locator": "data/full_chain_logs/chain_case_08_c2_exfiltration.json#LOG-20261105-0808",
+      "observed_at": "2026-11-05T03:21:00.000Z",
+      "snapshot_summary": "2026-11-05T03:21:00Z zeek_http web-prod-01 POST None 10.0.0.15 91.219.236.7",
+      "snapshot_sha256": "2d3431a0a27ad61ef22ee7ce2275fa73a7ecd82950ab9aeac9ea62c76fffa0e8"
+    },
+    {
+      "evidence_id": "E809",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261105-0809",
+      "locator": "data/full_chain_logs/chain_case_08_c2_exfiltration.json#LOG-20261105-0809",
+      "observed_at": "2026-11-05T03:21:05.000Z",
+      "snapshot_summary": "2026-11-05T03:21:05Z zeek_conn web-prod-01 TCP None 10.0.0.15 91.219.236.7",
+      "snapshot_sha256": "34ac9fdc0b62d6a82a62b6bd5811c8537c8fc57c4f6bc2ece77b6061339788c5"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "缺少 HTTP 正文时用连接周期和流量方向核查可疑回连",
+    "environment_summary": "项目开发集 V1 控制器离线回放",
+    "investigation_summary": [
+      "按资产和外部目的地址排列连接时间，比较周期、持续时间和业务基线。",
+      "关联同目的地上传与长连接，核实发送字节的方向和来源。记录尚未证实的数据范围。"
+    ],
+    "original_judgement": "insufficient_evidence",
+    "final_judgement": "周期联络和随后的上传请求支持可疑外连判断。流量字段方向及传输内容需另行核实。",
+    "outcome": "inconclusive",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "unknown",
+      "response": "not_applicable"
+    },
+    "error_reason": "原调查弃权。缺少应用正文时，仍应报告已观察到的周期联络和后续传输，并区分线索与已证实的影响。",
+    "corrected_steps": [
+      "按资产和外部目的地址排列连接时间，比较周期、持续时间和业务基线。",
+      "关联同目的地上传与长连接，核实发送字节的方向和来源。记录尚未证实的数据范围。"
+    ],
+    "lessons": [
+      "周期联络和随后的上传请求支持可疑外连判断。流量字段方向及传输内容需另行核实。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "缺少 HTTP 正文时用连接周期和流量方向核查可疑回连",
+        "action": "按资产和外部目的地址排列连接时间，比较周期、持续时间和业务基线。",
+        "evidence_ids": [
+          "E801",
+          "E802",
+          "E803",
+          "E808",
+          "E809"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "周期联络和随后的上传请求支持可疑外连判断。流量字段方向及传输内容需另行核实。",
+        "conclusion": "周期联络和随后的上传请求支持可疑外连判断。流量字段方向及传输内容需另行核实。",
+        "next_step": "关联同目的地上传与长连接，核实发送字节的方向和来源。记录尚未证实的数据范围。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-08.json",
+      "notes": "依据已归档的受控 V1 回放输出及对应场景日志核对。"
+    },
+    "response_summary": "回放仅用于调查。",
+    "response_result": "not_executed"
+  }
+}

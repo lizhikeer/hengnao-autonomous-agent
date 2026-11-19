@@ -3,7 +3,7 @@
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-001",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "Web 备份文件暴露识别与调查",
     "summary": "通过 Web 访问日志识别备份文件异常访问，结合文件内容和访问权限核实是否存在敏感信息泄露。",
@@ -35,7 +35,7 @@
     ],
     "recommended_action": "none",
     "error_revision_note": "正常业务下载、静态资源访问和授权备份任务也可能产生类似日志。不能仅凭文件名或单次 HTTP 200 判定信息泄露，应结合文件实际内容、访问权限和业务用途确认。 该场景的主要修复是由维护人员关闭备份文件公开访问并核查凭据；知识卡不直接修改服务器配置，故推荐动作为 none。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2 - Configuration and Deployment Management Testing",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Configuration and Deployment Management Testing https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -43,13 +43,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-002",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "敏感配置文件意外公开识别与调查",
     "summary": "结合 Web 访问日志和配置文件访问权限，识别环境配置、版本控制元数据等敏感资源的意外公开风险。",
@@ -83,7 +83,7 @@
     ],
     "recommended_action": "none",
     "error_revision_note": "部分路径可能由正常业务功能提供，访问日志也不能直接证明敏感内容已被读取。需要结合响应内容、权限配置和业务用途核实。 该场景的主要修复是限制配置文件访问并轮换可能泄露的凭据；这些变更需由资产维护人员执行，故推荐动作为 none。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2 - Review Webserver Metafiles for Information Leakage",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Review Webserver Metafiles for Information Leakage https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -91,13 +91,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-003",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "Web 应用技术栈指纹异常识别",
     "summary": "通过 Web 访问行为、请求头和响应特征识别自动化技术栈信息收集活动，并结合业务基线判断风险。",
@@ -131,7 +131,7 @@
     ],
     "recommended_action": "rate_limit",
     "error_revision_note": "搜索引擎、监控系统和授权资产扫描也可能产生类似访问行为。User-Agent 可以被伪造，不能单独作为攻击判定依据。 仅在确认来源为未授权自动化枚举且请求频率异常时限速；正常爬虫、资产盘点和授权测试应排除。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2 - Fingerprint Web Application Framework",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Fingerprint Web Application Framework https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/01-Information_Gathering/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -139,13 +139,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-004",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "异常 HTTP 方法与服务配置风险识别",
     "summary": "通过 Web 访问日志识别非预期 HTTP 方法请求，结合应用接口定义和服务器配置判断是否存在安全配置问题。",
@@ -178,7 +178,7 @@
     ],
     "recommended_action": "none",
     "error_revision_note": "部分 API、跨域请求和正常业务组件可能使用特殊 HTTP 方法。不能仅凭方法名称判定攻击，应结合接口定义、访问权限和响应行为综合判断。 HTTP 方法配置应由维护人员按业务需求整改；仅凭方法探测不触发封禁或账户隔离，故推荐动作为 none。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2 - Test HTTP Methods",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Test HTTP Methods https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -186,6 +186,6 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   }
 ]

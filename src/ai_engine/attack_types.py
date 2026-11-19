@@ -4,13 +4,7 @@
 ——「首批建议覆盖扫描、密码爆破、SQL 注入、XSS、遍历与越权、恶意上传、可疑外连」，
 分类基准为 OWASP WSTG v4.2（4.1~4.11）+ MITRE ATT&CK 网络侧三类。
 
-**重要：这不是"团队已冻结契约"。** 与 Issue #17 的正式枚举对齐前，
-本模块的取值属于我方实现口径，集中在此便于一处修改、全员同步。
-
-设计取舍：
-* 七类中「恶意上传」与「遍历与越权」现有知识卡合并为 ``File_Upload_Traversal``，
-  因此对外取值沿用知识卡口径，便于检索时按 ``attack_category`` 直接过滤；
-* 「扫描」暂无知识卡（待 @Snowed-night 补充），但枚举先占位，避免模型自造词；
+知识卡按调查类别过滤，历史结果编码沿用兼容映射。
 * ``attack_type`` 允许组合，格式 ``<后阶段>_After_<前阶段>``，逐段校验，
   例如 ``SQL_Injection_After_Brute_Force``；
 * 证据不足用 ``insufficient_evidence``，无恶意用 ``none``，两者都不属于七类。
@@ -44,7 +38,7 @@ ATTACK_TYPES: tuple[AttackType, ...] = (
         code="Scan",
         zh="扫描探测",
         mitre=("T1046",),
-        knowledge_category=None,
+        knowledge_category="Scan",
         indicators=("dirsearch", "nikto", "nmap", "masscan", "nuclei", "acunetix", "nessus", "robots.txt", ".git/", "敏感路径探测"),
     ),
     AttackType(
@@ -65,22 +59,21 @@ ATTACK_TYPES: tuple[AttackType, ...] = (
         code="XSS",
         zh="跨站脚本",
         mitre=("T1059.007",),
-        # 知识卡侧 XSS 与 RCE 合并在 XSS_RCE.json，但结果分类不合并
-        knowledge_category="XSS_RCE",
+        knowledge_category="XSS",
         indicators=("<script", "onerror=", "javascript:", "alert(", "document.cookie"),
     ),
     AttackType(
         code="Path_Traversal_Privilege",
         zh="目录遍历与越权",
         mitre=("T1083", "T1548"),
-        knowledge_category="File_Upload_Traversal",
+        knowledge_category="Path_Traversal_Privilege",
         indicators=("../", "..%2f", "%2e%2e", "/etc/passwd", "/etc/shadow", "未授权访问", "越权"),
     ),
     AttackType(
         code="Malicious_Upload",
         zh="恶意上传",
         mitre=("T1105",),
-        knowledge_category="File_Upload_Traversal",
+        knowledge_category="Malicious_Upload",
         indicators=("upload", "filename=", "multipart/form-data", "webshell", "shell.php", "cmd="),
     ),
     AttackType(

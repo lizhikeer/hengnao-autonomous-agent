@@ -23,7 +23,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 #: 允许透传给 hybrid_search 的过滤键（与 KnowledgeService.search 白名单一致）
-_ALLOWED_FILTERS = {"attack_category", "log_sources", "tenant_id", "exclude_investigation_id", "exclude_scenario_ids"}
+_ALLOWED_FILTERS = {"attack_category", "log_sources", "tenant_id", "exclude_investigation_id", "exclude_scenario_ids", "knowledge_only"}
 
 #: 知识卡 card_type 到对外枚举的兜底映射
 _CARD_TYPES = {"security_knowledge", "verified_correct_case", "verified_error_revision"}
