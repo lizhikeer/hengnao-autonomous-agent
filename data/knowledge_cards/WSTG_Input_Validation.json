@@ -3,7 +3,7 @@
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-013",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "SSRF服务端请求伪造异常识别与调查",
     "summary": "通过异常请求参数、服务端出站连接和目标地址访问记录，识别可能利用服务端访问非预期资源的SSRF行为。",
@@ -37,7 +37,7 @@
     ],
     "recommended_action": "block_ip_short_term",
     "error_revision_note": "仅在确认请求利用 SSRF 访问未授权目标后，才申请短时封禁来源；应先核对业务回调、Webhook 和合法 URL 抓取功能，并经人工审批。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190",
+    "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190 https://attack.mitre.org/techniques/T1190/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -45,13 +45,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-014",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "数据库错误与堆栈信息泄露识别",
     "summary": "识别应用程序向客户端暴露数据库错误、内部路径、程序堆栈和组件版本等敏感技术信息的异常情况。",
@@ -84,7 +84,7 @@
     ],
     "recommended_action": "none",
     "error_revision_note": "错误信息与堆栈泄露应由开发人员修复响应处理和日志配置；单独信息泄露探测不触发封禁，故推荐动作为 none。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2，4.8 Error Handling；OWASP Error Handling Cheat Sheet",
+    "source_reference": "OWASP Web Security Testing Guide v4.2，4.8 Error Handling；OWASP Error Handling Cheat Sheet https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/08-Testing_for_Error_Handling/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -92,13 +92,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-015",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "时间盲注异常请求与数据库延迟识别",
     "summary": "通过异常请求频率、数据库执行耗时和响应延迟变化，识别可能利用时间差异进行数据库注入探测的行为。",
@@ -131,7 +131,7 @@
     ],
     "recommended_action": "rate_limit",
     "error_revision_note": "对具有重复自动化特征的盲注探测请求限速；响应延迟还可能由慢查询、负载或网络问题造成，需关联数据库审计。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190",
+    "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190 https://attack.mitre.org/techniques/T1190/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -139,13 +139,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-016",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "Log4j与反序列化漏洞探测行为识别",
     "summary": "通过异常请求特征、应用程序错误和异常出站连接，识别针对日志组件及反序列化机制的漏洞探测行为。",
@@ -180,7 +180,7 @@
     ],
     "recommended_action": "block_ip_short_term",
     "error_revision_note": "仅在确认漏洞利用成功或出现关联的异常进程/出站通信后申请短时封禁；漏洞探测请求本身不足以确认入侵，必须人工审批。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190",
+    "source_reference": "OWASP Web Security Testing Guide v4.2，4.7 Input Validation Testing；MITRE ATT&CK T1190 https://attack.mitre.org/techniques/T1190/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -188,6 +188,6 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   }
 ]
