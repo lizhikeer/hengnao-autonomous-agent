@@ -192,7 +192,23 @@ def load_truth(case_id: str) -> dict | None:
     return None
 
 
-def run_one(case_id: str) -> dict:
+#: 控制器标识（V2 运行脚本会覆盖为 rule_based_v2_controller）
+CONTROLLER = "rule_based_v1_controller"
+
+
+def run_one(
+    case_id: str,
+    *,
+    controller: str | None = None,
+    origin: str = "local_replay",
+    include_rag: bool = False,
+) -> dict:
+    """跑一个场景并返回结果 + 轨迹。
+
+    ``include_rag`` 为 True 时额外落盘 Week 3 的 RAG 事实
+    （检索状态、知识卡触发的补查、错题复查、证据分组），
+    V1 归档保持原样，不因新增字段而被改写。
+    """
     registry.clear()
     started = datetime.now(timezone.utc)
     session = InvestigationSession(case_id=case_id, seed_trace_id=case_id, seed_asset_id=None)
@@ -208,19 +224,30 @@ def run_one(case_id: str) -> dict:
     for idx, (call, raw) in enumerate(zip(session.calls, session.results), start=1):
         items = raw.get("items") if isinstance(raw, dict) else None
         detail = _step_result(call.tool, raw)
-        steps.append(
-            {
-                "round": idx,
-                "tool": call.tool,
-                "args": _redact(call.args),
-                "why": call.why,
-                "data_source": (raw.get("meta") or {}).get("data_source")
-                if isinstance(raw, dict)
-                else None,
-                "returned_log_ids": [i.get("log_id") for i in (items or []) if isinstance(i, dict)],
-                **detail,
-            }
-        )
+        step = {
+            "round": idx,
+            "tool": call.tool,
+            "args": _redact(call.args),
+            "why": call.why,
+            "data_source": (raw.get("meta") or {}).get("data_source")
+            if isinstance(raw, dict)
+            else None,
+            "returned_log_ids": [i.get("log_id") for i in (items or []) if isinstance(i, dict)],
+            **detail,
+        }
+        if include_rag:
+            # 哪张卡的第几步触发了这次调用；非补查步骤为 None
+            step["triggered_by"] = call.triggered_by
+            if call.tool == "search_knowledge" and isinstance(raw, dict):
+                meta = raw.get("meta") or {}
+                step["retrieval"] = {
+                    "degraded": bool(meta.get("degraded")),
+                    "retrieval_mode": meta.get("retrieval_mode"),
+                    "backend": meta.get("dataset"),
+                    "hits": len(items or []),
+                    "notes": meta.get("notes") or [],
+                }
+        steps.append(step)
 
     registered = registry.known_log_ids(case_id=case_id)
     evidence = list(validated.evidence_log_ids)
@@ -258,7 +285,9 @@ def run_one(case_id: str) -> dict:
             "started_at": started.isoformat(),
             "finished_at": finished.isoformat(),
             "duration_ms": int((finished - started).total_seconds() * 1000),
-            "controller": "rule_based_v1_controller",
+            "controller": controller or CONTROLLER,
+            # 本地回放 / 平台实跑：归档时必须分得清，不能把回放当成平台验证
+            "origin": origin,
             "env": {
                 "data_source_mode": os.environ.get("SECLOG_DATA_SOURCE", "auto"),
                 "search_mode": os.environ.get("SECLOG_SEARCH_MODE", "auto"),
@@ -290,6 +319,25 @@ def run_one(case_id: str) -> dict:
         },
         "evaluation": evaluation,
     }
+    if include_rag:
+        trace["rag"] = {
+            # 四态要分开：失败不是零命中，零命中也不是降级
+            "retrieval_state": session.retrieval_state,
+            **{k: v for k, v in (session.retrieval_meta or {}).items()},
+            "cards_used": [
+                {
+                    "card_id": card.get("card_id"),
+                    "card_type": card.get("card_type"),
+                    "attack_category": card.get("attack_category"),
+                    "score": card.get("score"),
+                    "has_error_revision_note": bool(card.get("error_revision_note")),
+                }
+                for card in (session.findings.get("knowledge") or [])[:3]
+            ],
+            "card_triggered_queries": _redact(session.card_triggered_queries),
+            "revision_checks": _redact(session.findings.get("revision_checks") or []),
+        }
+        trace["evidence_plan"] = _redact(session.findings.get("evidence_plan") or [])
     return {"result": payload, "trace": trace, "verify_ok": verify.ok, "unregistered": unregistered}
 
 

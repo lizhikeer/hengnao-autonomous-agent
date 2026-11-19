@@ -89,6 +89,11 @@ TOKEN_ALIASES = {
     "c2": {"c2", "callback"},
 }
 
+# 历史正常场景标签描述活动类型，AgentResults 统一用 none。
+BENIGN_TRUTH_TYPES = {
+    "none", "normal_maintenance_operation", "authorized_security_scan", "normal_user_login_retry",
+}
+
 # Agent 输出 JSON 中演示数据的标记路径：顶层 meta.mock == true
 MOCK_FLAG_PATH = ("meta", "mock")
 
@@ -181,25 +186,14 @@ def _split_type_tokens(attack_type: str) -> set[str]:
     - 中文描述  ：SQL 注入 → {sql, 注入}（按空白切分，中文整体保留）
     停用词与别名在命中判断时再处理，这里只做机械切分。
     """
-    text = str(attack_type)
-    expanded: list[str] = []
-    token = ""
-    for ch in text:
-        # 驼峰边界：前一个字符是小写字母、当前是大写字母 → 插入分隔符
-        if ch.isupper() and token and token[-1].islower():
-            expanded.append(token)
-            token = ch.lower()
-        elif ch.isalnum():
-            token += ch.lower()
-        else:  # 下划线 / 连字符 / 空格 / 标点都是天然分隔符
-            if token:
-                expanded.append(token)
-            token = ""
-            if "\u4e00" <= ch <= "\u9fff":  # 中文逐字保留，供"正常运维"类描述匹配
-                expanded.append(ch)
-    if token:
-        expanded.append(token)
-    return set(expanded)
+    tokens: set[str] = set()
+    for word in re.findall(r"[^\W_]+", str(attack_type)):
+        if word.lower() in TOKEN_ALIASES:
+            tokens.add(word.lower())
+            continue
+        parts = re.split(r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", word)
+        tokens.update(part.lower() for part in parts)
+    return tokens
 
 
 def _attack_type_hit(truth_type: str, agent_type: str) -> bool:
@@ -347,7 +341,11 @@ def score_case(
     # IP / 资产匹配：归一化后严格相等；Agent 输出必须是已查日志中出现的真实值
     ip_ok = _norm_text(agent.get("attacker_ip", "")) == _norm_text(truth.get("attacker_ip", ""))
     asset_ok = _norm_text(agent.get("victim_asset", "")) == _norm_text(truth.get("victim_asset", ""))
-    type_ok = (not abstain) and _attack_type_hit(str(truth.get("attack_type", "")), agent_type)
+    truth_type = str(truth.get("attack_type", ""))
+    if not truth_mal and _norm_text(truth_type) in BENIGN_TRUTH_TYPES:
+        type_ok = _norm_text(agent_type) == "none"
+    else:
+        type_ok = not abstain and _norm_text(agent_type) != "none" and _attack_type_hit(truth_type, agent_type)
     mal_ok = truth_mal == agent_mal
     result.update(
         {

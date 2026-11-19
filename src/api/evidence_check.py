@@ -34,6 +34,9 @@ class EvidenceRecord:
     bucket: str
     registered_at: float
     query_params: dict[str, Any] = field(default_factory=dict)
+    asset_id: str | None = None
+    addresses: tuple[str, ...] = ()
+    user: str | None = None
 
 
 @dataclass
@@ -64,6 +67,7 @@ class EvidenceRegistry:
         *,
         case_id: str | None = None,
         query_params: dict[str, Any] | None = None,
+        facts: dict[str, tuple[str | None, tuple[str, ...], str | None]] | None = None,
     ) -> int:
         """登记一次查询返回的证据编号，返回新登记条数。"""
         if not case_id or not case_id.strip() or case_id == UNSCOPED_BUCKET:
@@ -79,12 +83,16 @@ class EvidenceRegistry:
                     continue
                 if log_id in store:
                     continue
+                asset_id, addresses, user = (facts or {}).get(log_id, (None, (), None))
                 store[log_id] = EvidenceRecord(
                     log_id=log_id,
                     case_id=case_id,
                     bucket=bucket,
                     registered_at=now,
                     query_params=params,
+                    asset_id=asset_id,
+                    addresses=addresses,
+                    user=user,
                 )
                 added += 1
         return added

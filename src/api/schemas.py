@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import (
     ALLOWED_LOG_SOURCES,
@@ -100,6 +100,19 @@ class QueryMeta(BaseModel):
                 "matched": 29,
             }
         ],
+    )
+    degraded: bool = Field(
+        default=False,
+        description=(
+            "检索是否处于降级模式。true 表示本次结果来自词面降级检索（如缺向量依赖），"
+            "与『检索失败』（503）和『零命中』（total=0）是三种不同状态，消费方不得混用"
+        ),
+        examples=[False],
+    )
+    retrieval_mode: Optional[str] = Field(
+        default=None,
+        description="检索模式标识：hybrid / lexical_fallback / mock；无检索的后端留空",
+        examples=["hybrid"],
     )
     notes: list[str] = Field(
         default_factory=list,
@@ -414,6 +427,7 @@ class RequestResponseRequest(BaseModel):
         description="处置目标账号（仅 action=isolate_account 时必填）",
         examples=["admin"],
     )
+    asset_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
     evidence_log_ids: list[str] = Field(
         default_factory=list,
         description="支撑本次处置的证据日志编号列表，必须来自当前 case 已查询返回的 log_id；action=none 时可为空数组",
@@ -449,16 +463,14 @@ class RequestResponseRequest(BaseModel):
         if not self.evidence_log_ids:
             raise ValueError("处置类动作必须提供至少一条 evidence_log_ids，无证据不得处置")
         return self
-        if self.action == "none" and self.target_ip:
-            raise ValueError("action=none 表示无需处置，不应指定 target_ip")
-        return self
 
 
 class RequestResponseResponse(BaseModel):
-    """处置提交响应：骨架阶段**不产生任何真实副作用**（不封 IP、不改防火墙、不发邮件）。"""
+    """登记或模拟处置的回执。"""
 
-    status: Literal["approval_required", "rejected", "executed", "no_action"] = Field(
-        description="处置状态四态：no_action(无需处置，action=none)/rejected(证据校验未通过)/approval_required(待审批，本周全部动作都落在这一态)/executed(已执行，本周不会出现)",
+    status: Literal["approval_required", "rejected", "executed", "no_action", "BLOCKED_BY_POLICY", "EXECUTED",
+                    "REJECTED", "INVALID_APPROVAL", "APPROVAL_TIMEOUT", "EXECUTOR_UNAVAILABLE"] = Field(
+        description="处置状态。EXECUTED 且 simulation=true 表示已写入模拟执行审计",
         examples=["approval_required"],
     )
     approval_id: Optional[str] = Field(
@@ -467,7 +479,7 @@ class RequestResponseResponse(BaseModel):
         examples=["APPR-20261027-0001"],
     )
     executed: Literal[False] = Field(
-        description="恒为 false 直到权限网关与执行器真实接入。消费方不得据此宣称处置已生效",
+        description="此服务只支持登记和模拟，真实执行标记恒为 false",
         examples=[False],
     )
     detail: str = Field(
@@ -480,3 +492,18 @@ class RequestResponseResponse(BaseModel):
         examples=[["LOG-FAKE-999"]],
     )
     mock: Literal[True] = Field(description="Mock 标识：登记动作仅写入本地 Mock 审批表", examples=[True])
+    simulation: bool = Field(default=False, description="是否经过策略网关及模拟处置状态机")
+    deadline: Optional[str] = None
+    policy_reason: Optional[str] = None
+
+
+class ApproveResponseRequest(BaseModel):
+    """只提交工单决定和人工说明。目标、动作与证据从服务端冻结的工单取出。"""
+
+    model_config = ConfigDict(extra="forbid")
+    case_id: str = Field(min_length=1, max_length=64)
+    approval_id: str = Field(min_length=1, max_length=128)
+    decision: Literal["approve", "reject"]
+    expected_effect: str = Field(default="", max_length=500)
+    rollback_plan: str = Field(default="", max_length=500)
+    reason: str = Field(default="", max_length=500)
