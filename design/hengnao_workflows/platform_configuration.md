@@ -71,14 +71,13 @@ Mock 使用固定回放时间 `2026-10-27T14:26:00Z`，不是实时安全监测�
 | 节点 | 变更 | 配置 |
 | --- | --- | --- |
 | node1 / 自规划 | 调查提示词升级 | `platform_nodes/investigation_prompt.txt`；强制"先上下文 + `seclog_search_knowledge`（带 `case_id`）→ 按知识卡 `investigation_steps` 定向补查 `log_source` → 按 `error_revision_note` 复查 → 再下结论"；仍只绑定 `SecLog_只读调查`（`/investigation/`，四个读取工具） |
-| node3 / 交互 | 审批语义不变 | `confirm_block` 单选 A/B，等待 600 秒；未回答或超时按**拒绝**处理 |
-| **node7 / 代码（新增）** | 受控处置步骤 | `platform_nodes/code_response_step.py`；input 引用 `$.node2.triage`、`$.node3.confirm_block._answer`、`$.kv_user.input`；输出 `result_key` 含 `receipt` 与 `results` |
-| node5 / 代码 | 报告节点 | 输入改为引用 `$.node7.result_key.results`，报告里追加处置回执（`status` / `approval_id` / `executed` / `detail`） |
+| node3 / 交互 | 确认是否提交申请 | `confirm_block` 单选 A/B，选项值配置为单个字母。A 允许提交申请，B、空值和超时均按拒绝处理。等待 600 秒。 |
+| **node7 / 代码（新增）** | 受控处置步骤 | `platform_nodes/code_response_step.py`。分别将 `triage`、`answer`、`seed` 引用到 `$.node2.triage`、`$.node3.confirm_block._answer`、`$.kv_user.input`。将 `result_key` 按前文配置解析为 Object 输出 `payload`，包含 `receipt` 与 `results`。 |
+| node5 / 代码 | 报告节点 | `input` 引用 `$.node7.payload.results`，`receipt` 引用 `$.node7.payload.receipt`。 |
 | 结束 | 输出不变 | 十一项仍引用 `$.node5.payload.results.<字段>` |
 
-主路径改为：开始 → node0 → node1 → node6 → node2 → node3 →（A）node7 → node5 → 结束。
-A 分支边条件仍是 `"A" in node3.confirm_block._answer`；B/超时分支**不经过 node7 的提交逻辑**
-（node7 内部按"未批准"直接返回 `REJECTED` 回执），保证拒绝路径绝不发请求。
+主路径为开始 → node0 → node1 → node6 → node2 → node3 → node7 → node5 → 结束。
+若平台需配置分支，两条边均通往 node7，由它按选项值处理。只有单个字符串 A 会提交申请。B 和无回答生成 `REJECTED`，有回执可进报告。
 
 ### 三、回执状态口径
 
@@ -97,10 +96,8 @@ A 分支边条件仍是 `"A" in node3.confirm_block._answer`；B/超时分支**�
 
 ### 四、当前阻塞（2026-11-19）
 
-1. 服务端 `/tools/request_response` 仍是第一周的登记实现：策略网关与状态机
-   （PR #37 / #38）**尚未合入 main**，因此回执只会出现 `approval_required`。
-   `src/operations/response_step.py` 已按该 PR 的 `evaluate_action/approve/reject/
-   expire_pending` 契约写好适配层，并用真实执行器做过接口核验（待审 → 批准 → EXECUTED，
-   db-core-01 被 `allowlist_asset` 拦截），合入后无需改调用方。
+1. PR #37/#38 已合入 `main`，本地适配层可调用执行器并验证模拟审计。当前
+   `/tools/request_response` 仍是申请登记接口，尚未接到执行器，仓库也没有对外审批结算端点。
+   交互节点的 A 仅确认提交申请。平台审批闭环还需要 #30 接入服务端审批接口，并携带工单号和可核验的审批身份。
 2. NAS ClickHouse、公网 HTTPS 与平台交互节点的操作权限都不在当前会话，平台实跑与
    审批闭环演示**未完成**；`data/agent_traces/v2/` 的 `run.origin` 全部是 `local_replay`。

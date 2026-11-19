@@ -6,31 +6,28 @@
 
 1. 输出目录换成 ``v2/``，控制器标为 ``rule_based_v2_controller``；
 2. 额外落盘 Week 3 的 RAG 事实（检索状态、卡片触发的补查、错题复查、证据分组）；
-3. 标注运行来源 ``origin``：``local_replay``（本地回放）或 ``platform``（恒脑实跑）。
+3. 标注本地回放来源 ``origin=local_replay``。
 
 用法::
 
     # 本地回放（缺 BGE/Qdrant 时用词面降级检索，轨迹里会标 degraded）
     SECLOG_SEARCH_MODE=lexical_fallback python tests/run_v2_traces.py
 
-    # 平台实跑导出后归档（由平台导出 11 字段结果 + 轨迹，本脚本负责规范化）
-    SECLOG_RUN_ORIGIN=platform python tests/run_v2_traces.py --from-platform <dir>
-
 产物::
 
     data/agent_traces/v2/<CASE>.json         严格 11 字段结论（原样保存，不改写）
     data/agent_traces/v2/<CASE>.trace.json   运行元数据 + 每轮调用 + RAG 事实
     data/agent_traces/v2/SUMMARY.md          汇总
-    data/agent_traces/v2/EVALUATION.md       用现有评测器算分（不改评分逻辑）
+    data/agent_traces/v2/EVALUATION.md       用仓库评测器算分
 """
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -50,6 +47,7 @@ os.environ.setdefault("SECLOG_SEARCH_MODE", "lexical_fallback")
 import run_v1_traces as base  # noqa: E402
 
 CONTROLLER = "rule_based_v2_controller"
+ORIGIN = "local_replay"
 
 
 def _load_eval_runner():
@@ -62,15 +60,11 @@ def _load_eval_runner():
     return module
 
 
-def _origin() -> str:
-    return os.environ.get("SECLOG_RUN_ORIGIN", "local_replay").strip() or "local_replay"
-
-
-def run(cases: list[str], origin: str) -> list[dict]:
+def run(cases: list[str]) -> list[dict]:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     rows: list[dict] = []
     for case_id in cases:
-        output = base.run_one(case_id, controller=CONTROLLER, origin=origin, include_rag=True)
+        output = base.run_one(case_id, controller=CONTROLLER, origin=ORIGIN, include_rag=True)
         (OUT_DIR / f"{case_id}.json").write_text(
             json.dumps(output["result"], ensure_ascii=False, indent=2), encoding="utf-8"
         )
@@ -95,7 +89,7 @@ def run(cases: list[str], origin: str) -> list[dict]:
     return rows
 
 
-def write_summary(rows: list[dict], origin: str) -> Path:
+def write_summary(rows: list[dict]) -> Path:
     first = rows[0]["trace"]["run"] if rows else {}
     code = first.get("code_version") or {}
     env = first.get("env") or {}
@@ -103,8 +97,7 @@ def write_summary(rows: list[dict], origin: str) -> Path:
     lines = [
         "# V2 调查报告汇总（Week 3）",
         "",
-        f"- 运行来源：`{origin}`"
-        + ("（本地回放，**不是**恒脑平台实跑）" if origin.startswith("local") else "（恒脑平台实跑导出）"),
+        f"- 运行来源：`{ORIGIN}`（本地回放）",
         f"- 运行时间：{first.get('started_at', '未知')}（run_id `{first.get('run_id', '-')}`）",
         f"- 控制器：`{CONTROLLER}`（`src/ai_engine/investigation.py`）",
         f"- 数据源：`{first.get('data_source') or '未知'}`（配置模式 `{env.get('data_source_mode', '-')}`）",
@@ -145,7 +138,7 @@ def write_evaluation(rows: list[dict]) -> Path:
         [str(DATASET)],
         agent_paths=agent_paths,
         logs_dir=DATASET,
-        round_title=f"V2 单轮评测报告（{_origin()}）",
+        round_title=f"V2 单轮评测报告（{ORIGIN}）",
     )
     path = OUT_DIR / "EVALUATION.md"
     path.write_text(markdown, encoding="utf-8")
@@ -153,15 +146,22 @@ def write_evaluation(rows: list[dict]) -> Path:
 
 
 def main(argv: list[str]) -> int:
-    cases = [item for item in argv[1:] if not item.startswith("-")]
-    if not cases:
-        cases = base.list_scenarios()
+    parser = argparse.ArgumentParser(description="运行 V2 本地数据集回放")
+    parser.add_argument("cases", nargs="*", help="指定场景 ID；缺省时回放全部场景")
+    args = parser.parse_args(argv[1:])
+    if os.getenv("SECLOG_RUN_ORIGIN", ORIGIN).strip() != ORIGIN:
+        parser.error("本脚本只生成 local_replay 产物")
+    if os.getenv("SECLOG_DATA_SOURCE") != "dataset_replay":
+        parser.error("请设 SECLOG_DATA_SOURCE=dataset_replay 后重跑")
+    available = base.list_scenarios()
+    if invalid := set(args.cases) - set(available):
+        parser.error("未知场景：" + ", ".join(sorted(invalid)))
+    cases = list(dict.fromkeys(args.cases)) or available
     if not cases:
         print("数据集中没有任何场景，无法运行")
         return 2
-    origin = _origin()
-    rows = run(cases, origin)
-    summary = write_summary(rows, origin)
+    rows = run(cases)
+    summary = write_summary(rows)
     evaluation = write_evaluation(rows)
     print(f"\n产物目录：{OUT_DIR}\n汇总：{summary.name}，评测：{evaluation.name}")
     return 0 if all(row["verify_ok"] for row in rows) else 1

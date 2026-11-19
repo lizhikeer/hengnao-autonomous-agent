@@ -573,6 +573,11 @@ class InvestigationSession:
         enum_ids = {str(log.get("log_id")) for item in enumerations for log in item["logs"]}
 
         failure_ids = {str(log.get("log_id")) for log in auth.failure_logs if log.get("log_id")}
+        brute_sources = auth.brute_sources
+        brute_failure_ids = {
+            str(log["log_id"]) for log in auth.failure_logs
+            if log.get("log_id") and log.get("src_ip") in brute_sources
+        }
         success_ids = {str(log.get("log_id")) for log in auth.success_logs if log.get("log_id")}
         retry_ids = (failure_ids | success_ids) if auth.benign_retry else set()
 
@@ -608,7 +613,7 @@ class InvestigationSession:
             scanner = self._is_authorized_scan_candidate(log)
             if scanner and not strong:
                 strong.append("Scan")
-            if auth.brute_force and (log_id in failure_ids or log_id in success_ids):
+            if auth.brute_force and (log_id in brute_failure_ids or log_id in success_ids):
                 # 只有达到爆破门槛的失败才算攻击；低频人工输错走下面的"已解释"分支
                 strong.append("Brute_Force")
             if c2 or log_id in c2_group_ids:
@@ -1321,28 +1326,21 @@ class InvestigationSession:
         )
         if last_success is None:
             return []
-        attacker_sources = {str(log.get("src_ip")) for log in auth.failure_logs if log.get("src_ip")}
-        victim_ips = {
-            str((self.findings.get("context") or {}).get("asset_context", {}).get("ip") or ""),
-            str(self.seed_asset_id or ""),
-        }
-        victim_ips |= {
-            str(log.get("dest_ip"))
-            for log in auth.failure_logs
-            if log.get("dest_ip")
-        }
+        attacker_sources = {log["src_ip"] for log in auth.success_logs if log.get("src_ip")}
+        victim_ips = {log["dest_ip"] for log in auth.success_logs if log.get("dest_ip")}
         attack_ids = {str(log.get("log_id")) for log in facts["attack"]}
         out: list[dict[str, Any]] = []
         for log in self.logs:
             stamp = behavior_rules.parse_ts(log.get("timestamp"))
-            if stamp is None or stamp < last_success:
+            if stamp is None or stamp < last_success or log.get("log_source") not in {"zeek_conn", "zeek_http"}:
                 continue
             if str(log.get("log_id")) in attack_ids:
                 continue
             src = str(log.get("src_ip") or "")
             # 失陷主机主动向外部地址发起非常规/长时连接
             if (
-                not behavior_rules.is_external_ip(src)
+                src in victim_ips
+                and not behavior_rules.is_external_ip(src)
                 and behavior_rules.is_external_ip(log.get("dest_ip"))
                 and (
                     behavior_rules.is_unusual_egress_port(log)
@@ -1354,6 +1352,7 @@ class InvestigationSession:
             # 攻击源在登录成功后维持的远程会话连接
             if (
                 src in attacker_sources
+                and log.get("dest_ip") in victim_ips
                 and behavior_rules.dest_port(log) in {22, 3389, 445, 5985}
                 and (behavior_rules.connection_duration(log) or 0) >= 30
             ):
@@ -1519,24 +1518,23 @@ class InvestigationSession:
             attack_chain_summary=summary,
             recommended_action=action,  # type: ignore[arg-type]
             requires_human_approval=action != "rate_limit",
-            unknown_items=self._unknown_items(facts=facts),
+            unknown_items=self._unknown_items(facts=facts, action=action),
         )
 
     def _recommended_action(self, *, risk: str, scan_only: bool, attacker_ip: Optional[str]) -> str:
         """处置建议必须落在 ``config/response-policy.yaml`` 的授权范围内。
 
-        ``block_ip`` 的 ``target_types`` 只有 ``web``；对 host/database（或类型未知）
-        一律退到 ``block_ip_short_term``，否则处置申请会在网关被拒，建议等于空谈。
+        ``block_ip`` 只允许 Web。短时封禁和限速只允许 Web 与主机。
         """
-        if scan_only:
-            return "rate_limit"
-        if not attacker_ip:
-            return "none"
-        if risk not in {"HIGH", "CRITICAL"}:
-            return "block_ip_short_term"
         role = str(
             ((self.findings.get("context") or {}).get("asset_context") or {}).get("role") or ""
         ).lower()
+        if not attacker_ip or (role and role not in {"web", "host"}):
+            return "none"
+        if scan_only:
+            return "rate_limit"
+        if risk not in {"HIGH", "CRITICAL"}:
+            return "block_ip_short_term"
         return "block_ip" if role == "web" else "block_ip_short_term"
 
     def _evaluate_revisions(self, facts: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1838,7 +1836,7 @@ class InvestigationSession:
             },
         }
 
-    def _unknown_items(self, facts: Optional[dict[str, Any]] = None) -> str:
+    def _unknown_items(self, facts: Optional[dict[str, Any]] = None, *, action: str = "none") -> str:
         facts = facts if facts is not None else self._behavior_facts()
         missing: list[str] = []
         for log_id, reason in self.findings.get("request_target_errors", {}).items():
@@ -1849,7 +1847,9 @@ class InvestigationSession:
         if len(facts.get("kinds", [])) > 1 and (len(set(times)) < len(times) or any(len(kinds) > 1 for kinds in facts["log_kinds"].values())):
             missing.append("部分分类同时命中，时序不确定；主分类外的类别保留在 conclusion_basis")
         if facts["has_attack"]:
-            if set(facts.get("kinds") or []) == {"Scan"}:
+            if action == "none":
+                missing.append("未生成可提交的处置建议，交人工复核")
+            elif action == "rate_limit":
                 missing.append("仅生成限速建议；本调查器未调用处置工具")
             else:
                 missing.append("处置建议尚未经过人工审批，未提交处置申请")

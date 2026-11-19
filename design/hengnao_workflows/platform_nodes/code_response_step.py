@@ -40,8 +40,7 @@ def _load(value):
 
 def _approved(answer) -> bool:
     """只认交互节点的明确批准（单选 A）；其余（B/空/超时）一律按拒绝处理。"""
-    text = str(answer or "")
-    return "A" in text
+    return isinstance(answer, str) and answer.strip() == "A"
 
 
 def handler(args) -> dict:
@@ -73,7 +72,7 @@ def handler(args) -> dict:
         }
 
     # 人工拒绝（或未批准）：只登记拒绝回执，绝不提交申请
-    if not _approved(args.input.answer):
+    if not _approved(getattr(args.input, "answer", None)):
         return {
             "result_key": {
                 "receipt": {
@@ -106,13 +105,19 @@ def handler(args) -> dict:
     with urllib.request.urlopen(request, timeout=20) as response:
         payload = json.load(response)
 
+    status = payload.get("status")
     receipt = {
         # 服务端状态原样透出：approval_required / executed / rejected / 其它
-        "status": payload.get("status"),
+        "status": status,
         "case_id": case_id,
         "action": action,
         "target": target_ip,
-        "executed": bool(payload.get("executed")),
+        "executed": (
+            status in {"executed", "EXECUTED"}
+            and payload.get("executed") is True
+            and payload.get("mock") is not True
+        ),
+        "mock": payload.get("mock") is True,
         "approval_id": payload.get("approval_id"),
         "detail": payload.get("detail"),
         "evidence_log_ids": evidence,

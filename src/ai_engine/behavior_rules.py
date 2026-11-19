@@ -143,6 +143,10 @@ class AuthAssessment:
     benign_reasons: list[str] = field(default_factory=list)
     evidence_ids: list[str] = field(default_factory=list)
 
+    @property
+    def brute_sources(self) -> set[str]:
+        return {reason["src_ip"] for reason in self.brute_reasons if reason.get("src_ip")}
+
     def as_finding(self) -> dict[str, Any]:
         return {
             "attempts": self.attempts,
@@ -288,9 +292,6 @@ def assess_authentication(logs: list[dict[str, Any]]) -> AuthAssessment:
                     }
                 )
                 break
-        if assessment.brute_force:
-            break
-
     # 3) 同源多账号连续失败 —— 只看账号唯一性会漏掉这一整类（V1 CASE-06 盲区）
     by_source: dict[str, list[dict[str, Any]]] = {}
     for (src, _user), entries in attempts.items():
@@ -329,27 +330,27 @@ def assess_authentication(logs: list[dict[str, Any]]) -> AuthAssessment:
             assessment.brute_reasons.append(
                 {"rule": "automation_user_agent", "src_ip": log.get("src_ip"), "user_agent": log.get("user_agent")}
             )
-            break
-
     if assessment.brute_force:
-        # 同一来源在失败之后拿到会话，说明口令被猜中（失陷），不是"疑似"
-        last_failure = max(
-            (parse_ts(row.get("timestamp")) for row in assessment.failure_logs if parse_ts(row.get("timestamp"))),
-            default=None,
-        )
-        attacker_sources = {str(row.get("src_ip") or "") for row in assessment.failure_logs}
-        failure_seconds = {
-            int(stamp.timestamp())
-            for stamp in (parse_ts(row.get("timestamp")) for row in assessment.failure_logs)
-            if stamp is not None
-        }
+        # 只关联触发爆破规则的来源，避免把同案正常用户重试后的成功算作失陷。
+        attacker_sources = assessment.brute_sources
         for log in logs:
-            if not _is_login_success(log, failure_seconds):
+            src = log.get("src_ip")
+            if src not in attacker_sources:
                 continue
-            if str(log.get("src_ip") or "") not in attacker_sources:
+            matching_failures = [
+                row for row in assessment.failure_logs
+                if row.get("src_ip") == src
+                and not any(
+                    log.get(field) and row.get(field) and log[field] != row[field]
+                    for field in ("asset_id", "dest_ip", "user")
+                )
+            ]
+            times = [stamp for row in matching_failures if (stamp := parse_ts(row.get("timestamp")))]
+            if not times or not _is_login_success(log, {int(stamp.timestamp()) for stamp in times}):
                 continue
+            last_failure = max(times)
             stamp = parse_ts(log.get("timestamp"))
-            if last_failure and stamp and 0 <= (stamp - last_failure).total_seconds() <= _LOGIN_SUCCESS_LOOKAHEAD:
+            if stamp and 0 <= (stamp - last_failure).total_seconds() <= _LOGIN_SUCCESS_LOOKAHEAD:
                 assessment.success_logs.append(log)
         assessment.compromise = bool(assessment.success_logs)
         return assessment

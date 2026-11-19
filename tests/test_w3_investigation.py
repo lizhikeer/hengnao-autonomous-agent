@@ -86,6 +86,34 @@ def test_case06_host_asset_uses_short_term_block(replay):
     assert result.requires_human_approval is True
 
 
+def test_brute_force_does_not_attribute_another_sources_success():
+    from ai_engine.behavior_rules import assess_authentication
+
+    common = {"log_source": "auth_log", "asset_id": "host-01", "dest_ip": "192.0.2.200"}
+    failures = [
+        {**common, "timestamp": f"2026-11-19T01:00:{i:02d}Z", "src_ip": "192.0.2.10",
+         "user": "ops", "action_or_method": "login_failure"}
+        for i in range(5)
+    ]
+    incidental = [
+        {**common, "timestamp": "2026-11-19T01:00:06Z", "src_ip": "192.0.2.11",
+         "user": "staff", "action_or_method": "login_failure"},
+        {**common, "timestamp": "2026-11-19T01:00:07Z", "src_ip": "192.0.2.11",
+         "user": "staff", "action_or_method": "login_success"},
+    ]
+    facts = assess_authentication(failures + incidental)
+    assert facts.brute_force
+    assert not facts.compromise
+    assert not facts.success_logs
+
+
+@pytest.mark.parametrize("scan_only", [False, True])
+def test_investigation_does_not_recommend_ip_actions_for_database(scan_only):
+    session = InvestigationSession(case_id="CASE-POLICY")
+    session.findings["context"] = {"asset_context": {"role": "database"}}
+    assert session._recommended_action(risk="HIGH", scan_only=scan_only, attacker_ip="192.0.2.11") == "none"
+
+
 def test_case08_payloadless_c2_is_detected_by_corroborating_signals(replay):
     """无 HTTP payload 的外连：靠目的地址、周期性、连接状态与字节量共同定性。"""
     session, result = _run("CHAIN-CASE-08")

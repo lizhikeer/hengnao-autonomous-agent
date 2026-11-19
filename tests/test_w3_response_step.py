@@ -193,6 +193,28 @@ def test_approve_executes_and_records_reviewer():
     assert executor.enforcements[0]["approved_by"] == "ops_zhang"
 
 
+def test_adapter_uses_merged_executor_to_record_pending_then_review(monkeypatch, tmp_path):
+    from operations import response_executor
+
+    monkeypatch.setenv("SECLOG_STATE_DIR", str(tmp_path))
+    response_executor.reset_pending()
+    try:
+        request = _request(target_ip="192.0.2.10")
+        pending = step.submit(request, now=NOW)
+        assert pending.status == step.APPROVAL_REQUIRED
+        assert not response_executor.enforcement_log_path().exists()
+        receipt = step.resolve_approval(
+            pending.approval_id, decision="approve", reviewed_by="test-reviewer",
+            order=request.approval_order("test-reviewer"), now=NOW,
+        )
+        assert receipt.status == step.EXECUTED
+        record = json.loads(response_executor.enforcement_log_path().read_text(encoding="utf-8").strip())
+        assert record["approved_by"] == "test-reviewer"
+        assert record["target"] == "192.0.2.10"
+    finally:
+        response_executor.reset_pending()
+
+
 def test_reject_never_executes():
     executor = ContractDouble()
     pending = step.submit(_request(), executor=executor, now=NOW)
@@ -397,12 +419,36 @@ def test_platform_node_does_not_submit_when_rejected():
     assert receipt["executed"] is False
 
 
+@pytest.mark.parametrize("answer", ["A/B", "NOT_APPROVED", ["B", "A"], "", None])
+def test_platform_node_requires_an_unambiguous_approval(monkeypatch, answer):
+    node = _load_platform_node()
+    monkeypatch.setattr(node["urllib"].request, "urlopen", lambda *a, **k: pytest.fail("不应提交"))
+    output = node["handler"](
+        _Args(triage=_triage(), answer=answer, seed={"case_id": "CHAIN-CASE-01", "service_url": "http://x"})
+    )
+    assert output["result_key"]["receipt"]["status"] == "REJECTED"
+
+
 def test_platform_node_none_action_skips_http():
     node = _load_platform_node()
     output = node["handler"](
         _Args(triage=_triage(recommended_action="none"), answer="A", seed=json.dumps({"case_id": "C", "service_url": "http://x"}))
     )
     assert output["result_key"]["receipt"]["status"] == "no_action"
+
+
+def test_platform_report_includes_pending_receipt(monkeypatch):
+    import runpy
+    import sys
+    from types import SimpleNamespace
+
+    monkeypatch.setitem(sys.modules, "runtime", SimpleNamespace(Args=_Args))
+    node = runpy.run_path("design/hengnao_workflows/platform_nodes/code_report.py")
+    receipt = {"status": "approval_required", "approval_id": "APR-1", "mock": True}
+    output = node["handler"](_Args(input=_triage(), receipt=json.dumps(receipt)))["result_key"]
+    assert output["results"] == _triage()
+    assert "approval_required（模拟回执）" in output["report"]
+    assert "APR-1" in output["report"]
 
 
 def test_platform_node_passes_server_receipt_through(monkeypatch):

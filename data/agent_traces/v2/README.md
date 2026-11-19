@@ -11,11 +11,10 @@
 | `CHAIN-CASE-XX.json` | 严格 11 字段结论，**原样保存，未人工改写** |
 | `CHAIN-CASE-XX.trace.json` | 运行元数据 + 每轮工具调用 + 结论依据 + RAG 事实 |
 | `SUMMARY.md` | 十案例汇总（含检索状态、卡片补查数、错题复查数） |
-| `EVALUATION.md` | 由 `scripts/eval_runner.py` 现场算分（评分逻辑与标准答案未改动） |
+| `EVALUATION.md` | 由 `scripts/eval_runner.py` 现场算分，兼容大写缩写及历史正常活动标签 |
 
 > `run.code_version.dirty_worktree` 为 `true`：本批结果是在同一分支**提交前**跑出来的，
-> 代码与轨迹一起提交。`commit` 字段记录的是当时的基线（`68d0783`，即 `origin/main`），
-> 复核时请以分支上的这次提交为准，而不是把它当成"来自某个旧提交的产物"。
+> `commit` 字段记录回放时的 HEAD。复核请使用同时包含代码和轨迹的提交。
 
 **运行来源必须分开看**：
 
@@ -23,6 +22,7 @@
   数据源 `dataset_replay`（`data/full_chain_logs/`），检索为 `lexical_fallback`（降级）；
 - **不是**恒脑平台实跑，也**不是** NAS ClickHouse + 公网 HTTPS 的实跑结果。
   平台实跑导出后应写 `run.origin = platform`，并与本地回放分开放置，不得混为一份数据。
+  本地回放脚本只生成 `local_replay`，平台文件以平台导出为准。
 
 复现命令：
 

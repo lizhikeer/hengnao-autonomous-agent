@@ -1,10 +1,10 @@
 {
   "case_id": "CHAIN-CASE-02",
   "run": {
-    "run_id": "20261119T044928Z",
-    "started_at": "2026-11-19T04:49:28.641466+00:00",
-    "finished_at": "2026-11-19T04:49:28.645978+00:00",
-    "duration_ms": 4,
+    "run_id": "20261119T082059Z",
+    "started_at": "2026-11-19T08:20:59.603459+00:00",
+    "finished_at": "2026-11-19T08:20:59.608988+00:00",
+    "duration_ms": 5,
     "controller": "rule_based_v2_controller",
     "origin": "local_replay",
     "env": {
@@ -12,7 +12,7 @@
       "search_mode": "lexical_fallback"
     },
     "code_version": {
-      "commit": "68d0783",
+      "commit": "e0d71c3",
       "branch": "feature/w3-v2-investigation-rag-response",
       "dirty_worktree": true
     },
@@ -643,7 +643,7 @@
             "degraded": true,
             "retrieval_mode": "lexical_fallback",
             "notes": [
-              "检索为降级模式（lexical_fallback）：hybrid backend unavailable (sentence-transformers/qdrant-client not installed)"
+              "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
             ]
           },
           "items": [
@@ -807,7 +807,7 @@
           "backend": "data/knowledge_cards(manifest-verified)+lexical",
           "hits": 5,
           "notes": [
-            "检索为降级模式（lexical_fallback）：hybrid backend unavailable (sentence-transformers/qdrant-client not installed)"
+            "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
           ]
         }
       },
@@ -1268,7 +1268,7 @@
     "error_code": null,
     "error_message": null,
     "notes": [
-      "检索为降级模式（lexical_fallback）：hybrid backend unavailable (sentence-transformers/qdrant-client not installed)"
+      "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
     ],
     "cards_used": [
       {

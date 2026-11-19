@@ -128,7 +128,7 @@ def _tokens(text: str) -> set[str]:
     return latin | grams
 
 
-def _load_manifest_cards() -> list[dict[str, Any]]:
+def _load_manifest_cards(tenant_id: str) -> list[dict[str, Any]]:
     """按来源清单（SHA-256 白名单）加载全部知识卡；文件损坏即报错，不返回半套。"""
     manifest = Path(os.getenv("SECLOG_KNOWLEDGE_MANIFEST", DEFAULT_MANIFEST))
     if not manifest.is_file():
@@ -136,7 +136,7 @@ def _load_manifest_cards() -> list[dict[str, Any]]:
             f"知识卡来源清单不存在：{manifest}",
             details={"stage": "manifest", "path": str(manifest)},
         )
-    key = (str(manifest), manifest.stat().st_mtime)
+    key = (str(manifest), manifest.stat().st_mtime, tenant_id)
     if _card_cache["key"] == key:
         return _card_cache["cards"]
 
@@ -153,9 +153,11 @@ def _load_manifest_cards() -> list[dict[str, Any]]:
     source = SourceManifest(manifest, PROJECT_ROOT)
     cards: list[dict[str, Any]] = []
     for relative in doc.get("files", {}):
+        if doc["files"][relative].get("tenant_id") != tenant_id:
+            continue
         path = PROJECT_ROOT / relative
         try:
-            cards.extend(source.read(path, doc["files"][relative].get("tenant_id") or "default"))
+            cards.extend(source.read(path, tenant_id))
         except Exception as exc:
             raise KnowledgeUnavailable(
                 f"知识卡 {relative} 未通过来源清单校验",
@@ -190,8 +192,12 @@ def _lexical_search(
     """在已校验的知识卡上做词面检索；只为"缺向量依赖时仍能跑通调查"而存在。"""
     _ensure_project_root_on_path()
     from src.knowledge.categories import categories_for  # noqa: PLC0415
+    from src.knowledge.config import KnowledgeConfig  # noqa: PLC0415
 
-    cards = _load_manifest_cards()
+    tenant_id = KnowledgeConfig.from_env().tenant_id
+    if filters.get("tenant_id", tenant_id) != tenant_id:
+        raise KnowledgeUnavailable("调用者不能扩大后台租户范围", details={"stage": "filters"})
+    cards = _load_manifest_cards(tenant_id)
     wanted = set(categories_for(filters.get("attack_category")))
     excluded_scenarios = set(filters.get("exclude_scenario_ids") or [])
     excluded_investigation = filters.get("exclude_investigation_id")
@@ -258,8 +264,7 @@ def search(
             "retrieval_mode": "lexical_fallback",
             "mock": False,
             "degraded": True,
-            # 降级原因写清楚：不是"没有知识"，而是本机没有向量检索依赖
-            "degraded_reason": "hybrid backend unavailable (sentence-transformers/qdrant-client not installed)",
+            "degraded_reason": "lexical_fallback explicitly configured",
             "backend": "data/knowledge_cards(manifest-verified)+lexical",
             "filters": merged_filters,
         }
