@@ -55,3 +55,52 @@ $env:SECLOG_PUBLIC_HOST='<隧道主机名>'
 试运行到交互问答后，选 A 或 B，再点发送；不点击发送不算回答。当前后端只返回 `approval_required`、`executed=false`，没有真实权限网关、封禁和邮件发送。
 
 Mock 使用固定回放时间 `2026-10-27T14:26:00Z`，不是实时安全监测。证据表在内存中，重启后需要重新查询。程序校验能证明编号由该事件查询返回，不能独立证明上游日志未被篡改，也不能保证模型的攻击因果判断一定正确。
+
+---
+
+## Week 3（V2）配置变更
+
+### 一、公网入口以架构文档为准
+
+正式入口是 `https://seclog.91666.icu:18443`（国内 IPv4 中转 → NAS），见
+`docs/架构变更说明_2026-11-12.md`。上文的 Cloudflare 隧道地址是历史记录，
+**不再作为平台配置依据**；重建隧道后不要回写旧地址。
+
+### 二、调查节点只读，处置独立成节点
+
+| 节点 | 变更 | 配置 |
+| --- | --- | --- |
+| node1 / 自规划 | 调查提示词升级 | `platform_nodes/investigation_prompt.txt`；强制"先上下文 + `seclog_search_knowledge`（带 `case_id`）→ 按知识卡 `investigation_steps` 定向补查 `log_source` → 按 `error_revision_note` 复查 → 再下结论"；仍只绑定 `SecLog_只读调查`（`/investigation/`，四个读取工具） |
+| node3 / 交互 | 审批语义不变 | `confirm_block` 单选 A/B，等待 600 秒；未回答或超时按**拒绝**处理 |
+| **node7 / 代码（新增）** | 受控处置步骤 | `platform_nodes/code_response_step.py`；input 引用 `$.node2.triage`、`$.node3.confirm_block._answer`、`$.kv_user.input`；输出 `result_key` 含 `receipt` 与 `results` |
+| node5 / 代码 | 报告节点 | 输入改为引用 `$.node7.result_key.results`，报告里追加处置回执（`status` / `approval_id` / `executed` / `detail`） |
+| 结束 | 输出不变 | 十一项仍引用 `$.node5.payload.results.<字段>` |
+
+主路径改为：开始 → node0 → node1 → node6 → node2 → node3 →（A）node7 → node5 → 结束。
+A 分支边条件仍是 `"A" in node3.confirm_block._answer`；B/超时分支**不经过 node7 的提交逻辑**
+（node7 内部按"未批准"直接返回 `REJECTED` 回执），保证拒绝路径绝不发请求。
+
+### 三、回执状态口径
+
+`code_response_step.py` 原样透出服务端状态，不做二次加工：
+
+| 状态 | 含义 | 是否执行 |
+| --- | --- | :--- |
+| `no_action` | 结论为无需处置 | 否 |
+| `REJECTED` | 人工未批准 / 拒绝 | 否 |
+| `approval_required` | 已登记待审批单，等待权限网关或审批回执 | 否 |
+| `EXECUTED` | 审批通过并写入执行审计（服务端 `policy_reason=ALLOWED`） | 是 |
+| `BLOCKED_BY_POLICY` | 策略网关拦截（禁止动作 / 白名单 / 目标类型越界 / 缺证据） | 否，fail-closed |
+
+服务端返回 `approval_required` 却没有 `approval_id` 时，代码节点直接抛错——
+"没登记成功"不能被当成"待审批"。
+
+### 四、当前阻塞（2026-11-19）
+
+1. 服务端 `/tools/request_response` 仍是第一周的登记实现：策略网关与状态机
+   （PR #37 / #38）**尚未合入 main**，因此回执只会出现 `approval_required`。
+   `src/operations/response_step.py` 已按该 PR 的 `evaluate_action/approve/reject/
+   expire_pending` 契约写好适配层，并用真实执行器做过接口核验（待审 → 批准 → EXECUTED，
+   db-core-01 被 `allowlist_asset` 拦截），合入后无需改调用方。
+2. NAS ClickHouse、公网 HTTPS 与平台交互节点的操作权限都不在当前会话，平台实跑与
+   审批闭环演示**未完成**；`data/agent_traces/v2/` 的 `run.origin` 全部是 `local_replay`。

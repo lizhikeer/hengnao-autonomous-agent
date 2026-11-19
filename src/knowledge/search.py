@@ -18,18 +18,8 @@ from .schema import CardValidator, canonical_hash, normalize_card, utc_now
 from .text import match_query, sections, terms
 
 # 调查分类关联现有知识卡类别，保留已入库卡片原有标签和版本。
-_RELATED_CATEGORIES = {
-    "Scan": ("Information_Gathering", "Discovery"),
-    "Brute_Force": ("Credential_Access",),
-    "XSS": ("XSS_RCE",),
-    "Path_Traversal_Privilege": (
-        "File_Upload_Traversal",
-        "Authorization_Failure",
-        "Privilege_Escalation",
-    ),
-    "Malicious_Upload": ("File_Upload_Traversal",),
-    "C2_Exfiltration": ("Command_and_Control", "Exfiltration"),
-}
+# 降级检索（``src/api/knowledge_adapter.py``）复用同一张表，避免两种模式召回范围不同。
+from .categories import RELATED_CATEGORIES as _RELATED_CATEGORIES  # noqa: E402
 
 
 def reciprocal_rank_fusion(rankings: list[list[str]]) -> list[tuple[str, float]]:

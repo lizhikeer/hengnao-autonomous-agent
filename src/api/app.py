@@ -567,16 +567,29 @@ def search_knowledge(req: SearchKnowledgeRequest):
             "attack_category": req.attack_category,
             "hits": len(cards),
             "retrieval_mode": meta.get("retrieval_mode"),
+            "degraded": bool(meta.get("degraded")),
         },
     )
+    notes: list[str] = []
+    if not cards:
+        notes.append("检索未命中任何卡片")
+    if meta.get("degraded"):
+        notes.append(
+            "检索为降级模式（"
+            + str(meta.get("retrieval_mode"))
+            + "）："
+            + str(meta.get("degraded_reason") or "混合检索后端不可用")
+        )
     return SearchKnowledgeResponse(
         meta=QueryMeta(
             total=len(cards),
             data_source="mock" if meta.get("mock") else "hybrid_search",
             mock=bool(meta.get("mock")),
             backend_available=True,
+            degraded=bool(meta.get("degraded")),
+            retrieval_mode=meta.get("retrieval_mode"),
             dataset=meta.get("backend"),
-            notes=[] if cards else ["检索未命中任何卡片"],
+            notes=notes,
         ),
         items=[KnowledgeCard(**c) for c in cards],
     )

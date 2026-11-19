@@ -101,6 +101,19 @@ class QueryMeta(BaseModel):
             }
         ],
     )
+    degraded: bool = Field(
+        default=False,
+        description=(
+            "检索是否处于降级模式。true 表示本次结果来自词面降级检索（如缺向量依赖），"
+            "与『检索失败』（503）和『零命中』（total=0）是三种不同状态，消费方不得混用"
+        ),
+        examples=[False],
+    )
+    retrieval_mode: Optional[str] = Field(
+        default=None,
+        description="检索模式标识：hybrid / lexical_fallback / mock；无检索的后端留空",
+        examples=["hybrid"],
+    )
     notes: list[str] = Field(
         default_factory=list,
         description="数据集加载或回放过程中的告警（如文件解析失败），便于排查数据问题",
