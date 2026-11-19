@@ -19,5 +19,5 @@
   "attack_chain_summary": "未发现攻击载荷或外连迹象；账号 ops_zhang 经上下文核对（账号已登记、账号类型可执行该操作、来源 IP 符合授权范围、目标资产在授权范围、全部行为在维护窗口内、资产已登记）与授权范围一致，判定为授权运维/业务行为。",
   "recommended_action": "none",
   "requires_human_approval": false,
-  "unknown_items": "知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考。"
+  "unknown_items": ""
 }

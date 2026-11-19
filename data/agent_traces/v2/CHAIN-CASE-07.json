@@ -25,5 +25,5 @@
   "attack_chain_summary": "攻击源 45.155.205.233 对 web-prod-01 实施：扫描探测 15 次。",
   "recommended_action": "rate_limit",
   "requires_human_approval": false,
-  "unknown_items": "仅生成限速建议；本调查器未调用处置工具；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考。"
+  "unknown_items": "仅生成限速建议；本调查器未调用处置工具。"
 }

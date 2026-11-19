@@ -1,18 +1,18 @@
 {
   "case_id": "CHAIN-CASE-04",
   "run": {
-    "run_id": "20261119T082059Z",
-    "started_at": "2026-11-19T08:20:59.935455+00:00",
-    "finished_at": "2026-11-19T08:20:59.940021+00:00",
-    "duration_ms": 4,
+    "run_id": "20261119T102509Z",
+    "started_at": "2026-11-19T10:25:09.806267+00:00",
+    "finished_at": "2026-11-19T10:25:10.025890+00:00",
+    "duration_ms": 219,
     "controller": "rule_based_v2_controller",
     "origin": "local_replay",
     "env": {
       "data_source_mode": "dataset_replay",
-      "search_mode": "lexical_fallback"
+      "search_mode": "auto"
     },
     "code_version": {
-      "commit": "e0d71c3",
+      "commit": "7ae6463",
       "branch": "feature/w3-v2-investigation-rag-response",
       "dirty_worktree": true
     },
@@ -638,18 +638,47 @@
             "data_source": "hybrid_search",
             "mock": false,
             "backend_available": true,
-            "dataset": "data/knowledge_cards(manifest-verified)+lexical",
+            "dataset": "bge-small-zh-v1.5+qdrant+fts5+rrf",
             "time_base": null,
             "time_window_applied": null,
             "scenarios": [],
             "scenario_time_bases": [],
-            "degraded": true,
-            "retrieval_mode": "lexical_fallback",
-            "notes": [
-              "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-            ]
+            "degraded": false,
+            "retrieval_mode": "hybrid",
+            "notes": []
           },
           "items": [
+            {
+              "card_id": "KB-XSS-003",
+              "version": 2,
+              "card_type": "security_knowledge",
+              "title": "文件包含与路径遍历异常访问行为识别",
+              "attack_category": "XSS_RCE",
+              "mitre_id": "T1190",
+              "key_indicators": [
+                "nginx_access 中 request_uri 出现 ../ 或其 URL 编码形式，且访问目标偏离正常业务路由",
+                "请求路径出现 /.git/config、/.env 等敏感配置资源标识，需要核实服务器实际资源访问结果",
+                "同一来源 IP 反复访问非正常业务目录或文件资源，status 出现连续 403、404 或 500",
+                "多个请求呈现相似的异常路径变化和请求参数特征",
+                "服务器文件访问审计记录显示相关请求时间附近出现非预期文件读取行为"
+              ],
+              "recommended_action": "rate_limit_ip",
+              "score": 0.9841269841269842,
+              "investigation_steps": [
+                "检索 nginx_access，统计异常路径请求的来源 IP、request_uri、请求时间和 status",
+                "关联 zeek_http 记录，分析请求路径、参数和访问顺序",
+                "核对目标资源是否属于正常业务文件，并检查相关访问是否经过授权",
+                "结合服务器文件访问审计记录，确认是否存在越权读取或非预期文件访问",
+                "检查敏感配置文件是否实际暴露，并核实是否存在信息泄露影响"
+              ],
+              "analysis_rules": [],
+              "required_data": [],
+              "source_reference": "OWASP Web Security Testing Guide - Path Traversal; MITRE ATT&CK T1190",
+              "sources": [],
+              "applicability_limits": [],
+              "error_revision_note": "正常文件下载、图片访问、静态资源加载和目录映射也可能产生相似路径特征。应结合业务路由规则、资源权限和实际访问结果排除误报。",
+              "corrected_steps": []
+            },
             {
               "card_id": "KB-XSS-001",
               "version": 2,
@@ -665,7 +694,7 @@
                 "异常请求对应的 status、body_bytes_sent 与同一业务接口的正常访问基线存在明显差异"
               ],
               "recommended_action": "rate_limit_ip",
-              "score": 0.05,
+              "score": 0.9765625000000001,
               "investigation_steps": [
                 "检索 nginx_access，定位包含异常参数的请求及其来源 IP、request_uri、request_method 和 status",
                 "关联 zeek_http 记录，核对请求时间、请求路径、参数特征和响应情况",
@@ -696,7 +725,7 @@
                 "异常请求发生后，服务器网络访问行为、响应状态或响应字节数明显偏离正常基线"
               ],
               "recommended_action": "block_ip",
-              "score": 0.0271,
+              "score": 0.9760624679979518,
               "investigation_steps": [
                 "检索 nginx_access，定位异常请求的来源 IP、目标路径和发生时间",
                 "关联 zeek_http 记录，核对异常请求的上下文、目标主机和响应情况",
@@ -727,7 +756,7 @@
                 "服务器进程审计记录出现与对应 Web 请求时间吻合的非预期子进程或异常进程调用"
               ],
               "recommended_action": "block_ip",
-              "score": 0.0146,
+              "score": 0.9684979838709676,
               "investigation_steps": [
                 "检索 nginx_access，定位异常请求的时间、来源 IP、目标路径、请求方法和状态码",
                 "关联 zeek_http 记录，分析请求时间、目标主机和相邻请求的关联性",
@@ -742,49 +771,16 @@
               "applicability_limits": [],
               "error_revision_note": "正常系统管理接口、文件处理功能和运维任务也可能涉及命令调用。仅凭特殊字符或关键词不能认定命令注入成功，必须结合服务器进程审计和授权情况确认。block_ip 仅适用于确认攻击行为后并经人工审批的情形。",
               "corrected_steps": []
-            },
-            {
-              "card_id": "KB-XSS-003",
-              "version": 2,
-              "card_type": "security_knowledge",
-              "title": "文件包含与路径遍历异常访问行为识别",
-              "attack_category": "XSS_RCE",
-              "mitre_id": "T1190",
-              "key_indicators": [
-                "nginx_access 中 request_uri 出现 ../ 或其 URL 编码形式，且访问目标偏离正常业务路由",
-                "请求路径出现 /.git/config、/.env 等敏感配置资源标识，需要核实服务器实际资源访问结果",
-                "同一来源 IP 反复访问非正常业务目录或文件资源，status 出现连续 403、404 或 500",
-                "多个请求呈现相似的异常路径变化和请求参数特征",
-                "服务器文件访问审计记录显示相关请求时间附近出现非预期文件读取行为"
-              ],
-              "recommended_action": "rate_limit_ip",
-              "score": 0.0083,
-              "investigation_steps": [
-                "检索 nginx_access，统计异常路径请求的来源 IP、request_uri、请求时间和 status",
-                "关联 zeek_http 记录，分析请求路径、参数和访问顺序",
-                "核对目标资源是否属于正常业务文件，并检查相关访问是否经过授权",
-                "结合服务器文件访问审计记录，确认是否存在越权读取或非预期文件访问",
-                "检查敏感配置文件是否实际暴露，并核实是否存在信息泄露影响"
-              ],
-              "analysis_rules": [],
-              "required_data": [],
-              "source_reference": "OWASP Web Security Testing Guide - Path Traversal; MITRE ATT&CK T1190",
-              "sources": [],
-              "applicability_limits": [],
-              "error_revision_note": "正常文件下载、图片访问、静态资源加载和目录映射也可能产生相似路径特征。应结合业务路由规则、资源权限和实际访问结果排除误报。",
-              "corrected_steps": []
             }
           ]
         },
         "triggered_by": null,
         "retrieval": {
-          "degraded": true,
-          "retrieval_mode": "lexical_fallback",
-          "backend": "data/knowledge_cards(manifest-verified)+lexical",
+          "degraded": false,
+          "retrieval_mode": "hybrid",
+          "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
           "hits": 4,
-          "notes": [
-            "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-          ]
+          "notes": []
         }
       },
       {
@@ -797,7 +793,7 @@
           "trace_id": "CHAIN-CASE-04",
           "time_window": "2h"
         },
-        "why": "知识卡 KB-XSS-001 调查步骤 1「检索 nginx_access，定位包含异常参数的请求及其来源 IP、request_uri、request_metho」要求补查 nginx_access；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
+        "why": "知识卡 KB-XSS-003 调查步骤 1「检索 nginx_access，统计异常路径请求的来源 IP、request_uri、请求时间和 status」要求补查 nginx_access；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
         "data_source": "dataset_replay",
         "returned_log_ids": [
           "LOG-20261103-0401",
@@ -1169,10 +1165,10 @@
           ]
         },
         "triggered_by": {
-          "card_id": "KB-XSS-001",
+          "card_id": "KB-XSS-003",
           "card_type": "security_knowledge",
           "step_index": 1,
-          "step": "检索 nginx_access，定位包含异常参数的请求及其来源 IP、request_uri、request_method 和 status",
+          "step": "检索 nginx_access，统计异常路径请求的来源 IP、request_uri、请求时间和 status",
           "declared_log_sources": [],
           "log_source": "nginx_access"
         }
@@ -1187,7 +1183,7 @@
           "trace_id": "CHAIN-CASE-04",
           "time_window": "2h"
         },
-        "why": "知识卡 KB-XSS-001 调查步骤 2「关联 zeek_http 记录，核对请求时间、请求路径、参数特征和响应情况」要求补查 zeek_http；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
+        "why": "知识卡 KB-XSS-003 调查步骤 2「关联 zeek_http 记录，分析请求路径、参数和访问顺序」要求补查 zeek_http；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
         "data_source": "dataset_replay",
         "returned_log_ids": [
           "LOG-20261103-0413"
@@ -1244,10 +1240,10 @@
           ]
         },
         "triggered_by": {
-          "card_id": "KB-XSS-001",
+          "card_id": "KB-XSS-003",
           "card_type": "security_knowledge",
           "step_index": 2,
-          "step": "关联 zeek_http 记录，核对请求时间、请求路径、参数特征和响应情况",
+          "step": "关联 zeek_http 记录，分析请求路径、参数和访问顺序",
           "declared_log_sources": [],
           "log_source": "zeek_http"
         }
@@ -1276,7 +1272,7 @@
     "attack_chain_summary": "攻击源 198.51.100.61 对 web-prod-01 实施：跨站脚本尝试 2 次；同一会话标识被另一来源复用（会话劫持迹象）；攻击请求得到响应（未确认利用成功）。",
     "recommended_action": "block_ip",
     "requires_human_approval": true,
-    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考。"
+    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论。"
   },
   "conclusion_basis": {
     "attack_type": {
@@ -1452,47 +1448,45 @@
     "note": "仅作独立评测对照，未参与调查过程"
   },
   "rag": {
-    "retrieval_state": "degraded",
-    "state": "degraded",
-    "retrieval_mode": "lexical_fallback",
-    "backend": "data/knowledge_cards(manifest-verified)+lexical",
-    "degraded": true,
+    "retrieval_state": "ok",
+    "state": "ok",
+    "retrieval_mode": "hybrid",
+    "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
+    "degraded": false,
     "hits": 4,
     "error_code": null,
     "error_message": null,
-    "notes": [
-      "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-    ],
+    "notes": [],
     "cards_used": [
+      {
+        "card_id": "KB-XSS-003",
+        "card_type": "security_knowledge",
+        "attack_category": "XSS_RCE",
+        "score": 0.9841269841269842,
+        "has_error_revision_note": true
+      },
       {
         "card_id": "KB-XSS-001",
         "card_type": "security_knowledge",
         "attack_category": "XSS_RCE",
-        "score": 0.05,
+        "score": 0.9765625000000001,
         "has_error_revision_note": true
       },
       {
         "card_id": "KB-XSS-004",
         "card_type": "security_knowledge",
         "attack_category": "XSS_RCE",
-        "score": 0.0271,
-        "has_error_revision_note": true
-      },
-      {
-        "card_id": "KB-XSS-002",
-        "card_type": "security_knowledge",
-        "attack_category": "XSS_RCE",
-        "score": 0.0146,
+        "score": 0.9760624679979518,
         "has_error_revision_note": true
       }
     ],
     "card_triggered_queries": [
       {
         "round": 4,
-        "card_id": "KB-XSS-001",
+        "card_id": "KB-XSS-003",
         "card_type": "security_knowledge",
         "step_index": 1,
-        "step": "检索 nginx_access，定位包含异常参数的请求及其来源 IP、request_uri、request_method 和 status",
+        "step": "检索 nginx_access，统计异常路径请求的来源 IP、request_uri、请求时间和 status",
         "declared_log_sources": [],
         "log_source": "nginx_access",
         "returned_total": 16,
@@ -1501,10 +1495,10 @@
       },
       {
         "round": 5,
-        "card_id": "KB-XSS-001",
+        "card_id": "KB-XSS-003",
         "card_type": "security_knowledge",
         "step_index": 2,
-        "step": "关联 zeek_http 记录，核对请求时间、请求路径、参数特征和响应情况",
+        "step": "关联 zeek_http 记录，分析请求路径、参数和访问顺序",
         "declared_log_sources": [],
         "log_source": "zeek_http",
         "returned_total": 1,

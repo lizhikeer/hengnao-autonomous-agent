@@ -45,7 +45,7 @@
 - 新增 `src/operations/response_step.py`：把结论翻译成处置申请、转译执行器回执
   （`approval_required` / `EXECUTED` / `BLOCKED_BY_POLICY` / `REJECTED` / `APPROVAL_TIMEOUT` /
   `NO_ACTION` / `EXECUTOR_UNAVAILABLE`），执行器缺失时 **fail-closed**；
-- 复用 PR #37/#38 已合入的执行器。本地测试在临时目录验证待审 → 人工批准 → `EXECUTED` 状态和模拟审计记录。
+- 复用 PR #37/#38 已合入的执行器。`SECLOG_RESPONSE_MODE=simulation` 启用两段 HTTP 流程，提交与审批使用独立凭据。服务端以本案已登记证据核对资产与目标，并冻结待审工单的动作、证据和目标。HTTP 验证覆盖待审、批准、拒绝、超时、身份和案件隔离。参见 [平台配置](../design/hengnao_workflows/platform_configuration.md)。
 - 平台代码节点仅接受明确的单选 A 来提交申请。拒绝、歧义答案和超时返回 `REJECTED`。报告呈现服务端回执及模拟标记。
 
 ## 二、实测指标（本地回放，10 案例）
@@ -53,7 +53,7 @@
 命令：
 
 ```bash
-SECLOG_DATA_SOURCE=dataset_replay SECLOG_SEARCH_MODE=lexical_fallback \
+SECLOG_DATA_SOURCE=dataset_replay SECLOG_SEARCH_MODE=auto \
   python tests/run_v2_traces.py
 python scripts/eval_runner.py --truth data/full_chain_logs \
   --agent data/agent_traces/v2/CHAIN-CASE-0{1,2,3,4,5,6,7,8,9}.json \
@@ -78,6 +78,8 @@ python scripts/eval_runner.py --truth data/full_chain_logs \
 旧版报告为 V1 28.6%、V2 40%。上表用同一新算分器重算 V1 归档与 V2 回放，
 原始标准答案和 V1 归档保留。该结果只覆盖基础 10 例，诊断分数包含评分兼容修复的影响。
 
+本次本地运行使用 BGE-small-zh-v1.5、Qdrant Local 和 SQLite FTS5/RRF，将仓库现有 40 张知识卡载入独立本地索引。10 例的检索状态均为 `ok`，触发 20 次按日志源补查。基础日志仍来自 `dataset_replay`，此处的处置正确率和审批合规率评估的是调查建议。
+
 ## 三、数据一致性发现（需日志包负责人核对）
 
 判定逻辑只能看日志字段，但两张真值卡的摘要与日志字段对不上，已按"以日志为准"处理：
@@ -100,8 +102,7 @@ python scripts/eval_runner.py --truth data/full_chain_logs \
 
 | 阻塞 | 影响 | 解除条件 |
 | :--- | :--- | :--- |
-| #30 的 HTTP 处置接线未完成 | PR #37/#38 已合入，本地可验证状态机。HTTP 仍只登记申请，没有审批结算入口 | 组长接通接口后再联调平台交互节点 |
-| 本机缺 `sentence-transformers` / `qdrant-client` / NumPy | 检索走词面降级，`degraded` 标注，指标不代表混合检索效果 | #31 提供索引与模型权重后重跑 V2 |
-| `data/case_memories/` 为空 | 错题卡尚未入库，只能消费知识卡自带的 `error_revision_note` | #31 交付候选案例与错题卡 |
-| 无 NAS ClickHouse / 公网 HTTPS / 平台权限 | 平台多轮调查与审批闭环演示、`run.origin=platform` 未产出 | 拿到权限后按 `platform_configuration.md` 的 Week 3 节执行 |
+| 线上处置接线与审批身份 | HTTP 模拟链路在本地验证。恒脑当前的单选 A 只允许提交申请 | 组长部署更新后的服务，在预发布环境接通可验证的审批人身份 |
+| `data/case_memories/` 为空 | 本地真实混合检索只消费现有知识卡及其提示 | #31 和 #34 交付并审核独立错题卡后，纳入平台检索复测 |
+| NAS ClickHouse / 公网 HTTPS / 恒脑登录 | 公网健康接口 TLS 握手失败，恒脑工作流重定向到登录页。未产出平台审批演示和线上轨迹 | 恢复公网入口并提供已登录的恒脑测试会话，按 Week 3 配置执行 |
 | `dataset_manifest.json` 未交付 | 只能跑开发集 10 案例，无法分集算分与盲测 | #33 交付分集清单后补跑 |

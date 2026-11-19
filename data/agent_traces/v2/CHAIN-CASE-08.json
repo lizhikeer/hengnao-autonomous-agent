@@ -22,5 +22,5 @@
   "attack_chain_summary": "攻击源 91.219.236.7 对 web-prod-01 实施：可疑外连 12 次；已建立对外连接。",
   "recommended_action": "block_ip",
   "requires_human_approval": true,
-  "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考。"
+  "unknown_items": "处置建议尚未经过人工审批，未提交处置申请。"
 }

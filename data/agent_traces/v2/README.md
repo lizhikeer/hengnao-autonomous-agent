@@ -18,8 +18,8 @@
 
 **运行来源必须分开看**：
 
-- 本目录当前内容是 `run.origin = local_replay`，控制器 `rule_based_v2_controller`，
-  数据源 `dataset_replay`（`data/full_chain_logs/`），检索为 `lexical_fallback`（降级）；
+- 本目录当前内容是 `run.origin = local_replay`，控制器 `rule_based_v2_controller`。
+  使用 `dataset_replay`（`data/full_chain_logs/`）与真实混合检索（BGE + Qdrant + FTS5/RRF）。
 - **不是**恒脑平台实跑，也**不是** NAS ClickHouse + 公网 HTTPS 的实跑结果。
   平台实跑导出后应写 `run.origin = platform`，并与本地回放分开放置，不得混为一份数据。
   本地回放脚本只生成 `local_replay`，平台文件以平台导出为准。
@@ -27,8 +27,8 @@
 复现命令：
 
 ```bash
-# 本地回放（缺 sentence-transformers / qdrant-client 时使用词面降级检索）
-SECLOG_DATA_SOURCE=dataset_replay SECLOG_SEARCH_MODE=lexical_fallback \
+# 本地索引配置和建库见 src/knowledge/README.md
+SECLOG_DATA_SOURCE=dataset_replay SECLOG_SEARCH_MODE=auto \
   python tests/run_v2_traces.py
 
 # 单案例
@@ -75,10 +75,9 @@ SECLOG_SEARCH_MODE=lexical_fallback python tests/run_v2_traces.py CHAIN-CASE-06
 
 ## 三、本次结果的已知限制（如实记录，不做美化）
 
-1. **检索是降级模式**：本机缺少 `sentence-transformers` / `qdrant-client` / NumPy，
-   无法跑 BGE + Qdrant + FTS5 混合检索，改用源清单校验过的知识卡做词面检索。
-   轨迹中 `rag.retrieval_state = degraded`，`EVALUATION.md` 的结论只代表"流程可跑通"，
-   不代表混合检索效果。需要 #31 的索引与模型权重到位后重跑。
+1. **现有 40 张卡参与混合检索**：`rag.retrieval_state = ok`。使用本地向量和关键词索引，
+   线上 NAS 索引及新版案例记忆仍待验证。汇总表的“覆盖 truth 分类”是对归档标签的严格覆盖，
+   `EVALUATION.md` 的诊断准确率按评测器的类别兼容规则计算。
 2. **补查未带来新日志**：数据集回放按 `trace_id` 一次返回整条故事链，
    卡片驱动的定向补查（按 `log_source` + 2h 窗口）必然与首轮重复，`new_log_ids = 0`。
    在 ClickHouse 真实库上同一查询才是"按源定向核验"，这是回放环境的固有限制。

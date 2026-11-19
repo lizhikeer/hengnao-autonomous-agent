@@ -1,18 +1,18 @@
 {
   "case_id": "CHAIN-CASE-02",
   "run": {
-    "run_id": "20261119T082059Z",
-    "started_at": "2026-11-19T08:20:59.603459+00:00",
-    "finished_at": "2026-11-19T08:20:59.608988+00:00",
-    "duration_ms": 5,
+    "run_id": "20261119T102509Z",
+    "started_at": "2026-11-19T10:25:09.223715+00:00",
+    "finished_at": "2026-11-19T10:25:09.406262+00:00",
+    "duration_ms": 182,
     "controller": "rule_based_v2_controller",
     "origin": "local_replay",
     "env": {
       "data_source_mode": "dataset_replay",
-      "search_mode": "lexical_fallback"
+      "search_mode": "auto"
     },
     "code_version": {
-      "commit": "e0d71c3",
+      "commit": "7ae6463",
       "branch": "feature/w3-v2-investigation-rag-response",
       "dirty_worktree": true
     },
@@ -635,49 +635,16 @@
             "data_source": "hybrid_search",
             "mock": false,
             "backend_available": true,
-            "dataset": "data/knowledge_cards(manifest-verified)+lexical",
+            "dataset": "bge-small-zh-v1.5+qdrant+fts5+rrf",
             "time_base": null,
             "time_window_applied": null,
             "scenarios": [],
             "scenario_time_bases": [],
-            "degraded": true,
-            "retrieval_mode": "lexical_fallback",
-            "notes": [
-              "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-            ]
+            "degraded": false,
+            "retrieval_mode": "hybrid",
+            "notes": []
           },
           "items": [
-            {
-              "card_id": "KB-C2-003",
-              "version": 3,
-              "card_type": "security_knowledge",
-              "title": "异常大流量外传与数据泄露风险识别",
-              "attack_category": "C2_Exfiltration",
-              "mitre_id": "T1041",
-              "key_indicators": [
-                "Zeek conn.log 中内部 id.orig_h 向非业务 id.resp_h 发送的 orig_bytes 明显高于该主机历史及同类资产基线",
-                "同一主机在短时间内建立多条持续时间较长的外部连接，duration、orig_bytes 和 resp_bytes 同步异常",
-                "大流量连接发生在非正常业务时段，且目的地址不属于已登记备份、同步或云存储服务",
-                "异常传输前同一主机出现敏感系统访问记录，且账号、资产和时间能够与数据访问审计关联",
-                "数据库/文件访问审计与 Zeek 流量记录在时间、源主机和传输规模上相互印证"
-              ],
-              "recommended_action": "block_ip_short_term",
-              "score": 0.1167,
-              "investigation_steps": [
-                "检索zeek_conn日志，统计异常主机的连接次数、持续时间和上下行字节数",
-                "关联zeek_http记录，检查目标域名、请求路径和流量变化",
-                "结合资产信息确认主机是否具有访问敏感数据的业务权限",
-                "对照正常业务流量基线，核实大流量传输是否具有合理业务原因",
-                "关联文件访问审计和数据访问记录，确认是否存在未经授权的数据读取或传输"
-              ],
-              "analysis_rules": [],
-              "required_data": [],
-              "source_reference": "MITRE ATT&CK T1041 Exfiltration Over C2 Channel; Zeek Network Security Monitoring Documentation",
-              "sources": [],
-              "applicability_limits": [],
-              "error_revision_note": "数据备份、文件同步、系统更新和批量业务处理都可能产生大流量。不能仅依据流量大小认定数据泄露，应结合目标地址、数据访问权限、业务时段和传输背景综合研判。T1041需要有证据支持通过C2通道外传数据。 仅在数据访问审计与网络记录共同确认未经授权外传后，才申请短时封禁；备份、同步和业务批处理须先排除，按策略人工审批。",
-              "corrected_steps": []
-            },
             {
               "card_id": "KB-C2-001",
               "version": 3,
@@ -693,7 +660,7 @@
                 "目的地址或域名命中威胁情报时，需结合进程、资产用途及情报更新时间复核，不能仅凭信誉命中定性"
               ],
               "recommended_action": "block_ip_short_term",
-              "score": 0.105,
+              "score": 0.9841269841269842,
               "investigation_steps": [
                 "检索异常时间窗口内的zeek_conn记录，统计源IP、目的IP、目的端口和连接持续时间",
                 "关联zeek_http记录，核对请求域名、URI、User-Agent及响应状态",
@@ -710,6 +677,37 @@
               "corrected_steps": []
             },
             {
+              "card_id": "KB-C2-002",
+              "version": 3,
+              "card_type": "security_knowledge",
+              "title": "Web服务器异常外连与远程控制通信调查",
+              "attack_category": "C2_Exfiltration",
+              "mitre_id": "T1071.001",
+              "key_indicators": [
+                "Web 服务器资产在非预期时间出现新的 Zeek conn.log 外连，记录 id.orig_h、id.resp_h、id.resp_p 和 duration",
+                "nginx_access 在外连前出现异常来源 src_ip、request_uri、request_method 或 status 分布变化",
+                "Zeek http.log 中 host、uri、method、status_code 或 user_agent 与该服务器正常第三方 API 调用基线不符",
+                "同一时间窗口内 Web 请求与服务器出站连接在 timestamp 上吻合，且目的地址未登记为业务依赖",
+                "服务器进程审计显示发起外连的进程或父子进程关系不符合应用服务正常运行基线"
+              ],
+              "recommended_action": "block_ip_short_term",
+              "score": 0.9684979838709676,
+              "investigation_steps": [
+                "检索nginx_access日志，确定异常请求发生的时间、来源IP、访问路径和状态码",
+                "关联zeek_conn记录，检查Web服务器同期是否出现未知目的地址的外连",
+                "结合zeek_http记录核对通信域名、请求方法和流量变化",
+                "检查服务器资产用途和近期变更记录，交由管理员进一步核实异常通信原因",
+                "关联终端进程和应用审计记录，确认外连是否由合法业务组件发起"
+              ],
+              "analysis_rules": [],
+              "required_data": [],
+              "source_reference": "MITRE ATT&CK T1071.001 Web Protocols; OWASP Logging Cheat Sheet",
+              "sources": [],
+              "applicability_limits": [],
+              "error_revision_note": "Web服务器可能因调用第三方API、更新服务或业务回调产生正常外连。应结合服务器角色、业务调用关系和变更记录判断，避免将合法通信误判为远程控制。T1071.001描述的是Web协议通信，不能仅凭HTTP外连直接确认C2活动。 仅在确认 Web 服务器遭入侵且外连为恶意控制通信后，才申请短时封禁；第三方 API、更新服务和合法回调须先排除，按策略人工审批。",
+              "corrected_steps": []
+            },
+            {
               "card_id": "KB-WSTG-020",
               "version": 1,
               "card_type": "security_knowledge",
@@ -723,7 +721,7 @@
                 "数据库批量读取事件与代理、网络流量或DLP告警在时间上高度关联"
               ],
               "recommended_action": "block_ip_short_term",
-              "score": 0.0933,
+              "score": 0.9621212121212123,
               "investigation_steps": [
                 "检查数据库审计记录，确认访问账户、数据范围、查询时间和读取规模",
                 "结合业务审批记录核实批量数据访问是否具有合法业务原因",
@@ -736,6 +734,37 @@
               "sources": [],
               "applicability_limits": [],
               "error_revision_note": "仅在数据库审计与网络/DLP 证据确认未授权外传后申请短时封禁；同时通知数据责任人并核查账户，所有高危动作须人工审批。",
+              "corrected_steps": []
+            },
+            {
+              "card_id": "KB-C2-003",
+              "version": 3,
+              "card_type": "security_knowledge",
+              "title": "异常大流量外传与数据泄露风险识别",
+              "attack_category": "C2_Exfiltration",
+              "mitre_id": "T1041",
+              "key_indicators": [
+                "Zeek conn.log 中内部 id.orig_h 向非业务 id.resp_h 发送的 orig_bytes 明显高于该主机历史及同类资产基线",
+                "同一主机在短时间内建立多条持续时间较长的外部连接，duration、orig_bytes 和 resp_bytes 同步异常",
+                "大流量连接发生在非正常业务时段，且目的地址不属于已登记备份、同步或云存储服务",
+                "异常传输前同一主机出现敏感系统访问记录，且账号、资产和时间能够与数据访问审计关联",
+                "数据库/文件访问审计与 Zeek 流量记录在时间、源主机和传输规模上相互印证"
+              ],
+              "recommended_action": "block_ip_short_term",
+              "score": 0.961166253101737,
+              "investigation_steps": [
+                "检索zeek_conn日志，统计异常主机的连接次数、持续时间和上下行字节数",
+                "关联zeek_http记录，检查目标域名、请求路径和流量变化",
+                "结合资产信息确认主机是否具有访问敏感数据的业务权限",
+                "对照正常业务流量基线，核实大流量传输是否具有合理业务原因",
+                "关联文件访问审计和数据访问记录，确认是否存在未经授权的数据读取或传输"
+              ],
+              "analysis_rules": [],
+              "required_data": [],
+              "source_reference": "MITRE ATT&CK T1041 Exfiltration Over C2 Channel; Zeek Network Security Monitoring Documentation",
+              "sources": [],
+              "applicability_limits": [],
+              "error_revision_note": "数据备份、文件同步、系统更新和批量业务处理都可能产生大流量。不能仅依据流量大小认定数据泄露，应结合目标地址、数据访问权限、业务时段和传输背景综合研判。T1041需要有证据支持通过C2通道外传数据。 仅在数据访问审计与网络记录共同确认未经授权外传后，才申请短时封禁；备份、同步和业务批处理须先排除，按策略人工审批。",
               "corrected_steps": []
             },
             {
@@ -752,7 +781,7 @@
                 "异常通信发生时缺少对应的正常用户操作或业务请求"
               ],
               "recommended_action": "block_ip_short_term",
-              "score": 0.0517,
+              "score": 0.939350864723999,
               "investigation_steps": [
                 "统计相关主机的连接时间间隔、目标地址和流量大小，建立通信时间线",
                 "检查DNS解析记录及域名信誉，确认目标域名是否属于授权业务服务",
@@ -766,49 +795,16 @@
               "applicability_limits": [],
               "error_revision_note": "仅在终端进程、DNS/HTTP 流量及威胁情报共同支持恶意 Beacon 后申请短时封禁；周期性通信本身不足以定性。",
               "corrected_steps": []
-            },
-            {
-              "card_id": "KB-C2-004",
-              "version": 3,
-              "card_type": "security_knowledge",
-              "title": "合法运维通信与疑似C2活动区分",
-              "attack_category": "C2_Exfiltration",
-              "mitre_id": "T1071",
-              "key_indicators": [
-                "Zeek conn.log 中主机连接的 id.resp_h、id.resp_p 或周期特征与已登记运维目标及历史基线不一致",
-                "auth_log 中相关账户的登录 timestamp、src_ip 与异常外连时间接近，但无法匹配授权工单",
-                "外连目的地址、duration、orig_bytes/resp_bytes 或连接频率与运维平台登记行为不符",
-                "同一 username 或主机在短时间内同时出现异常认证、管理接口访问和未知外连事件",
-                "网络连接记录无法对应有效变更工单、授权账户、维护窗口或资产责任人确认"
-              ],
-              "recommended_action": "none",
-              "score": 0.045,
-              "investigation_steps": [
-                "检索auth_log，核对相关账户的登录时间、来源地址和认证结果",
-                "关联zeek_conn记录，分析登录事件前后主机的外部连接变化",
-                "查询zeek_http记录，核实通信目标和请求行为是否符合已知运维业务",
-                "联系运维人员核对变更工单、维护时间和目标地址，形成最终研判结论",
-                "结合终端进程、资产信息和安全告警判断通信是否具有合法业务来源"
-              ],
-              "analysis_rules": [],
-              "required_data": [],
-              "source_reference": "MITRE ATT&CK T1071 Application Layer Protocol; NIST SP 800-61 Computer Security Incident Handling Guide",
-              "sources": [],
-              "applicability_limits": [],
-              "error_revision_note": "合法运维工具、VPN、远程管理平台和自动化任务可能产生类似异常通信。应优先核对运维工单、授权账户、资产清单和操作时间，不应仅凭单一网络指标采取封禁措施。 该卡用于区分合法运维与疑似 C2，缺少确证时不触发自动处置；记录并继续核验授权工单、账户和资产。",
-              "corrected_steps": []
             }
           ]
         },
         "triggered_by": null,
         "retrieval": {
-          "degraded": true,
-          "retrieval_mode": "lexical_fallback",
-          "backend": "data/knowledge_cards(manifest-verified)+lexical",
+          "degraded": false,
+          "retrieval_mode": "hybrid",
+          "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
           "hits": 5,
-          "notes": [
-            "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-          ]
+          "notes": []
         }
       },
       {
@@ -821,7 +817,7 @@
           "trace_id": "CHAIN-CASE-02",
           "time_window": "2h"
         },
-        "why": "知识卡 KB-C2-003 调查步骤 1「检索zeek_conn日志，统计异常主机的连接次数、持续时间和上下行字节数」要求补查 zeek_conn；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
+        "why": "知识卡 KB-C2-001 调查步骤 1「检索异常时间窗口内的zeek_conn记录，统计源IP、目的IP、目的端口和连接持续时间」要求补查 zeek_conn；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
         "data_source": "dataset_replay",
         "returned_log_ids": [
           "LOG-20261028-0205",
@@ -983,10 +979,10 @@
           ]
         },
         "triggered_by": {
-          "card_id": "KB-C2-003",
+          "card_id": "KB-C2-001",
           "card_type": "security_knowledge",
           "step_index": 1,
-          "step": "检索zeek_conn日志，统计异常主机的连接次数、持续时间和上下行字节数",
+          "step": "检索异常时间窗口内的zeek_conn记录，统计源IP、目的IP、目的端口和连接持续时间",
           "declared_log_sources": [],
           "log_source": "zeek_conn"
         }
@@ -1001,7 +997,7 @@
           "trace_id": "CHAIN-CASE-02",
           "time_window": "2h"
         },
-        "why": "知识卡 KB-C2-003 调查步骤 2「关联zeek_http记录，检查目标域名、请求路径和流量变化」要求补查 zeek_http；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
+        "why": "知识卡 KB-C2-001 调查步骤 2「关联zeek_http记录，核对请求域名、URI、User-Agent及响应状态」要求补查 zeek_http；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
         "data_source": "dataset_replay",
         "returned_log_ids": [
           "LOG-20261028-0208",
@@ -1079,10 +1075,10 @@
           ]
         },
         "triggered_by": {
-          "card_id": "KB-C2-003",
+          "card_id": "KB-C2-001",
           "card_type": "security_knowledge",
           "step_index": 2,
-          "step": "关联zeek_http记录，检查目标域名、请求路径和流量变化",
+          "step": "关联zeek_http记录，核对请求域名、URI、User-Agent及响应状态",
           "declared_log_sources": [],
           "log_source": "zeek_http"
         }
@@ -1111,7 +1107,7 @@
     "attack_chain_summary": "攻击源 203.0.113.45 对 web-prod-01 实施：恶意上传或 webshell 访问 6 次，可疑外连 4 次；已建立对外连接。",
     "recommended_action": "block_ip",
     "requires_human_approval": true,
-    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、exploitation、c2_callback 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考。"
+    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、exploitation、c2_callback 的日志，但缺少对应行为证据，仅作待查线索，未计入结论。"
   },
   "conclusion_basis": {
     "attack_type": {
@@ -1259,47 +1255,45 @@
     "note": "仅作独立评测对照，未参与调查过程"
   },
   "rag": {
-    "retrieval_state": "degraded",
-    "state": "degraded",
-    "retrieval_mode": "lexical_fallback",
-    "backend": "data/knowledge_cards(manifest-verified)+lexical",
-    "degraded": true,
+    "retrieval_state": "ok",
+    "state": "ok",
+    "retrieval_mode": "hybrid",
+    "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
+    "degraded": false,
     "hits": 5,
     "error_code": null,
     "error_message": null,
-    "notes": [
-      "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-    ],
+    "notes": [],
     "cards_used": [
-      {
-        "card_id": "KB-C2-003",
-        "card_type": "security_knowledge",
-        "attack_category": "C2_Exfiltration",
-        "score": 0.1167,
-        "has_error_revision_note": true
-      },
       {
         "card_id": "KB-C2-001",
         "card_type": "security_knowledge",
         "attack_category": "C2_Exfiltration",
-        "score": 0.105,
+        "score": 0.9841269841269842,
+        "has_error_revision_note": true
+      },
+      {
+        "card_id": "KB-C2-002",
+        "card_type": "security_knowledge",
+        "attack_category": "C2_Exfiltration",
+        "score": 0.9684979838709676,
         "has_error_revision_note": true
       },
       {
         "card_id": "KB-WSTG-020",
         "card_type": "security_knowledge",
         "attack_category": "Exfiltration",
-        "score": 0.0933,
+        "score": 0.9621212121212123,
         "has_error_revision_note": true
       }
     ],
     "card_triggered_queries": [
       {
         "round": 4,
-        "card_id": "KB-C2-003",
+        "card_id": "KB-C2-001",
         "card_type": "security_knowledge",
         "step_index": 1,
-        "step": "检索zeek_conn日志，统计异常主机的连接次数、持续时间和上下行字节数",
+        "step": "检索异常时间窗口内的zeek_conn记录，统计源IP、目的IP、目的端口和连接持续时间",
         "declared_log_sources": [],
         "log_source": "zeek_conn",
         "returned_total": 6,
@@ -1308,10 +1302,10 @@
       },
       {
         "round": 5,
-        "card_id": "KB-C2-003",
+        "card_id": "KB-C2-001",
         "card_type": "security_knowledge",
         "step_index": 2,
-        "step": "关联zeek_http记录，检查目标域名、请求路径和流量变化",
+        "step": "关联zeek_http记录，核对请求域名、URI、User-Agent及响应状态",
         "declared_log_sources": [],
         "log_source": "zeek_http",
         "returned_total": 2,
@@ -1321,20 +1315,20 @@
     ],
     "revision_checks": [
       {
-        "card_id": "KB-C2-003",
-        "note": "数据备份、文件同步、系统更新和批量业务处理都可能产生大流量。不能仅依据流量大小认定数据泄露，应结合目标地址、数据访问权限、业务时段和传输背景综合研判。T1041需要有证据支持通过C2通道外传数据。 仅在数据访问审计与网络记录共同确认未经授权外传后，才申请短时封禁；备份、同步和业务批处理须先排除，按策略人工审批。",
-        "check": "benign_context_check",
-        "check_description": "按错题提示复查：先排除备份/合法运维/授权扫描等正常业务，再定性",
-        "outcome": "no_match",
-        "detail": "未命中授权扫描/维护窗口范围"
-      },
-      {
         "card_id": "KB-C2-001",
         "note": "云服务、软件更新、合法代理和远程运维也可能产生周期性外连。不能仅凭连接频率或单一目的IP判定恶意通信，应结合资产归属、业务用途和历史基线综合判断。矿池通信需要结合目标信誉、主机进程和资源使用情况进一步确认。 仅在威胁情报、主机进程/终端告警及网络记录共同确认恶意通信后，才申请短时封禁；必须附证据并经人工审批。周期性外连本身不足以定性。",
         "check": "outbound_needs_corroboration",
         "check_description": "按错题提示复查：外连须由目的地址、周期性、连接模式共同支撑，不以端口或流量单独定性",
         "outcome": "corroborated",
         "detail": "3 次连接间隔中位 88s，呈固定周期；3 次连接持续 ≥240s（中位 302s）；与同一目的地址 45.77.128.203 的已确认连接同属一条外连通道"
+      },
+      {
+        "card_id": "KB-C2-002",
+        "note": "Web服务器可能因调用第三方API、更新服务或业务回调产生正常外连。应结合服务器角色、业务调用关系和变更记录判断，避免将合法通信误判为远程控制。T1071.001描述的是Web协议通信，不能仅凭HTTP外连直接确认C2活动。 仅在确认 Web 服务器遭入侵且外连为恶意控制通信后，才申请短时封禁；第三方 API、更新服务和合法回调须先排除，按策略人工审批。",
+        "check": "benign_context_check",
+        "check_description": "按错题提示复查：先排除备份/合法运维/授权扫描等正常业务，再定性",
+        "outcome": "no_match",
+        "detail": "未命中授权扫描/维护窗口范围"
       }
     ]
   },

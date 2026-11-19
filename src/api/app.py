@@ -39,11 +39,12 @@ import sys
 import threading
 from typing import Any, Optional
 
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from . import asset_context, datasource, knowledge_adapter
+from . import asset_context, datasource, knowledge_adapter, response_http
 from .config import (
     HIGH_RISK_ACTIONS,
     LIMIT_DEFAULT,
@@ -59,6 +60,7 @@ from .mock_data import (
     search_mock_knowledge,
 )
 from .schemas import (
+    ApproveResponseRequest,
     ErrorBody,
     GetContextRequest,
     GetContextResponse,
@@ -420,8 +422,12 @@ def query_logs(req: QueryLogsRequest):
 
     # 登记证据：本次查询返回的 log_id 才能被后续处置引用
     registered = registry.register(
-        (r["log_id"] for r in result.items if r.get("log_id")),
+        (row.log_id for row in validated_items),
         case_id=req.case_id,
+        facts={
+            row.log_id: (row.asset_id, tuple(ip for ip in (row.src_ip, row.dest_ip) if ip), row.user)
+            for row in validated_items
+        },
         query_params={
             "src_ip": req.src_ip,
             "dest_ip": req.dest_ip,
@@ -600,10 +606,14 @@ def search_knowledge(req: SearchKnowledgeRequest):
 # ---------------------------------------------------------------------------
 
 
+_response_bearer = HTTPBearer(auto_error=False)
+
+
 @app.post(
     "/tools/request_response",
     response_model=RequestResponseResponse,
-    summary="提交处置动作与证据编号（高危动作进入人工审批，本周不执行）",
+    response_model_exclude_unset=True,
+    summary="提交处置申请；模拟模式启用策略网关和人工审批",
     description=(
         "Agent 提交处置动作时必须附上支撑证据的 log_id，服务端做程序性校验："
         "证据必须来自本次调查真实查询返回，伪造编号或引用其它调查任务的编号一律拒绝。"
@@ -612,7 +622,29 @@ def search_knowledge(req: SearchKnowledgeRequest):
     ),
     tags=["处置工具"],
 )
+def request_response_http(
+    req: RequestResponseRequest,
+    auth: HTTPAuthorizationCredentials | None = Depends(_response_bearer),
+):
+    if response_http.mode() == "simulation":
+        return response_http.submit(req, auth.credentials if auth else "")
+    return request_response(req)
+
+
+@app.post(
+    "/tools/approve_response", response_model=RequestResponseResponse, response_model_exclude_unset=True,
+    summary="使用独立审批身份结算本案模拟工单", tags=["处置工具"],
+)
+def approve_response_http(
+    req: ApproveResponseRequest,
+    auth: HTTPAuthorizationCredentials | None = Depends(_response_bearer),
+):
+    return response_http.settle(req, auth.credentials if auth else "")
+
+
 def request_response(req: RequestResponseRequest):
+    if response_http.mode() != "legacy":
+        raise HTTPException(503, "此入口只用于旧版登记。模拟处置须走受控 HTTP 入口")
     guard = _real_backend_guard()
     if guard is not None:
         return guard

@@ -21,5 +21,5 @@
   "attack_chain_summary": "攻击源 203.0.113.147 对 web-prod-01 实施：目录遍历/越权访问 11 次；攻击请求得到响应（未确认利用成功）。",
   "recommended_action": "block_ip",
   "requires_human_approval": true,
-  "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考。"
+  "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论。"
 }

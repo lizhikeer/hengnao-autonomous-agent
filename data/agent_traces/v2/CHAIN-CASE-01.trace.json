@@ -1,18 +1,18 @@
 {
   "case_id": "CHAIN-CASE-01",
   "run": {
-    "run_id": "20261119T082059Z",
-    "started_at": "2026-11-19T08:20:59.227339+00:00",
-    "finished_at": "2026-11-19T08:20:59.444787+00:00",
-    "duration_ms": 217,
+    "run_id": "20261119T102503Z",
+    "started_at": "2026-11-19T10:25:03.009886+00:00",
+    "finished_at": "2026-11-19T10:25:09.104727+00:00",
+    "duration_ms": 6094,
     "controller": "rule_based_v2_controller",
     "origin": "local_replay",
     "env": {
       "data_source_mode": "dataset_replay",
-      "search_mode": "lexical_fallback"
+      "search_mode": "auto"
     },
     "code_version": {
-      "commit": "e0d71c3",
+      "commit": "7ae6463",
       "branch": "feature/w3-v2-investigation-rag-response",
       "dirty_worktree": true
     },
@@ -827,16 +827,14 @@
             "data_source": "hybrid_search",
             "mock": false,
             "backend_available": true,
-            "dataset": "data/knowledge_cards(manifest-verified)+lexical",
+            "dataset": "bge-small-zh-v1.5+qdrant+fts5+rrf",
             "time_base": null,
             "time_window_applied": null,
             "scenarios": [],
             "scenario_time_bases": [],
-            "degraded": true,
-            "retrieval_mode": "lexical_fallback",
-            "notes": [
-              "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-            ]
+            "degraded": false,
+            "retrieval_mode": "hybrid",
+            "notes": []
           },
           "items": [
             {
@@ -854,7 +852,7 @@
                 "User-Agent 出现 sqlmap 等自动化扫描工具标识，但该字段可能被伪造，不能单独作为攻击判定依据"
               ],
               "recommended_action": "rate_limit_ip",
-              "score": 0.0958,
+              "score": 0.9765625000000001,
               "investigation_steps": [
                 "按时间窗口检索 nginx_access，统计来源 IP、request_uri、request_method、status 和请求频率",
                 "关联 zeek_http 记录，核对请求时间、目标主机、请求方法和异常参数特征",
@@ -868,6 +866,37 @@
               "sources": [],
               "applicability_limits": [],
               "error_revision_note": "正常业务查询、搜索筛选和特殊字符输入也可能出现类似特征。不能仅凭单个特殊字符或一次 4xx、5xx 响应判定 SQL 注入，应结合请求频率、参数特征、上下游日志和应用错误信息综合判断。",
+              "corrected_steps": []
+            },
+            {
+              "card_id": "KB-SQLI-003",
+              "version": 2,
+              "card_type": "security_knowledge",
+              "title": "数据库异常文件导出行为的关联调查",
+              "attack_category": "SQL_Injection",
+              "mitre_id": "T1190",
+              "key_indicators": [
+                "nginx_access 或 zeek_http 中出现与数据库文件写入或导出相关的请求参数特征，例如 INTO OUTFILE、INTO DUMPFILE",
+                "相关请求的 request_method、request_uri、status 和 body_bytes_sent 与同一接口的正常业务请求存在明显差异",
+                "数据库审计记录显示异常 Web 请求时间附近发生未经授权的文件写入或导出操作",
+                "服务器文件完整性记录发现 Web 可访问目录中出现非预期新增或修改的文件，且文件变更时间与异常请求吻合",
+                "Web 请求、数据库审计和文件完整性记录在时间与来源上能够相互关联，形成未授权文件写入的证据链"
+              ],
+              "recommended_action": "block_ip",
+              "score": 0.9760624679979518,
+              "investigation_steps": [
+                "检索 nginx_access，定位异常请求的时间、来源 IP、请求路径和请求方法",
+                "关联 zeek_http 记录，核对请求时间、目标主机和响应情况",
+                "检查数据库审计日志，确认是否存在未经授权的文件写入或导出操作",
+                "核对服务器文件完整性记录，确认相关文件是否属于正常业务生成文件",
+                "核实操作账号、业务任务和授权记录，确认是否构成未经授权的安全事件"
+              ],
+              "analysis_rules": [],
+              "required_data": [],
+              "source_reference": "OWASP Top 10 A03:2021 Injection; OWASP Logging Cheat Sheet; MITRE ATT&CK T1190",
+              "sources": [],
+              "applicability_limits": [],
+              "error_revision_note": "正常数据导出、报表生成和备份任务也可能产生文件操作记录。Nginx 和 Zeek HTTP 日志本身不能证明数据库文件写入成功，必须结合数据库审计、服务器文件完整性和授权记录确认。block_ip 仅适用于确认未经授权的文件写入后，并经人工审批的情形。",
               "corrected_steps": []
             },
             {
@@ -885,7 +914,7 @@
                 "相似请求的 body_bytes_sent 或 bytes_out 出现规律性变化，且与请求时间和参数变化存在关联"
               ],
               "recommended_action": "rate_limit_ip",
-              "score": 0.0792,
+              "score": 0.9760624679979518,
               "investigation_steps": [
                 "按时间窗口聚合同一来源 IP 对目标接口的访问记录",
                 "比较相似请求的 request_time、upstream_response_time、status 和响应字节数",
@@ -915,7 +944,7 @@
                 "同一接口出现大量相似请求，且请求间隔和响应时间具有明显规律"
               ],
               "recommended_action": "rate_limit",
-              "score": 0.0792,
+              "score": 0.9692307692307693,
               "investigation_steps": [
                 "提取异常时间段的请求记录，比较相同接口的响应耗时分布",
                 "关联数据库审计日志，检查是否存在异常查询或执行时间显著增加的记录",
@@ -928,37 +957,6 @@
               "sources": [],
               "applicability_limits": [],
               "error_revision_note": "对具有重复自动化特征的盲注探测请求限速；响应延迟还可能由慢查询、负载或网络问题造成，需关联数据库审计。",
-              "corrected_steps": []
-            },
-            {
-              "card_id": "KB-SQLI-003",
-              "version": 2,
-              "card_type": "security_knowledge",
-              "title": "数据库异常文件导出行为的关联调查",
-              "attack_category": "SQL_Injection",
-              "mitre_id": "T1190",
-              "key_indicators": [
-                "nginx_access 或 zeek_http 中出现与数据库文件写入或导出相关的请求参数特征，例如 INTO OUTFILE、INTO DUMPFILE",
-                "相关请求的 request_method、request_uri、status 和 body_bytes_sent 与同一接口的正常业务请求存在明显差异",
-                "数据库审计记录显示异常 Web 请求时间附近发生未经授权的文件写入或导出操作",
-                "服务器文件完整性记录发现 Web 可访问目录中出现非预期新增或修改的文件，且文件变更时间与异常请求吻合",
-                "Web 请求、数据库审计和文件完整性记录在时间与来源上能够相互关联，形成未授权文件写入的证据链"
-              ],
-              "recommended_action": "block_ip",
-              "score": 0.0604,
-              "investigation_steps": [
-                "检索 nginx_access，定位异常请求的时间、来源 IP、请求路径和请求方法",
-                "关联 zeek_http 记录，核对请求时间、目标主机和响应情况",
-                "检查数据库审计日志，确认是否存在未经授权的文件写入或导出操作",
-                "核对服务器文件完整性记录，确认相关文件是否属于正常业务生成文件",
-                "核实操作账号、业务任务和授权记录，确认是否构成未经授权的安全事件"
-              ],
-              "analysis_rules": [],
-              "required_data": [],
-              "source_reference": "OWASP Top 10 A03:2021 Injection; OWASP Logging Cheat Sheet; MITRE ATT&CK T1190",
-              "sources": [],
-              "applicability_limits": [],
-              "error_revision_note": "正常数据导出、报表生成和备份任务也可能产生文件操作记录。Nginx 和 Zeek HTTP 日志本身不能证明数据库文件写入成功，必须结合数据库审计、服务器文件完整性和授权记录确认。block_ip 仅适用于确认未经授权的文件写入后，并经人工审批的情形。",
               "corrected_steps": []
             },
             {
@@ -976,7 +974,7 @@
                 "同一时间窗口内请求数量、请求路径数量和 body_bytes_sent 分布明显偏离该来源的正常访问基线"
               ],
               "recommended_action": "rate_limit_ip",
-              "score": 0.0583,
+              "score": 0.9457932692307692,
               "investigation_steps": [
                 "统计来源 IP 在指定时间段内访问的接口数量、请求频率和请求方法",
                 "分析 nginx_access 中的 User-Agent、status 和 request_uri 分布",
@@ -996,13 +994,11 @@
         },
         "triggered_by": null,
         "retrieval": {
-          "degraded": true,
-          "retrieval_mode": "lexical_fallback",
-          "backend": "data/knowledge_cards(manifest-verified)+lexical",
+          "degraded": false,
+          "retrieval_mode": "hybrid",
+          "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
           "hits": 5,
-          "notes": [
-            "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-          ]
+          "notes": []
         }
       },
       {
@@ -1648,7 +1644,7 @@
     "attack_chain_summary": "攻击源 198.51.100.23 对 web-prod-01 实施：扫描探测 7 次，账号爆破 5 次，SQL 注入尝试 4 次；攻击请求得到响应（未确认利用成功）。",
     "recommended_action": "block_ip",
     "requires_human_approval": true,
-    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、brute_force、exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考。"
+    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、brute_force、exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论。"
   },
   "conclusion_basis": {
     "attack_type": {
@@ -1895,37 +1891,35 @@
     "note": "仅作独立评测对照，未参与调查过程"
   },
   "rag": {
-    "retrieval_state": "degraded",
-    "state": "degraded",
-    "retrieval_mode": "lexical_fallback",
-    "backend": "data/knowledge_cards(manifest-verified)+lexical",
-    "degraded": true,
+    "retrieval_state": "ok",
+    "state": "ok",
+    "retrieval_mode": "hybrid",
+    "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
+    "degraded": false,
     "hits": 5,
     "error_code": null,
     "error_message": null,
-    "notes": [
-      "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-    ],
+    "notes": [],
     "cards_used": [
       {
         "card_id": "KB-SQLI-001",
         "card_type": "security_knowledge",
         "attack_category": "SQL_Injection",
-        "score": 0.0958,
+        "score": 0.9765625000000001,
+        "has_error_revision_note": true
+      },
+      {
+        "card_id": "KB-SQLI-003",
+        "card_type": "security_knowledge",
+        "attack_category": "SQL_Injection",
+        "score": 0.9760624679979518,
         "has_error_revision_note": true
       },
       {
         "card_id": "KB-SQLI-002",
         "card_type": "security_knowledge",
         "attack_category": "SQL_Injection",
-        "score": 0.0792,
-        "has_error_revision_note": true
-      },
-      {
-        "card_id": "KB-WSTG-015",
-        "card_type": "security_knowledge",
-        "attack_category": "SQL_Injection",
-        "score": 0.0792,
+        "score": 0.9760624679979518,
         "has_error_revision_note": true
       }
     ],
@@ -1963,6 +1957,14 @@
         "check_description": "按错题提示复查：失败次数/间隔节奏/后续是否登录成功，避免仅凭失败次数定性",
         "outcome": "brute_force_confirmed",
         "detail": "失败次数与节奏已超过人工输入范围"
+      },
+      {
+        "card_id": "KB-SQLI-003",
+        "note": "正常数据导出、报表生成和备份任务也可能产生文件操作记录。Nginx 和 Zeek HTTP 日志本身不能证明数据库文件写入成功，必须结合数据库审计、服务器文件完整性和授权记录确认。block_ip 仅适用于确认未经授权的文件写入后，并经人工审批的情形。",
+        "check": "benign_context_check",
+        "check_description": "按错题提示复查：先排除备份/合法运维/授权扫描等正常业务，再定性",
+        "outcome": "no_match",
+        "detail": "未命中授权扫描/维护窗口范围"
       },
       {
         "card_id": "KB-SQLI-002",

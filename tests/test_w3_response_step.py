@@ -437,6 +437,15 @@ def test_platform_node_none_action_skips_http():
     assert output["result_key"]["receipt"]["status"] == "no_action"
 
 
+def test_platform_node_keeps_submission_token_on_configured_origin(monkeypatch):
+    node = _load_platform_node()
+    monkeypatch.setattr(node["urllib"].request, "build_opener",
+                        lambda *_: pytest.fail("不应向此地址提交凭据"))
+    with pytest.raises(ValueError, match="HTTPS"):
+        node["handler"](_Args(triage=_triage(), answer="A", submit_token="test-only",
+                              seed={"case_id": "CHAIN-CASE-01", "service_url": "https://example.invalid"}))
+
+
 def test_platform_report_includes_pending_receipt(monkeypatch):
     import runpy
     import sys

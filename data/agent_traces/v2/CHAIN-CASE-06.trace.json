@@ -1,18 +1,18 @@
 {
   "case_id": "CHAIN-CASE-06",
   "run": {
-    "run_id": "20261119T082100Z",
-    "started_at": "2026-11-19T08:21:00.295906+00:00",
-    "finished_at": "2026-11-19T08:21:00.300914+00:00",
-    "duration_ms": 5,
+    "run_id": "20261119T102510Z",
+    "started_at": "2026-11-19T10:25:10.468442+00:00",
+    "finished_at": "2026-11-19T10:25:10.646756+00:00",
+    "duration_ms": 178,
     "controller": "rule_based_v2_controller",
     "origin": "local_replay",
     "env": {
       "data_source_mode": "dataset_replay",
-      "search_mode": "lexical_fallback"
+      "search_mode": "auto"
     },
     "code_version": {
-      "commit": "e0d71c3",
+      "commit": "7ae6463",
       "branch": "feature/w3-v2-investigation-rag-response",
       "dirty_worktree": true
     },
@@ -656,16 +656,14 @@
             "data_source": "hybrid_search",
             "mock": false,
             "backend_available": true,
-            "dataset": "data/knowledge_cards(manifest-verified)+lexical",
+            "dataset": "bge-small-zh-v1.5+qdrant+fts5+rrf",
             "time_base": null,
             "time_window_applied": null,
             "scenarios": [],
             "scenario_time_bases": [],
-            "degraded": true,
-            "retrieval_mode": "lexical_fallback",
-            "notes": [
-              "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-            ]
+            "degraded": false,
+            "retrieval_mode": "hybrid",
+            "notes": []
           },
           "items": [
             {
@@ -683,7 +681,7 @@
                 "异常登录成功后，相关账户访问敏感 URI 或产生非日常操作审计事件"
               ],
               "recommended_action": "rate_limit_ip",
-              "score": 0.1455,
+              "score": 0.9919354838709679,
               "investigation_steps": [
                 "检索异常时间窗口内的nginx访问日志，统计来源IP、登录路径、请求次数和状态码",
                 "关联认证日志，核对失败登录记录、账户名称和时间分布",
@@ -697,37 +695,6 @@
               "sources": [],
               "applicability_limits": [],
               "error_revision_note": "正常用户输错密码、自动化测试和企业统一认证系统也可能产生连续失败记录。应结合请求频率、账户数量、来源IP及后续登录结果综合判断，避免仅凭失败次数封禁。 本仓库原始 Nginx 样本的 src_ip 可能是 Docker bridge 网关地址（如 172.17.0.1），须通过 asset_id 台账还原真实来源，不得直接封禁网关；auth_sample.log 使用 user、src_ip、re…(共 209 字)",
-              "corrected_steps": []
-            },
-            {
-              "card_id": "KB-BF-003",
-              "version": 3,
-              "card_type": "security_knowledge",
-              "title": "账户撞库行为识别与调查",
-              "attack_category": "Brute_Force",
-              "mitre_id": "T1110.004",
-              "key_indicators": [
-                "同一 src_ip 在短时间内对多个 username 发起登录尝试，认证日志中账户分布广且单账户失败次数相对分散",
-                "多个账户在相近 timestamp 出现认证失败，且登录接口 request_uri、request_method 和 User-Agent 高度相似",
-                "nginx_access 中同一 src_ip 对登录 URI 产生异常 POST 频率，并出现 HTTP 401/403 或 429 集中响应",
-                "部分账户在连续失败后出现认证成功，auth_log 的 user、src_ip、result 和 timestamp 偏离该账户历史记录",
-                "成功登录后出现异常敏感资源访问或权限操作，需用 username 与审计日志关联确认"
-              ],
-              "recommended_action": "isolate_account",
-              "score": 0.125,
-              "investigation_steps": [
-                "检索登录接口访问日志，统计来源IP、账户标识和认证请求时间分布",
-                "关联auth_log，识别多个账户是否存在集中失败或异常成功登录",
-                "对比相关账户的历史登录来源和正常访问时间，判断是否偏离行为基线",
-                "核查异常成功登录后的账户操作记录，评估是否存在账户被未授权使用的风险",
-                "联系账户所有者或管理员核实异常登录事件"
-              ],
-              "analysis_rules": [],
-              "required_data": [],
-              "source_reference": "MITRE ATT&CK T1110.004 Credential Stuffing; OWASP Credential Stuffing Prevention Cheat Sheet",
-              "sources": [],
-              "applicability_limits": [],
-              "error_revision_note": "企业统一登录、共享出口IP和批量账户管理可能造成多个账户在短时间内登录。不能仅凭账户数量判断撞库，应结合来源、失败与成功比例及历史行为进行核实。仅在确认账户已被未授权使用后，执行账户隔离并保留人工审批。 本仓库 auth_sample.log 的现有样本为 82 次成功登录、0 次失败登录，不能单独证明撞库/口令失败检测效果；需结合 Web 登录日志及补充标注样本。",
               "corrected_steps": []
             },
             {
@@ -745,7 +712,7 @@
                 "认证失败序列后出现同源成功登录，需关联 auth_log 的认证结果与主机登录审计确认"
               ],
               "recommended_action": "rate_limit_ip",
-              "score": 0.1114,
+              "score": 0.9841269841269842,
               "investigation_steps": [
                 "检索auth_log中的SSH和VPN认证事件，统计来源IP、账户及失败次数",
                 "关联zeek_conn连接记录，核对连接时间、目标主机和连接频率",
@@ -762,34 +729,34 @@
               "corrected_steps": []
             },
             {
-              "card_id": "KB-WSTG-007",
-              "version": 1,
+              "card_id": "KB-BF-003",
+              "version": 3,
               "card_type": "security_knowledge",
-              "title": "异常登录频率与账户破解风险识别",
-              "attack_category": "Credential_Access",
-              "mitre_id": "T1110",
+              "title": "账户撞库行为识别与调查",
+              "attack_category": "Brute_Force",
+              "mitre_id": "T1110.004",
               "key_indicators": [
-                "同一来源 IP 在短时间内对单个账户产生大量认证失败记录",
-                "同一来源 IP 在短时间内尝试访问多个不同账户",
-                "同一账户在短时间内出现大量来自不同来源的认证失败记录",
-                "连续认证失败后出现异常登录成功事件",
-                "认证请求频率明显偏离正常用户登录行为基线"
+                "同一 src_ip 在短时间内对多个 username 发起登录尝试，认证日志中账户分布广且单账户失败次数相对分散",
+                "多个账户在相近 timestamp 出现认证失败，且登录接口 request_uri、request_method 和 User-Agent 高度相似",
+                "nginx_access 中同一 src_ip 对登录 URI 产生异常 POST 频率，并出现 HTTP 401/403 或 429 集中响应",
+                "部分账户在连续失败后出现认证成功，auth_log 的 user、src_ip、result 和 timestamp 偏离该账户历史记录",
+                "成功登录后出现异常敏感资源访问或权限操作，需用 username 与审计日志关联确认"
               ],
-              "recommended_action": "rate_limit",
-              "score": 0.0932,
+              "recommended_action": "isolate_account",
+              "score": 0.9760624679979518,
               "investigation_steps": [
-                "按时间窗口统计来源 IP、账户标识和认证结果",
-                "区分针对单个账户的高频尝试与针对多个账户的异常尝试",
-                "关联 Web 访问日志，检查请求频率和客户端行为",
-                "确认连续失败后是否出现成功登录以及后续敏感操作",
-                "核对相关来源是否属于授权安全测试、企业代理或正常运维任务"
+                "检索登录接口访问日志，统计来源IP、账户标识和认证请求时间分布",
+                "关联auth_log，识别多个账户是否存在集中失败或异常成功登录",
+                "对比相关账户的历史登录来源和正常访问时间，判断是否偏离行为基线",
+                "核查异常成功登录后的账户操作记录，评估是否存在账户被未授权使用的风险",
+                "联系账户所有者或管理员核实异常登录事件"
               ],
               "analysis_rules": [],
               "required_data": [],
-              "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism; MITRE ATT&CK T1110 Brute Force",
+              "source_reference": "MITRE ATT&CK T1110.004 Credential Stuffing; OWASP Credential Stuffing Prevention Cheat Sheet",
               "sources": [],
               "applicability_limits": [],
-              "error_revision_note": "共享网络出口、企业代理和用户集中登录可能导致同一来源出现较多认证失败。不能仅凭失败次数判定暴力破解，应结合账户数量、时间分布和后续成功登录行为。 对确认的异常登录频率可限速；不得仅因用户输错密码或共享出口 IP 触发账户隔离。",
+              "error_revision_note": "企业统一登录、共享出口IP和批量账户管理可能造成多个账户在短时间内登录。不能仅凭账户数量判断撞库，应结合来源、失败与成功比例及历史行为进行核实。仅在确认账户已被未授权使用后，执行账户隔离并保留人工审批。 本仓库 auth_sample.log 的现有样本为 82 次成功登录、0 次失败登录，不能单独证明撞库/口令失败检测效果；需结合 Web 登录日志及补充标注样本。",
               "corrected_steps": []
             },
             {
@@ -807,7 +774,7 @@
                 "异常成功登录的 user、src_ip、timestamp 与敏感数据访问、权限变更或账户配置操作在审计日志中形成时间关联"
               ],
               "recommended_action": "isolate_account",
-              "score": 0.0864,
+              "score": 0.9457932692307692,
               "investigation_steps": [
                 "检索auth_log中的成功认证事件，核对账户、来源IP、认证方式和登录时间",
                 "对比账户历史登录记录及授权信息，识别异常来源和不符合日常规律的行为",
@@ -822,18 +789,47 @@
               "applicability_limits": [],
               "error_revision_note": "员工出差、VPN切换、代理网络和合法权限调整都可能产生异常登录特征。处置前应核实用户身份、设备和授权变更记录。只有确认账户存在未授权使用风险后，才建议执行账户隔离，并经过人工确认。 样本中的共享出口、VPN 和 Docker bridge 地址可能造成来源归因偏差；应结合 asset_id、账户归属和设备记录确认，不得仅凭异常地理位置或 src_ip 隔离账户。",
               "corrected_steps": []
+            },
+            {
+              "card_id": "KB-WSTG-007",
+              "version": 1,
+              "card_type": "security_knowledge",
+              "title": "异常登录频率与账户破解风险识别",
+              "attack_category": "Credential_Access",
+              "mitre_id": "T1110",
+              "key_indicators": [
+                "同一来源 IP 在短时间内对单个账户产生大量认证失败记录",
+                "同一来源 IP 在短时间内尝试访问多个不同账户",
+                "同一账户在短时间内出现大量来自不同来源的认证失败记录",
+                "连续认证失败后出现异常登录成功事件",
+                "认证请求频率明显偏离正常用户登录行为基线"
+              ],
+              "recommended_action": "rate_limit",
+              "score": 0.938683712121212,
+              "investigation_steps": [
+                "按时间窗口统计来源 IP、账户标识和认证结果",
+                "区分针对单个账户的高频尝试与针对多个账户的异常尝试",
+                "关联 Web 访问日志，检查请求频率和客户端行为",
+                "确认连续失败后是否出现成功登录以及后续敏感操作",
+                "核对相关来源是否属于授权安全测试、企业代理或正常运维任务"
+              ],
+              "analysis_rules": [],
+              "required_data": [],
+              "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism; MITRE ATT&CK T1110 Brute Force",
+              "sources": [],
+              "applicability_limits": [],
+              "error_revision_note": "共享网络出口、企业代理和用户集中登录可能导致同一来源出现较多认证失败。不能仅凭失败次数判定暴力破解，应结合账户数量、时间分布和后续成功登录行为。 对确认的异常登录频率可限速；不得仅因用户输错密码或共享出口 IP 触发账户隔离。",
+              "corrected_steps": []
             }
           ]
         },
         "triggered_by": null,
         "retrieval": {
-          "degraded": true,
-          "retrieval_mode": "lexical_fallback",
-          "backend": "data/knowledge_cards(manifest-verified)+lexical",
+          "degraded": false,
+          "retrieval_mode": "hybrid",
+          "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
           "hits": 5,
-          "notes": [
-            "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-          ]
+          "notes": []
         }
       },
       {
@@ -1199,7 +1195,7 @@
     "attack_chain_summary": "攻击源 198.51.100.99 对 nas-host-01 实施：账号爆破 8 次；认证失败后同一来源成功登录，判定已失陷。",
     "recommended_action": "block_ip_short_term",
     "requires_human_approval": true,
-    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 brute_force、exploitation、c2_callback 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考；维护窗口 never_exempt 命中 LOG-20261104-0602、LOG-20261104-0604、LOG-20261104-0606、LOG-20261104-0608、LOG-20261104-0610，窗口不作为豁免依据。"
+    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 brute_force、exploitation、c2_callback 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；维护窗口 never_exempt 命中 LOG-20261104-0602、LOG-20261104-0604、LOG-20261104-0606、LOG-20261104-0608、LOG-20261104-0610，窗口不作为豁免依据。"
   },
   "conclusion_basis": {
     "attack_type": {
@@ -1479,37 +1475,35 @@
     "note": "仅作独立评测对照，未参与调查过程"
   },
   "rag": {
-    "retrieval_state": "degraded",
-    "state": "degraded",
-    "retrieval_mode": "lexical_fallback",
-    "backend": "data/knowledge_cards(manifest-verified)+lexical",
-    "degraded": true,
+    "retrieval_state": "ok",
+    "state": "ok",
+    "retrieval_mode": "hybrid",
+    "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
+    "degraded": false,
     "hits": 5,
     "error_code": null,
     "error_message": null,
-    "notes": [
-      "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-    ],
+    "notes": [],
     "cards_used": [
       {
         "card_id": "KB-BF-001",
         "card_type": "security_knowledge",
         "attack_category": "Brute_Force",
-        "score": 0.1455,
-        "has_error_revision_note": true
-      },
-      {
-        "card_id": "KB-BF-003",
-        "card_type": "security_knowledge",
-        "attack_category": "Brute_Force",
-        "score": 0.125,
+        "score": 0.9919354838709679,
         "has_error_revision_note": true
       },
       {
         "card_id": "KB-BF-002",
         "card_type": "security_knowledge",
         "attack_category": "Brute_Force",
-        "score": 0.1114,
+        "score": 0.9841269841269842,
+        "has_error_revision_note": true
+      },
+      {
+        "card_id": "KB-BF-003",
+        "card_type": "security_knowledge",
+        "attack_category": "Brute_Force",
+        "score": 0.9760624679979518,
         "has_error_revision_note": true
       }
     ],

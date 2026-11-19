@@ -88,16 +88,26 @@ Mock 使用固定回放时间 `2026-10-27T14:26:00Z`，不是实时安全监测�
 | `no_action` | 结论为无需处置 | 否 |
 | `REJECTED` | 人工未批准 / 拒绝 | 否 |
 | `approval_required` | 已登记待审批单，等待权限网关或审批回执 | 否 |
-| `EXECUTED` | 审批通过并写入执行审计（服务端 `policy_reason=ALLOWED`） | 是 |
+| `EXECUTED` | 模拟状态机已写入执行审计，回执带 `simulation=true`、`mock=true` | 否 |
 | `BLOCKED_BY_POLICY` | 策略网关拦截（禁止动作 / 白名单 / 目标类型越界 / 缺证据） | 否，fail-closed |
+| `APPROVAL_TIMEOUT` | 工单到期拒批 | 否 |
 
 服务端返回 `approval_required` 却没有 `approval_id` 时，代码节点直接抛错——
 "没登记成功"不能被当成"待审批"。
 
-### 四、当前阻塞（2026-11-19）
+### 四、本地 HTTP 验证和平台前置条件
 
-1. PR #37/#38 已合入 `main`，本地适配层可调用执行器并验证模拟审计。当前
-   `/tools/request_response` 仍是申请登记接口，尚未接到执行器，仓库也没有对外审批结算端点。
-   交互节点的 A 仅确认提交申请。平台审批闭环还需要 #30 接入服务端审批接口，并携带工单号和可核验的审批身份。
-2. NAS ClickHouse、公网 HTTPS 与平台交互节点的操作权限都不在当前会话，平台实跑与
-   审批闭环演示**未完成**；`data/agent_traces/v2/` 的 `run.origin` 全部是 `local_replay`。
+本地验证命令为 `python -m pytest tests/test_w3_response_http.py -q`。测试用临时目录记录模拟审计。
+
+1. 在独立测试进程设 `SECLOG_RESPONSE_MODE=simulation` 和临时 `SECLOG_STATE_DIR`。
+   `SECLOG_RESPONSE_SUBMIT_TOKEN` 为提交凭据，`SECLOG_RESPONSE_APPROVAL_TOKENS_JSON`
+   为审批人到各自凭据的映射。两类凭据独立配置。
+2. 调查完成后，交互节点的 A 只确认提交申请。节点通过配置的 `submit_token` 调用
+   `POST /tools/request_response`，发送本案证据和 `asset_id`，读取回执中的工单号。
+3. 审批人在独立审批入口用其 Bearer 凭据调用 `POST /tools/approve_response`。请求注明
+   `case_id`、`approval_id`、`decision`（`approve` 或 `reject`）。批准时填
+   `expected_effect` 和 `rollback_plan`，拒绝时可附 `reason`。
+   动作、目标和证据来自服务端保存的待审工单。待审工单随测试进程重启清空。
+
+平台演示还需要 NAS 测试部署、公网 HTTPS 和恒脑登录。平台审批结算需要可验证的审批人身份，
+审批凭据只由审批入口使用。`data/agent_traces/v2/` 当前记录本地回放，线上原始轨迹须从平台导出。

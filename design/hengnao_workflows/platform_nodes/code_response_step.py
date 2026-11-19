@@ -17,6 +17,7 @@
 ``args.input.triage``   校验节点输出的 11 字段结论（Object 或 JSON 字符串）
 ``args.input.answer``   交互节点的单选结果（含 "A" 表示批准提交申请，其余表示拒绝）
 ``args.input.seed``     开始节点输入（含 case_id 与 service_url）
+``args.input.submit_token`` 可选，由平台凭据配置注入，只用于约定的公网 HTTPS 地址。
 
 输出
 ----
@@ -26,6 +27,14 @@
 
 import json
 import urllib.request
+
+
+_PUBLIC_SERVICE = "https://seclog.91666.icu:18443"
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def _load(value):
@@ -92,17 +101,26 @@ def handler(args) -> dict:
         {
             "case_id": case_id,
             "action": action,
+            "asset_id": triage.get("victim_asset"),
             "target_ip": target_ip or None,
             "evidence_log_ids": evidence,
             "reason": str(triage.get("attack_chain_summary") or "")[:500],
         }
     ).encode("utf-8")
+    service = seed["service_url"].rstrip("/")
+    headers = {"Content-Type": "application/json"}
+    submit_token = getattr(args.input, "submit_token", None)
+    if submit_token:
+        if service != _PUBLIC_SERVICE:
+            raise ValueError("处置凭据仅允许用于配置的 SecLog HTTPS 地址")
+        headers["Authorization"] = "Bearer " + submit_token
     request = urllib.request.Request(
-        seed["service_url"] + "/tools/request_response",
+        service + "/tools/request_response",
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
     )
-    with urllib.request.urlopen(request, timeout=20) as response:
+    open_request = urllib.request.build_opener(_NoRedirect()).open if submit_token else urllib.request.urlopen
+    with open_request(request, timeout=20) as response:
         payload = json.load(response)
 
     status = payload.get("status")
@@ -118,6 +136,7 @@ def handler(args) -> dict:
             and payload.get("mock") is not True
         ),
         "mock": payload.get("mock") is True,
+        "simulation": payload.get("simulation") is True,
         "approval_id": payload.get("approval_id"),
         "detail": payload.get("detail"),
         "evidence_log_ids": evidence,

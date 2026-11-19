@@ -20,5 +20,5 @@
   "attack_chain_summary": "攻击源 198.51.100.99 对 nas-host-01 实施：账号爆破 8 次；认证失败后同一来源成功登录，判定已失陷。",
   "recommended_action": "block_ip_short_term",
   "requires_human_approval": true,
-  "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 brute_force、exploitation、c2_callback 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考；维护窗口 never_exempt 命中 LOG-20261104-0602、LOG-20261104-0604、LOG-20261104-0606、LOG-20261104-0608、LOG-20261104-0610，窗口不作为豁免依据。"
+  "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 brute_force、exploitation、c2_callback 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；维护窗口 never_exempt 命中 LOG-20261104-0602、LOG-20261104-0604、LOG-20261104-0606、LOG-20261104-0608、LOG-20261104-0610，窗口不作为豁免依据。"
 }

@@ -1,18 +1,18 @@
 {
   "case_id": "CHAIN-CASE-05",
   "run": {
-    "run_id": "20261119T082100Z",
-    "started_at": "2026-11-19T08:21:00.125295+00:00",
-    "finished_at": "2026-11-19T08:21:00.129813+00:00",
-    "duration_ms": 4,
+    "run_id": "20261119T102510Z",
+    "started_at": "2026-11-19T10:25:10.170777+00:00",
+    "finished_at": "2026-11-19T10:25:10.361666+00:00",
+    "duration_ms": 190,
     "controller": "rule_based_v2_controller",
     "origin": "local_replay",
     "env": {
       "data_source_mode": "dataset_replay",
-      "search_mode": "lexical_fallback"
+      "search_mode": "auto"
     },
     "code_version": {
-      "commit": "e0d71c3",
+      "commit": "7ae6463",
       "branch": "feature/w3-v2-investigation-rag-response",
       "dirty_worktree": true
     },
@@ -617,49 +617,16 @@
             "data_source": "hybrid_search",
             "mock": false,
             "backend_available": true,
-            "dataset": "data/knowledge_cards(manifest-verified)+lexical",
+            "dataset": "bge-small-zh-v1.5+qdrant+fts5+rrf",
             "time_base": null,
             "time_window_applied": null,
             "scenarios": [],
             "scenario_time_bases": [],
-            "degraded": true,
-            "retrieval_mode": "lexical_fallback",
-            "notes": [
-              "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-            ]
+            "degraded": false,
+            "retrieval_mode": "hybrid",
+            "notes": []
           },
           "items": [
-            {
-              "card_id": "KB-FUT-002",
-              "version": 3,
-              "card_type": "security_knowledge",
-              "title": "敏感目录与备份文件异常探测识别",
-              "attack_category": "File_Upload_Traversal",
-              "mitre_id": "T1083",
-              "key_indicators": [
-                "nginx_access 中同一 src_ip 在短时间内请求多个不同的敏感路径，request_uri 包含备份、配置或管理资源名称",
-                "同一来源连续请求大量不存在或禁止访问的 URI，status 集中出现 404/403，且路径枚举规律明显",
-                "请求的 request_method、User-Agent 和请求间隔高度重复，偏离正常浏览器访问行为",
-                "相同 src_ip 对多个无关目录持续探测，URI 数量和请求频率显著高于正常用户基线",
-                "探测序列中出现 status=200 或异常 body_bytes_sent，需确认敏感资源是否实际返回内容"
-              ],
-              "recommended_action": "rate_limit_ip",
-              "score": 0.0357,
-              "investigation_steps": [
-                "检索nginx访问日志，统计异常来源IP访问的路径数量、请求频率和状态码分布",
-                "关联zeek_http记录，核对请求时间、目标主机和异常路径特征",
-                "对比同一来源IP的正常业务访问记录，判断是否存在集中式资源探测行为",
-                "检查相关资源是否对外暴露，并核实是否存在敏感信息访问成功的记录",
-                "结合运维扫描计划、爬虫身份和业务访问白名单排除合法访问"
-              ],
-              "analysis_rules": [],
-              "required_data": [],
-              "source_reference": "MITRE ATT&CK T1083 File and Directory Discovery; OWASP Web Security Testing Guide",
-              "sources": [],
-              "applicability_limits": [],
-              "error_revision_note": "搜索引擎爬虫、网站监测程序和合法运维扫描也可能访问大量路径。应结合爬虫身份、授权扫描记录、请求规律和访问结果综合判断。",
-              "corrected_steps": []
-            },
             {
               "card_id": "KB-FUT-003",
               "version": 3,
@@ -675,7 +642,7 @@
                 "文件访问审计显示请求时间附近读取了应用授权范围之外的文件资源"
               ],
               "recommended_action": "rate_limit_ip",
-              "score": 0.0357,
+              "score": 1.0,
               "investigation_steps": [
                 "检索nginx访问日志，定位包含异常路径特征的请求并统计来源IP、请求路径和状态码",
                 "关联zeek_http记录，核对请求时间、请求方法、目标主机和请求参数特征",
@@ -706,7 +673,7 @@
                 "异常连接时间窗口内 CPU、内存、文件描述符或服务可用性指标同步恶化"
               ],
               "recommended_action": "rate_limit_ip",
-              "score": 0.0143,
+              "score": 0.9684979838709676,
               "investigation_steps": [
                 "检索zeek_conn连接记录，统计来源IP、连接持续时间和并发连接变化",
                 "关联nginx访问日志，检查异常时间窗口内请求数量、响应状态码和响应延迟",
@@ -720,6 +687,37 @@
               "sources": [],
               "applicability_limits": [],
               "error_revision_note": "网络波动、客户端网络质量较差和业务高峰也可能造成连接持续时间增加。应结合并发连接数量、请求完成情况和服务器资源指标判断，不能仅凭连接时间长短认定攻击。该卡片属于服务可用性异常研判，与文件上传和路径遍历分类的关联需要维护者确认。",
+              "corrected_steps": []
+            },
+            {
+              "card_id": "KB-FUT-002",
+              "version": 3,
+              "card_type": "security_knowledge",
+              "title": "敏感目录与备份文件异常探测识别",
+              "attack_category": "File_Upload_Traversal",
+              "mitre_id": "T1083",
+              "key_indicators": [
+                "nginx_access 中同一 src_ip 在短时间内请求多个不同的敏感路径，request_uri 包含备份、配置或管理资源名称",
+                "同一来源连续请求大量不存在或禁止访问的 URI，status 集中出现 404/403，且路径枚举规律明显",
+                "请求的 request_method、User-Agent 和请求间隔高度重复，偏离正常浏览器访问行为",
+                "相同 src_ip 对多个无关目录持续探测，URI 数量和请求频率显著高于正常用户基线",
+                "探测序列中出现 status=200 或异常 body_bytes_sent，需确认敏感资源是否实际返回内容"
+              ],
+              "recommended_action": "rate_limit_ip",
+              "score": 0.9684979838709676,
+              "investigation_steps": [
+                "检索nginx访问日志，统计异常来源IP访问的路径数量、请求频率和状态码分布",
+                "关联zeek_http记录，核对请求时间、目标主机和异常路径特征",
+                "对比同一来源IP的正常业务访问记录，判断是否存在集中式资源探测行为",
+                "检查相关资源是否对外暴露，并核实是否存在敏感信息访问成功的记录",
+                "结合运维扫描计划、爬虫身份和业务访问白名单排除合法访问"
+              ],
+              "analysis_rules": [],
+              "required_data": [],
+              "source_reference": "MITRE ATT&CK T1083 File and Directory Discovery; OWASP Web Security Testing Guide",
+              "sources": [],
+              "applicability_limits": [],
+              "error_revision_note": "搜索引擎爬虫、网站监测程序和合法运维扫描也可能访问大量路径。应结合爬虫身份、授权扫描记录、请求规律和访问结果综合判断。",
               "corrected_steps": []
             },
             {
@@ -737,7 +735,7 @@
                 "文件完整性审计显示 Web 可访问目录出现未经授权的新文件，且创建时间与上传请求时间吻合"
               ],
               "recommended_action": "block_ip_short_term",
-              "score": 0.0095,
+              "score": 0.9682539682539681,
               "investigation_steps": [
                 "检索nginx访问日志，统计上传接口的请求来源、请求频率、状态码和访问路径",
                 "关联zeek_http记录，核对请求方法、请求时间、目标主机和上传请求特征",
@@ -757,13 +755,11 @@
         },
         "triggered_by": null,
         "retrieval": {
-          "degraded": true,
-          "retrieval_mode": "lexical_fallback",
-          "backend": "data/knowledge_cards(manifest-verified)+lexical",
+          "degraded": false,
+          "retrieval_mode": "hybrid",
+          "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
           "hits": 4,
-          "notes": [
-            "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-          ]
+          "notes": []
         }
       },
       {
@@ -776,7 +772,7 @@
           "trace_id": "CHAIN-CASE-05",
           "time_window": "2h"
         },
-        "why": "知识卡 KB-FUT-002 调查步骤 1「检索nginx访问日志，统计异常来源IP访问的路径数量、请求频率和状态码分布」要求补查 nginx_access；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
+        "why": "知识卡 KB-FUT-003 调查步骤 1「检索nginx访问日志，定位包含异常路径特征的请求并统计来源IP、请求路径和状态码」要求补查 nginx_access；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
         "data_source": "dataset_replay",
         "returned_log_ids": [
           "LOG-20261103-0501",
@@ -1148,10 +1144,10 @@
           ]
         },
         "triggered_by": {
-          "card_id": "KB-FUT-002",
+          "card_id": "KB-FUT-003",
           "card_type": "security_knowledge",
           "step_index": 1,
-          "step": "检索nginx访问日志，统计异常来源IP访问的路径数量、请求频率和状态码分布",
+          "step": "检索nginx访问日志，定位包含异常路径特征的请求并统计来源IP、请求路径和状态码",
           "declared_log_sources": [],
           "log_source": "nginx_access"
         }
@@ -1166,7 +1162,7 @@
           "trace_id": "CHAIN-CASE-05",
           "time_window": "2h"
         },
-        "why": "知识卡 KB-FUT-002 调查步骤 2「关联zeek_http记录，核对请求时间、目标主机和异常路径特征」要求补查 zeek_http；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
+        "why": "知识卡 KB-FUT-003 调查步骤 2「关联zeek_http记录，核对请求时间、请求方法、目标主机和请求参数特征」要求补查 zeek_http；定向复核比首轮 trace 级查询更细，可暴露被截断或缺失的日志源",
         "data_source": "dataset_replay",
         "returned_log_ids": [
           "LOG-20261103-0510"
@@ -1223,10 +1219,10 @@
           ]
         },
         "triggered_by": {
-          "card_id": "KB-FUT-002",
+          "card_id": "KB-FUT-003",
           "card_type": "security_knowledge",
           "step_index": 2,
-          "step": "关联zeek_http记录，核对请求时间、目标主机和异常路径特征",
+          "step": "关联zeek_http记录，核对请求时间、请求方法、目标主机和请求参数特征",
           "declared_log_sources": [],
           "log_source": "zeek_http"
         }
@@ -1256,7 +1252,7 @@
     "attack_chain_summary": "攻击源 203.0.113.147 对 web-prod-01 实施：目录遍历/越权访问 11 次；攻击请求得到响应（未确认利用成功）。",
     "recommended_action": "block_ip",
     "requires_human_approval": true,
-    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论；知识检索处于降级模式（lexical_fallback，非混合检索），结论仅作本地验证参考。"
+    "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论。"
   },
   "conclusion_basis": {
     "attack_type": {
@@ -1440,47 +1436,45 @@
     "note": "仅作独立评测对照，未参与调查过程"
   },
   "rag": {
-    "retrieval_state": "degraded",
-    "state": "degraded",
-    "retrieval_mode": "lexical_fallback",
-    "backend": "data/knowledge_cards(manifest-verified)+lexical",
-    "degraded": true,
+    "retrieval_state": "ok",
+    "state": "ok",
+    "retrieval_mode": "hybrid",
+    "backend": "bge-small-zh-v1.5+qdrant+fts5+rrf",
+    "degraded": false,
     "hits": 4,
     "error_code": null,
     "error_message": null,
-    "notes": [
-      "检索为降级模式（lexical_fallback）：lexical_fallback explicitly configured"
-    ],
+    "notes": [],
     "cards_used": [
-      {
-        "card_id": "KB-FUT-002",
-        "card_type": "security_knowledge",
-        "attack_category": "File_Upload_Traversal",
-        "score": 0.0357,
-        "has_error_revision_note": true
-      },
       {
         "card_id": "KB-FUT-003",
         "card_type": "security_knowledge",
         "attack_category": "File_Upload_Traversal",
-        "score": 0.0357,
+        "score": 1.0,
         "has_error_revision_note": true
       },
       {
         "card_id": "KB-FUT-004",
         "card_type": "security_knowledge",
         "attack_category": "File_Upload_Traversal",
-        "score": 0.0143,
+        "score": 0.9684979838709676,
+        "has_error_revision_note": true
+      },
+      {
+        "card_id": "KB-FUT-002",
+        "card_type": "security_knowledge",
+        "attack_category": "File_Upload_Traversal",
+        "score": 0.9684979838709676,
         "has_error_revision_note": true
       }
     ],
     "card_triggered_queries": [
       {
         "round": 4,
-        "card_id": "KB-FUT-002",
+        "card_id": "KB-FUT-003",
         "card_type": "security_knowledge",
         "step_index": 1,
-        "step": "检索nginx访问日志，统计异常来源IP访问的路径数量、请求频率和状态码分布",
+        "step": "检索nginx访问日志，定位包含异常路径特征的请求并统计来源IP、请求路径和状态码",
         "declared_log_sources": [],
         "log_source": "nginx_access",
         "returned_total": 16,
@@ -1489,10 +1483,10 @@
       },
       {
         "round": 5,
-        "card_id": "KB-FUT-002",
+        "card_id": "KB-FUT-003",
         "card_type": "security_knowledge",
         "step_index": 2,
-        "step": "关联zeek_http记录，核对请求时间、目标主机和异常路径特征",
+        "step": "关联zeek_http记录，核对请求时间、请求方法、目标主机和请求参数特征",
         "declared_log_sources": [],
         "log_source": "zeek_http",
         "returned_total": 1,
