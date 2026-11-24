@@ -226,6 +226,22 @@ def test_case_memory_manifest_review_and_case_alias_isolation(service):
         assert card["card_id"] not in {hit["card_id"] for hit in hits}
 
 
+def test_case_can_be_retrieved_by_either_stage_and_excluded_by_trace(service, monkeypatch):
+    folder = PROJECT_ROOT / "data/case_memories"
+    manifest = SourceManifest(folder / "manifest.json", PROJECT_ROOT)
+    service.ingest_files([folder / "MEM-DEV-002.json"], manifest=manifest, reviewed_by="test")
+    query = "上传后服务器持续外连，如何还原调查顺序"
+    for backend, method in [(service.store, "keyword_search"), (service.vectors, "search")]:
+        with monkeypatch.context() as patch:
+            patch.setattr(backend, method, lambda *args, **kwargs: [])
+            for stage in ("C2_Exfiltration", "Malicious_Upload"):
+                filters = {"attack_category": stage, "exclude_investigation_id": "RUN-A"}
+                hits = service.search(query, top_k=5, filters=filters)
+                assert [card["card_id"] for card in hits] == ["MEM-DEV-002"]
+                filters["exclude_scenario_ids"] = ["CASE-02"]
+                assert service.search(query, top_k=5, filters=filters) == []
+
+
 @pytest.mark.parametrize(
     "reference", ["来源CHAIN-CASE-13记录", "引用LOG-20261120-2001", "chain_case_13_truth.json"]
 )

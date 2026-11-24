@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1",
   "tenant_id": "default",
-  "version": 1,
+  "version": 2,
   "card_id": "MEM-DEV-002",
   "card_type": "verified_error_revision",
   "title": "上传后出现脚本访问与服务器外连：按资产重建多阶段顺序",
@@ -47,6 +47,7 @@
     "需核实当前资产和账号的授权，历史案例只能提供调查方法。"
   ],
   "attack_category": "Malicious_Upload",
+  "related_attack_categories": ["C2_Exfiltration"],
   "mitre_id": null,
   "applicable_log_sources": [
     "nginx_access",
@@ -85,7 +86,7 @@
   "valid_until": null,
   "dataset_split": "development",
   "created_at": "2026-11-19T00:00:00.000Z",
-  "updated_at": "2026-11-19T00:00:00.000Z",
+  "updated_at": "2026-11-24T00:00:00.000Z",
   "origin": {
     "case_id": "CHAIN-CASE-02",
     "investigation_id": "CHAIN-CASE-02",

@@ -286,10 +286,22 @@ class KnowledgeService:
                         "matched_section": item["section_path"],
                     }
                 )
-                if len(results) == top_k:
+                if len(results) == top_k and not category:
                     break
             if len(results) >= top_k or depth >= 200:
-                return results
+                if category and top_k > 1 and not baseline:
+                    # V2 已明确调查类别时，给该类别的审核案例保留最多一半名额。
+                    # 先排除同案，再按原排名取案例，剩余名额仍按融合分补齐。
+                    cases = [
+                        r for r in results if r["card_type"] != "security_knowledge"
+                    ][: top_k // 2]
+                    reserved = {r["card_id"] for r in cases}
+                    for hit in results:
+                        if len(reserved) == top_k:
+                            break
+                        reserved.add(hit["card_id"])
+                    return [r for r in results if r["card_id"] in reserved]
+                return results[:top_k]
             depth = min(depth * 2, 200)
 
     @staticmethod

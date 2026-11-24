@@ -20,7 +20,7 @@
       "scenario_ids": [
         "CHAIN-CASE-02"
       ],
-      "sha256": "11a7df7c608cf9c379ba1185440fd6af4a4e30bba338c0f68a35cb6be0781f91"
+      "sha256": "bb1d6293d193ba3ef961f0774885ffc2e5519358869cb7b338f4c834bee7aa37"
     },
     "data/case_memories/MEM-DEV-006.json": {
       "tenant_id": "default",

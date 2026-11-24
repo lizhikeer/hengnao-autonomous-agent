@@ -131,12 +131,34 @@ def test_rest_passes_case_scope_and_returns_investigation_content(monkeypatch):
     with TestClient(app) as client:
         result = client.post(
             "/tools/search_knowledge",
-            json={"query": "扫描探测", "attack_category": "Scan", "case_id": "CASE-01"},
+            json={"query": "扫描探测", "attack_category": "Scan", "case_id": "CASE-01", "trace_id": "CASE-01"},
         )
     assert result.status_code == 200
     item = result.json()["items"][0]
     assert item["source_reference"] == "WSTG 4.1"
     assert item["investigation_steps"] == ["核对授权范围"]
+
+
+def test_search_excludes_all_traces_seen_under_an_investigation(client, replay_backend, monkeypatch):
+    captured = []
+
+    def record_scope(query, *, top_k, filters):
+        captured.append(filters)
+        return []
+
+    _inject_hybrid(monkeypatch, record_scope)
+    case = "RUN-V2-ISOLATION"
+    search = {"query": "回连调查", "case_id": case, "attack_category": "C2_Exfiltration", "limit": 5}
+    assert client.post("/tools/search_knowledge", json=search).status_code == 200
+    assert captured[-1]["knowledge_only"]
+    # 使用来源过滤查询获得的 trace 也必须登记，不能只记录请求里的 trace_id。
+    rows = client.post("/tools/query_logs", json={"case_id": case, "src_ip": "10.0.0.66", "limit": 200}).json()["items"]
+    observed = {r["trace_id"] for r in rows}
+    assert len(observed) > 1
+    result = client.post("/tools/query_logs", json={"case_id": case, "trace_id": "CHAIN-CASE-02"})
+    assert result.json()["items"]
+    assert client.post("/tools/search_knowledge", json=search).status_code == 200
+    assert set(captured[-1]["exclude_scenario_ids"]) == observed | {case, "CHAIN-CASE-02"}
 
 
 def test_unknown_card_type_falls_back(monkeypatch):
