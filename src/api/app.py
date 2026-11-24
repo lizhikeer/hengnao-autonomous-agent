@@ -422,7 +422,6 @@ def query_logs(req: QueryLogsRequest):
     registered = registry.register(
         (r["log_id"] for r in result.items if r.get("log_id")),
         case_id=req.case_id,
-        trace_ids=[req.trace_id, *(row.trace_id for row in validated_items)],
         query_params={
             "src_ip": req.src_ip,
             "dest_ip": req.dest_ip,
@@ -434,6 +433,7 @@ def query_logs(req: QueryLogsRequest):
             "limit": req.limit,
             "data_source": result.data_source,
         },
+        trace_ids=[req.trace_id, *(row.trace_id for row in validated_items)],
     )
     _audit(
         "query_logs",

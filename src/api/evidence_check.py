@@ -63,9 +63,9 @@ class EvidenceRegistry:
         self,
         log_ids: Iterable[str],
         *,
+        trace_ids: Iterable[str | None] = (),
         case_id: str | None = None,
         query_params: dict[str, Any] | None = None,
-        trace_ids: Iterable[str | None] = (),
     ) -> int:
         """登记一次查询返回的证据编号，返回新登记条数。"""
         if not case_id or not case_id.strip() or case_id == UNSCOPED_BUCKET:
