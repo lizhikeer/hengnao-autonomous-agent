@@ -55,3 +55,59 @@ $env:SECLOG_PUBLIC_HOST='<隧道主机名>'
 试运行到交互问答后，选 A 或 B，再点发送；不点击发送不算回答。当前后端只返回 `approval_required`、`executed=false`，没有真实权限网关、封禁和邮件发送。
 
 Mock 使用固定回放时间 `2026-10-27T14:26:00Z`，不是实时安全监测。证据表在内存中，重启后需要重新查询。程序校验能证明编号由该事件查询返回，不能独立证明上游日志未被篡改，也不能保证模型的攻击因果判断一定正确。
+
+---
+
+## Week 3（V2）配置变更
+
+### 一、公网入口以架构文档为准
+
+正式入口是 `https://seclog.91666.icu:18443`（国内 IPv4 中转 → NAS），见
+`docs/架构变更说明_2026-11-12.md`。上文的 Cloudflare 隧道地址是历史记录，
+**不再作为平台配置依据**；重建隧道后不要回写旧地址。
+
+### 二、调查节点只读，处置独立成节点
+
+| 节点 | 变更 | 配置 |
+| --- | --- | --- |
+| node1 / 自规划 | 调查提示词升级 | `platform_nodes/investigation_prompt.txt`；强制"先上下文 + `seclog_search_knowledge`（带 `case_id`）→ 按知识卡 `investigation_steps` 定向补查 `log_source` → 按 `error_revision_note` 复查 → 再下结论"；仍只绑定 `SecLog_只读调查`（`/investigation/`，四个读取工具） |
+| node3 / 交互 | 确认是否提交申请 | `confirm_block` 单选 A/B，选项值配置为单个字母。A 允许提交申请，B、空值和超时均按拒绝处理。等待 600 秒。 |
+| **node7 / 代码（新增）** | 受控处置步骤 | `platform_nodes/code_response_step.py`。分别将 `triage`、`answer`、`seed` 引用到 `$.node2.triage`、`$.node3.confirm_block._answer`、`$.kv_user.input`。将 `result_key` 按前文配置解析为 Object 输出 `payload`，包含 `receipt` 与 `results`。 |
+| node5 / 代码 | 报告节点 | `input` 引用 `$.node7.payload.results`，`receipt` 引用 `$.node7.payload.receipt`。 |
+| 结束 | 输出不变 | 十一项仍引用 `$.node5.payload.results.<字段>` |
+
+主路径为开始 → node0 → node1 → node6 → node2 → node3 → node7 → node5 → 结束。
+若平台需配置分支，两条边均通往 node7，由它按选项值处理。只有单个字符串 A 会提交申请。B 和无回答生成 `REJECTED`，有回执可进报告。
+
+### 三、回执状态口径
+
+`code_response_step.py` 原样透出服务端状态，不做二次加工：
+
+| 状态 | 含义 | 是否执行 |
+| --- | --- | :--- |
+| `no_action` | 结论为无需处置 | 否 |
+| `REJECTED` | 人工未批准 / 拒绝 | 否 |
+| `approval_required` | 已登记待审批单，等待权限网关或审批回执 | 否 |
+| `EXECUTED` | 模拟状态机已写入执行审计，回执带 `simulation=true`、`mock=true` | 否 |
+| `BLOCKED_BY_POLICY` | 策略网关拦截（禁止动作 / 白名单 / 目标类型越界 / 缺证据） | 否，fail-closed |
+| `APPROVAL_TIMEOUT` | 工单到期拒批 | 否 |
+
+服务端返回 `approval_required` 却没有 `approval_id` 时，代码节点直接抛错——
+"没登记成功"不能被当成"待审批"。
+
+### 四、本地 HTTP 验证和平台前置条件
+
+本地验证命令为 `python -m pytest tests/test_w3_response_http.py -q`。测试用临时目录记录模拟审计。
+
+1. 在独立测试进程设 `SECLOG_RESPONSE_MODE=simulation` 和临时 `SECLOG_STATE_DIR`。
+   `SECLOG_RESPONSE_SUBMIT_TOKEN` 为提交凭据，`SECLOG_RESPONSE_APPROVAL_TOKENS_JSON`
+   为审批人到各自凭据的映射。两类凭据独立配置。
+2. 调查完成后，交互节点的 A 只确认提交申请。节点通过配置的 `submit_token` 调用
+   `POST /tools/request_response`，发送本案证据和 `asset_id`，读取回执中的工单号。
+3. 审批人在独立审批入口用其 Bearer 凭据调用 `POST /tools/approve_response`。请求注明
+   `case_id`、`approval_id`、`decision`（`approve` 或 `reject`）。批准时填
+   `expected_effect` 和 `rollback_plan`，拒绝时可附 `reason`。
+   动作、目标和证据来自服务端保存的待审工单。待审工单随测试进程重启清空。
+
+平台演示还需要 NAS 测试部署、公网 HTTPS 和恒脑登录。平台审批结算需要可验证的审批人身份，
+审批凭据只由审批入口使用。`data/agent_traces/v2/` 当前记录本地回放，线上原始轨迹须从平台导出。

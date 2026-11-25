@@ -43,11 +43,6 @@ for _path in (str(PROJECT_ROOT), str(SRC_DIR)):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-# 数据集回放：本机没有 ClickHouse，显式指定可免去每次连接超时的等待。
-os.environ.setdefault("SECLOG_DATA_SOURCE", "dataset_replay")
-# 处置必须走状态机，否则第 4、5 步退化成"只登记"。
-os.environ.setdefault("SECLOG_RESPONSE_MODE", "enforced")
-
 from ai_engine.investigation import InvestigationSession  # noqa: E402
 from api import app as api_app  # noqa: E402
 from api.schemas import ApproveResponseRequest, RequestResponseRequest  # noqa: E402
@@ -653,6 +648,10 @@ def build_report(context: Dict[str, Any]) -> str:
 # 主流程
 # ---------------------------------------------------------------------------
 def main(argv: Optional[List[str]] = None) -> int:
+    # 仅在作为独立 CLI 运行时注入回放与 enforced 默认模式，避免 import 本模块污染单测进程环境
+    os.environ.setdefault("SECLOG_DATA_SOURCE", "dataset_replay")
+    os.environ.setdefault("SECLOG_RESPONSE_MODE", "enforced")
+
     parser = argparse.ArgumentParser(description="W3 端到端全链路闭环")
     parser.add_argument("--output", default=str(PROJECT_ROOT / "docs" / "iterations" / "w3_e2e_pipeline_report.md"))
     parser.add_argument("--log-dir", default=str(DEFAULT_LOG_DIR))

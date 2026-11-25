@@ -31,7 +31,7 @@ def import_cards(service, tmp_path, cards, *, approve=True, split="knowledge"):
 def test_pending_is_sqlite_only(service, card, tmp_path):
     result = import_cards(service, tmp_path, [card], approve=False)
     assert result[0]["status"] == "pending"
-    assert service.store.get("default", card["card_id"], 1)["review_status"] == "pending"
+    assert service.store.get("default", card["card_id"], card["version"])["review_status"] == "pending"
     for collection in ("security_knowledge", "verified_cases"):
         assert not service.vectors.client.collection_exists(collection)
     assert service.search("密码爆破") == []
@@ -50,13 +50,15 @@ def test_publish_reimport_and_restore_full_text(service, card, tmp_path):
 
 
 def test_new_pending_keeps_old_published_version(service, card, tmp_path):
+    original_version = card["version"]
+    next_version = original_version + 1
     import_cards(service, tmp_path, [card])
-    card.update(version=2, title="新版：登录失败后成功的调查")
+    card.update(version=next_version, title="新版：登录失败后成功的调查")
     import_cards(service, tmp_path, [card], approve=False)
-    assert {item["version"] for item in service.search("登录爆破")} == {1}
+    assert {item["version"] for item in service.search("登录爆破")} == {original_version}
     import_cards(service, tmp_path, [card])
-    assert {item["version"] for item in service.search("登录爆破")} == {2}
-    card["version"] = 1
+    assert {item["version"] for item in service.search("登录爆破")} == {next_version}
+    card["version"] = original_version
     with pytest.raises(ValueError, match="同版本内容冲突"):
         import_cards(service, tmp_path, [card])
 
@@ -75,8 +77,10 @@ def test_incompatible_collection_is_preserved(tmp_path):
 
 
 def test_index_failure_retains_old_version_and_retry_is_safe(service, card, tmp_path, monkeypatch):
+    original_version = card["version"]
+    next_version = original_version + 1
     import_cards(service, tmp_path, [card])
-    card.update(version=2, title="新版认证调查")
+    card.update(version=next_version, title="新版认证调查")
     original = service.vectors.upsert
     with monkeypatch.context() as patch:
         patch.setattr(
@@ -84,7 +88,7 @@ def test_index_failure_retains_old_version_and_retry_is_safe(service, card, tmp_
         )
         with pytest.raises(OSError):
             import_cards(service, tmp_path, [card])
-    assert {item["version"] for item in service.search("密码爆破")} == {1}
+    assert {item["version"] for item in service.search("密码爆破")} == {original_version}
     assert (
         service.store.db.execute(
             "SELECT count(*) FROM kb_index_jobs WHERE status='failed'"
@@ -93,7 +97,7 @@ def test_index_failure_retains_old_version_and_retry_is_safe(service, card, tmp_
     )
     assert service.vectors.upsert == original
     import_cards(service, tmp_path, [card])
-    assert {item["version"] for item in service.search("密码爆破")} == {2}
+    assert {item["version"] for item in service.search("密码爆破")} == {next_version}
 
 
 def test_withdrawal_is_effective_even_when_qdrant_delete_fails(
@@ -110,9 +114,9 @@ def test_withdrawal_is_effective_even_when_qdrant_delete_fails(
     assert service.search("密码爆破") == []
     with pytest.raises(ValueError, match="恢复下架"):
         import_cards(service, tmp_path, [card])
-    card["version"] = 2
+    card["version"] += 1
     import_cards(service, tmp_path, [card])
-    assert service.search("密码爆破")[0]["version"] == 2
+    assert service.search("密码爆破")[0]["version"] == card["version"]
 
 
 def test_tenant_category_log_source_and_dates(service, card, tmp_path):

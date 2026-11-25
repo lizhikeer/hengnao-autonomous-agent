@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import (
     ALLOWED_LOG_SOURCES,
@@ -100,6 +100,19 @@ class QueryMeta(BaseModel):
                 "matched": 29,
             }
         ],
+    )
+    degraded: bool = Field(
+        default=False,
+        description=(
+            "检索是否处于降级模式。true 表示本次结果来自词面降级检索（如缺向量依赖），"
+            "与『检索失败』（503）和『零命中』（total=0）是三种不同状态，消费方不得混用"
+        ),
+        examples=[False],
+    )
+    retrieval_mode: Optional[str] = Field(
+        default=None,
+        description="检索模式标识：hybrid / lexical_fallback / mock；无检索的后端留空",
+        examples=["hybrid"],
     )
     notes: list[str] = Field(
         default_factory=list,
@@ -432,11 +445,12 @@ class RequestResponseRequest(BaseModel):
     )
     asset_id: Optional[str] = Field(
         default=None,
-        max_length=64,
+        min_length=1,
+        max_length=128,
         description=(
-            "受影响的资产编号（如 web-prod-01）。enforced 模式下用于判定 target_types 约束："
+            "受影响的资产编号（如 web-prod-01）。enforced/simulation 模式下用于判定 target_types 与证据绑定："
             "block_ip 只允许作用在 web 资产上，对 host/database 会被策略拦截。"
-            "不填时按 target_ip 反查资产台账。"
+            "不填时在 enforced 模式下按 target_ip 反查资产台账。"
         ),
         examples=["web-prod-01"],
     )
@@ -464,25 +478,10 @@ class RequestResponseRequest(BaseModel):
         if not self.evidence_log_ids:
             raise ValueError("处置类动作必须提供至少一条 evidence_log_ids，无证据不得处置")
         return self
-        if self.action == "none" and self.target_ip:
-            raise ValueError("action=none 表示无需处置，不应指定 target_ip")
-        return self
 
 
 class RequestResponseResponse(BaseModel):
-    """处置提交响应。
-
-    两种运行模式共用本模型：
-
-    * ``SECLOG_RESPONSE_MODE=legacy``（默认）：只登记待审批，``executed`` 恒为 false，
-      不产生任何状态机副作用；W2 的既有测试断言的就是这一形态。
-    * ``SECLOG_RESPONSE_MODE=enforced``：接入 ``operations.response_executor``，
-      低危授权动作流转为 executed 并给出 ``expires_at``，高危动作返回真实入库的审批单号，
-      策略/白名单命中时 ``status=blocked_by_policy`` 并给出 ``policy_reason``。
-
-    无论哪种模式，``mock`` 都为 true——本项目的处置是**模拟落盘**，
-    不调用任何真实的防火墙/网关接口。
-    """
+    """处置提交响应：兼容 legacy（仅登记）、enforced（状态机）与 simulation（独立审批闭环）。"""
 
     status: Literal[
         "approval_required",
@@ -490,11 +489,17 @@ class RequestResponseResponse(BaseModel):
         "executed",
         "no_action",
         "blocked_by_policy",
+        "BLOCKED_BY_POLICY",
+        "EXECUTED",
+        "REJECTED",
+        "INVALID_APPROVAL",
+        "APPROVAL_TIMEOUT",
+        "EXECUTOR_UNAVAILABLE",
     ] = Field(
         description=(
-            "处置状态：no_action(无需处置)/rejected(证据校验未通过)/"
-            "approval_required(已登记待审批)/executed(状态机已执行，见 expires_at)/"
-            "blocked_by_policy(策略或白名单拦截，见 policy_reason)"
+            "处置状态：no_action(无需处置)/rejected|REJECTED(校验或审批拒绝)/"
+            "approval_required(已登记待审批)/executed|EXECUTED(状态机已执行模拟审计)/"
+            "blocked_by_policy|BLOCKED_BY_POLICY(策略或白名单拦截)"
         ),
         examples=["approval_required"],
     )
@@ -505,7 +510,7 @@ class RequestResponseResponse(BaseModel):
     )
     executed: bool = Field(
         default=False,
-        description="状态机是否已流转到执行态。不代表真实网络处置已生效（本项目不接真实设备）",
+        description="状态机是否已流转到执行态（simulation 模式恒为 false）。不代表真实网络处置已生效",
         examples=[False],
     )
     detail: str = Field(
@@ -522,9 +527,13 @@ class RequestResponseResponse(BaseModel):
         description="Mock 标识：所有处置均为本地模拟落盘，不调用真实网络设备",
         examples=[True],
     )
+    simulation: bool = Field(
+        default=False,
+        description="是否经过独立凭据校验的模拟处置流程",
+    )
     policy_reason: Optional[str] = Field(
         default=None,
-        description="策略网关给出的原因（ALLOWED 或 BLOCKED_BY_POLICY:<原因>）；仅 enforced 模式填充",
+        description="策略网关给出的原因（ALLOWED 或 BLOCKED_BY_POLICY:<原因>）",
         examples=["BLOCKED_BY_POLICY:allowlist_ip:10.0.0.40"],
     )
     action_id: Optional[str] = Field(
@@ -545,11 +554,12 @@ class RequestResponseResponse(BaseModel):
 
 
 class ApproveResponseRequest(BaseModel):
-    """人工审批请求：approve 放行 / reject 拒批。"""
+    """人工审批请求：approve 放行 / reject 拒批（兼容 enforced 与 simulation 两种模式）。"""
 
+    model_config = ConfigDict(extra="forbid")
     approval_id: str = Field(
         min_length=1,
-        max_length=64,
+        max_length=128,
         description="待审批单编号（由 /tools/request_response 返回的 approval_id）",
         examples=["APR-20261125143000-0001"],
     )
@@ -557,10 +567,18 @@ class ApproveResponseRequest(BaseModel):
         description="approve=批准并执行；reject=拒批，不产生任何副作用",
         examples=["approve"],
     )
-    reviewer: str = Field(
+    case_id: Optional[str] = Field(
+        default=None,
         min_length=1,
         max_length=64,
-        description="审批人标识（不可为空，审计要能追溯到人）",
+        description="所属案例编号（simulation 模式必填）",
+        examples=["CASE-W3-HTTP"],
+    )
+    reviewer: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description="审批人标识（enforced 模式必填，审计要能追溯到人）",
         examples=["ops_zhang"],
     )
     reason: str = Field(
@@ -571,11 +589,13 @@ class ApproveResponseRequest(BaseModel):
     )
     expected_effect: str = Field(
         default="",
+        max_length=500,
         description="预期效果（decision=approve 时必填，审批单 6 项必填字段之一）",
         examples=["该源 IP 对 web-prod-01 的请求全部被拒"],
     )
     rollback_plan: str = Field(
         default="",
+        max_length=500,
         description="回滚方案（decision=approve 时必填，审批单 6 项必填字段之一）",
         examples=["到期自动解除；如需提前解除执行 sweep_expired"],
     )

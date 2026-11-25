@@ -1,0 +1,25 @@
+{
+  "case_id": "CHAIN-CASE-05",
+  "is_malicious": true,
+  "attack_type": "Path_Traversal_Privilege",
+  "risk_level": "HIGH",
+  "attacker_ip": "203.0.113.147",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261103-0502",
+    "LOG-20261103-0503",
+    "LOG-20261103-0504",
+    "LOG-20261103-0505",
+    "LOG-20261103-0506",
+    "LOG-20261103-0507",
+    "LOG-20261103-0508",
+    "LOG-20261103-0509",
+    "LOG-20261103-0510",
+    "LOG-20261103-0515",
+    "LOG-20261103-0518"
+  ],
+  "attack_chain_summary": "攻击源 203.0.113.147 对 web-prod-01 实施：目录遍历/越权访问 11 次；攻击请求得到响应（未确认利用成功）。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论。"
+}

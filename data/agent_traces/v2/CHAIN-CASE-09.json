@@ -1,0 +1,27 @@
+{
+  "case_id": "CHAIN-CASE-09",
+  "is_malicious": false,
+  "attack_type": "none",
+  "risk_level": "LOW",
+  "attacker_ip": "10.0.0.77",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261105-0901",
+    "LOG-20261105-0902",
+    "LOG-20261105-0903",
+    "LOG-20261105-0904",
+    "LOG-20261105-0905",
+    "LOG-20261105-0906",
+    "LOG-20261105-0907",
+    "LOG-20261105-0908",
+    "LOG-20261105-0909",
+    "LOG-20261105-0910",
+    "LOG-20261105-0913",
+    "LOG-20261105-0914",
+    "LOG-20261105-0917"
+  ],
+  "attack_chain_summary": "漏洞扫描源 10.0.0.77 对已登记资产进行探测；逐条核对来源、目标、授权时间窗及禁止行为（账号已登记、账号类型可执行该操作、来源 IP 符合授权范围、目标资产在授权范围、全部行为在维护窗口内、资产已登记、所有扫描源、资产、时间窗和行为均在扫描授权范围），未发现需告警的利用或禁止行为，判定为授权安全测试。",
+  "recommended_action": "none",
+  "requires_human_approval": false,
+  "unknown_items": ""
+}

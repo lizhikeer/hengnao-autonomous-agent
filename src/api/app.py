@@ -39,11 +39,12 @@ import sys
 import threading
 from typing import Any, Optional
 
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from . import asset_context, datasource, knowledge_adapter
+from . import asset_context, datasource, knowledge_adapter, response_http
 from .config import (
     HIGH_RISK_ACTIONS,
     LIMIT_DEFAULT,
@@ -570,8 +571,12 @@ def query_logs(req: QueryLogsRequest):
 
     # 登记证据：本次查询返回的 log_id 才能被后续处置引用
     registered = registry.register(
-        (r["log_id"] for r in result.items if r.get("log_id")),
+        (row.log_id for row in validated_items),
         case_id=req.case_id,
+        facts={
+            row.log_id: (row.asset_id, tuple(ip for ip in (row.src_ip, row.dest_ip) if ip), row.user)
+            for row in validated_items
+        },
         query_params={
             "src_ip": req.src_ip,
             "dest_ip": req.dest_ip,
@@ -723,16 +728,29 @@ def search_knowledge(req: SearchKnowledgeRequest):
             "attack_category": req.attack_category,
             "hits": len(cards),
             "retrieval_mode": meta.get("retrieval_mode"),
+            "degraded": bool(meta.get("degraded")),
         },
     )
+    notes: list[str] = []
+    if not cards:
+        notes.append("检索未命中任何卡片")
+    if meta.get("degraded"):
+        notes.append(
+            "检索为降级模式（"
+            + str(meta.get("retrieval_mode"))
+            + "）："
+            + str(meta.get("degraded_reason") or "混合检索后端不可用")
+        )
     return SearchKnowledgeResponse(
         meta=QueryMeta(
             total=len(cards),
             data_source="mock" if meta.get("mock") else "hybrid_search",
             mock=bool(meta.get("mock")),
             backend_available=True,
+            degraded=bool(meta.get("degraded")),
+            retrieval_mode=meta.get("retrieval_mode"),
             dataset=meta.get("backend"),
-            notes=[] if cards else ["检索未命中任何卡片"],
+            notes=notes,
         ),
         items=[KnowledgeCard(**c) for c in cards],
     )
@@ -743,10 +761,13 @@ def search_knowledge(req: SearchKnowledgeRequest):
 # ---------------------------------------------------------------------------
 
 
+_response_bearer = HTTPBearer(auto_error=False)
+
+
 @app.post(
     "/tools/request_response",
     response_model=RequestResponseResponse,
-    summary="提交处置动作与证据编号（高危动作进入人工审批，本周不执行）",
+    summary="提交处置申请；enforced/simulation 模式启用策略网关和人工审批",
     description=(
         "Agent 提交处置动作时必须附上支撑证据的 log_id，服务端做程序性校验："
         "证据必须来自本次调查真实查询返回，伪造编号或引用其它调查任务的编号一律拒绝。"
@@ -755,7 +776,18 @@ def search_knowledge(req: SearchKnowledgeRequest):
     ),
     tags=["处置工具"],
 )
+def request_response_http(
+    req: RequestResponseRequest,
+    auth: HTTPAuthorizationCredentials | None = Depends(_response_bearer),
+):
+    if response_http.mode() == "simulation":
+        return response_http.submit(req, auth.credentials if auth else "")
+    return request_response(req)
+
+
 def request_response(req: RequestResponseRequest):
+    if response_http.mode() == "simulation":
+        raise HTTPException(503, "此入口只用于旧版登记。模拟处置须走受控 HTTP 入口")
     guard = _real_backend_guard()
     if guard is not None:
         return guard
@@ -883,17 +915,38 @@ def _to_action_item(record: dict[str, Any]) -> ResponseActionItem:
     response_model=RequestResponseResponse,
     summary="人工审批处置工单（approve 执行 / reject 拒批）",
     description=(
-        "对 /tools/request_response 产生的待审批单做人工裁决。"
+        "对 /tools/request_response 产生的待审批单做人工裁决（兼容 enforced 与 simulation 模式）。"
         "approve 必须补齐 expected_effect 与 rollback_plan 两项，否则 422；"
         "审批通过后状态机落盘执行审计并计算到期时间，reject 不产生任何副作用。"
-        "身份校验只认 reviewer 字段——模型自称已审批不构成授权。"
     ),
     tags=["处置工具"],
 )
-def approve_response(req: ApproveResponseRequest):
+def approve_response(
+    req: ApproveResponseRequest,
+    auth: HTTPAuthorizationCredentials | None = Depends(_response_bearer),
+):
+    if response_http.mode() == "simulation":
+        if not (req.case_id and req.case_id.strip()):
+            return _error(
+                HTTP_422,
+                "invalid_params",
+                "simulation 模式下 case_id 必填",
+                {"field": "case_id"},
+            )
+        return response_http.settle(req, auth.credentials if auth else "")
+
     guard = _enforced_guard()
     if guard is not None:
         return guard
+
+    if not (req.reviewer and req.reviewer.strip()):
+        return _error(
+            HTTP_422,
+            "invalid_params",
+            "enforced 模式下 reviewer 必填",
+            {"field": "reviewer"},
+        )
+    reviewer = req.reviewer.strip()
 
     pending = response_executor.get_pending(req.approval_id)
     if pending is None:
@@ -914,10 +967,10 @@ def approve_response(req: ApproveResponseRequest):
                 "expected_effect": req.expected_effect,
                 "rollback_plan": req.rollback_plan,
             }
-            result = response_executor.approve(req.approval_id, order, req.reviewer)
+            result = response_executor.approve(req.approval_id, order, reviewer)
         else:
             result = response_executor.reject(
-                req.approval_id, req.reviewer, reason=req.reason
+                req.approval_id, reviewer, reason=req.reason
             )
     except response_executor.ApprovalError as exc:
         _audit(
@@ -939,9 +992,9 @@ def approve_response(req: ApproveResponseRequest):
         "target_type": pending.get("target_type"),
         "evidence_log_ids": pending.get("evidence_log_ids"),
         "approval_id": req.approval_id,
-        "detail": req.reason or f"{req.decision} by {req.reviewer}",
+        "detail": req.reason or f"{req.decision} by {reviewer}",
     }
-    _audit(f"approve_response:{event}", {**payload, "reviewer": req.reviewer})
+    _audit(f"approve_response:{event}", {**payload, "reviewer": reviewer})
     _safe_notify(event, payload)
 
     if event == "executed":
@@ -952,14 +1005,14 @@ def approve_response(req: ApproveResponseRequest):
             action_id=result.get("action_id"),
             expires_at=result.get("expires_at") or None,
             detail=(
-                f"审批单 {req.approval_id} 已由 {req.reviewer} 批准并执行，"
+                f"审批单 {req.approval_id} 已由 {reviewer} 批准并执行，"
                 f"到期时间 {result.get('expires_at') or '未设置'}。模拟处置，未调用真实网络设备。"
             ),
         )
     return RequestResponseResponse(
         status="rejected",
         approval_id=req.approval_id,
-        detail=f"审批单 {req.approval_id} 已被 {req.reviewer} 拒批，未产生任何副作用",
+        detail=f"审批单 {req.approval_id} 已被 {reviewer} 拒批，未产生任何副作用",
     )
 
 

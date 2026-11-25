@@ -84,6 +84,9 @@ def _fake_tools(query_results: list[list[dict[str, Any]]]):
             "asset_context": {
                 "asset_id": "web-prod-01",
                 "importance": "HIGH",
+                # 真实 /tools/get_context 必返 role（资产类型）；处置建议按类型选动作，
+                # 缺这个字段会让 block_ip（仅限 web）被降级成短时封禁。
+                "role": "web",
                 "maintenance_windows": [
                     {"kind": "daily", "start": "00:00", "end": "23:59", "timezone": "Asia/Shanghai"}
                 ],
@@ -187,12 +190,19 @@ def test_benign_only_traffic_is_not_malicious_and_no_response():
 
 
 def test_decision_depends_on_tool_result():
+    """同一会话在有无"利用阶段"时走不同查询分支。
+
+    Week 3 起知识检索是**结论前的固定步骤**（RAG 驱动补查），因此
+    "没有检索"不再作为区分点；区分点变成检索用的分类与问题：
+    只有爆破时按 Brute_Force 检索，出现注入后按 SQL_Injection 检索。
+    """
     brute_only = [_log("LOG-20261027-0001", stage="brute_force", user="admin")]
     s1 = InvestigationSession(
         case_id="CASE-BRUTE", seed_trace_id="CHAIN-ATTACK-01", tools=_fake_tools([brute_only])
     )
     s1.run()
     tools1 = [c.tool for c in s1.calls]
+    queries1 = [c.args for c in s1.calls if c.tool == "search_knowledge"]
 
     with_exploit = [
         _log("LOG-20261027-0001", stage="brute_force", user="admin"),
@@ -203,10 +213,15 @@ def test_decision_depends_on_tool_result():
     )
     s2.run()
     tools2 = [c.tool for c in s2.calls]
+    queries2 = [c.args for c in s2.calls if c.tool == "search_knowledge"]
 
-    assert "search_knowledge" not in tools1, "只有爆破阶段时不应去检索利用类知识卡"
-    assert "search_knowledge" in tools2, "出现利用阶段后才应检索处置知识"
-    assert tools1 != tools2
+    assert "search_knowledge" in tools1 and "search_knowledge" in tools2
+    assert queries1 and queries2
+    assert queries1[0].get("attack_category") == "Brute_Force"
+    assert queries2[0].get("attack_category") == "SQL_Injection"
+    assert queries1[0]["query"] != queries2[0]["query"]
+    # 工具序列相同（都按流程查日志→上下文→知识），差异体现在检索内容与最终结论上
+    assert tools1 == tools2
 
 
 # ---------------------------------------------------------------------------
