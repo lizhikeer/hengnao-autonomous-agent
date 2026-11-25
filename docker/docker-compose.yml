@@ -80,6 +80,20 @@ services:
       API_BIND_HOST: 0.0.0.0
       API_BIND_PORT: 8000
       TZ: Asia/Shanghai
+      # --- W3 受控处置 ---
+      # legacy（默认）= 只登记待审批，不产生状态机副作用；enforced = 接 response_executor
+      SECLOG_RESPONSE_MODE: ${SECLOG_RESPONSE_MODE:-legacy}
+      # 审计与通知队列的落盘目录（executed_enforcements.jsonl / notification_outbox.jsonl）
+      SECLOG_STATE_DIR: /app/data/state
+      # 可选：把状态文件指到显式路径，优先于 SECLOG_STATE_DIR
+      # SECLOG_RESPONSE_DB: /app/data/state/executed_enforcements.jsonl
+      # 无 SMTP 凭据时通知自动降级进 notification_outbox.jsonl，不阻断处置
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      ALERT_RECEIVER_EMAIL: ${ALERT_RECEIVER_EMAIL:-}
+    volumes:
+      # 状态卷：容器重建后审计与 outbox 仍在，便于复盘
+      - ${SECLOG_DATA_ROOT:-/vol4/seclog}/state:/app/data/state
     ports:
       # 公网隧道（natfrp）指向本端口；宿主机其余服务不受影响
       - "127.0.0.1:${SECLOG_API_PORT:-18000}:8000"
