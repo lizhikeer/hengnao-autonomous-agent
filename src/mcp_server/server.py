@@ -148,9 +148,10 @@ def seclog_search_knowledge(
     attack_category: Optional[str] = None,
     limit: int = 5,
     case_id: Optional[str] = None,
+    trace_id: Optional[str] = None,
 ) -> dict[str, Any]:
     req = SearchKnowledgeRequest(
-        query=query, attack_category=attack_category, limit=limit, case_id=case_id
+        query=query, attack_category=attack_category, limit=limit, case_id=case_id, trace_id=trace_id
     )
     return _unwrap(api_app.search_knowledge(req))
 

@@ -12,7 +12,7 @@ WORKDIR /app
 # 国内构建走清华源；如需切换，构建时传 --build-arg PIP_INDEX_URL=...
 ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 
-COPY requirements/base.txt requirements/api.txt /app/requirements/
+COPY requirements/base.txt requirements/api.txt requirements/knowledge*.txt /app/requirements/
 
 RUN pip install -i "${PIP_INDEX_URL}" -r /app/requirements/base.txt \
  && pip install -i "${PIP_INDEX_URL}" -r /app/requirements/api.txt
@@ -26,9 +26,19 @@ COPY config/ /app/config/
 # 数据集回放与知识卡：未接 ClickHouse 时的回放来源，体积很小一并带上
 COPY data/full_chain_logs/ /app/data/full_chain_logs/
 COPY data/knowledge_cards/ /app/data/knowledge_cards/
+COPY data/case_memories/ /app/data/case_memories/
+COPY design/knowledge/ /app/design/knowledge/
+COPY scripts/ingest_knowledge.py scripts/eval_knowledge_retrieval.py /app/scripts/
+
+# NAS 混合检索配置启用 CPU 依赖，权重由宿主机只读挂载。
+ARG WITH_KNOWLEDGE=0
+RUN if [ "$WITH_KNOWLEDGE" = "1" ]; then \
+      pip install --index-url https://download.pytorch.org/whl/cpu torch==2.7.1 && \
+      pip install -i "${PIP_INDEX_URL}" -r /app/requirements/knowledge.txt; \
+    fi
 
 # 非 root 运行
-RUN useradd --create-home --uid 10001 seclog && chown -R seclog:seclog /app
+RUN mkdir -p /app/work && useradd --create-home --uid 10001 seclog && chown -R seclog:seclog /app
 USER seclog
 
 EXPOSE 8000

@@ -23,10 +23,11 @@ def main(argv: list[str] | None = None) -> int:
     """approve-by 是管理员明确审批操作；不将此参数暴露给普通 Agent。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["validate", "init", "ingest", "search", "withdraw"])
-    parser.add_argument("--input", type=Path, default=ROOT / "data/knowledge_cards")
     parser.add_argument(
-        "--manifest", type=Path, default=ROOT / "data/knowledge_cards/manifest.json"
+        "--library", choices=["knowledge_cards", "case_memories"], default="knowledge_cards"
     )
+    parser.add_argument("--input", type=Path)
+    parser.add_argument("--manifest", type=Path)
     parser.add_argument("--tenant", default=None)
     parser.add_argument("--sqlite", default=None)
     parser.add_argument("--qdrant-path", default=None)
@@ -38,6 +39,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--card-id", default=None)
     parser.add_argument("--top-k", type=int, default=5)
     args = parser.parse_args(argv)
+    folder = ROOT / "data" / args.library
+    args.input = args.input or folder
+    args.manifest = args.manifest or folder / "manifest.json"
     config = KnowledgeConfig.from_env()
     updates = {
         key: value
@@ -85,7 +89,6 @@ def main(argv: list[str] | None = None) -> int:
             elif args.command == "search":
                 if not args.query:
                     raise ValueError("search 需要 --query")
-                service.vectors.initialize()
                 output = service.search(args.query, top_k=args.top_k)
             else:
                 if not args.card_id or not args.approve_by or not args.reason:

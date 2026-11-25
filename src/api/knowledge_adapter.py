@@ -32,7 +32,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MANIFEST = PROJECT_ROOT / "data" / "knowledge_cards" / "manifest.json"
 
 #: 允许透传给 hybrid_search 的过滤键（与 KnowledgeService.search 白名单一致）
-_ALLOWED_FILTERS = {"attack_category", "log_sources", "tenant_id", "exclude_investigation_id", "exclude_scenario_ids"}
+_ALLOWED_FILTERS = {"attack_category", "log_sources", "tenant_id", "exclude_investigation_id", "exclude_scenario_ids", "knowledge_only"}
 
 #: 知识卡 card_type 到对外枚举的兜底映射
 _CARD_TYPES = {"security_knowledge", "verified_correct_case", "verified_error_revision"}
@@ -206,6 +206,8 @@ def _lexical_search(
 
     scored: list[tuple[float, dict[str, Any]]] = []
     for card in cards:
+        if filters.get("knowledge_only") and card.get("card_type") != "security_knowledge":
+            continue
         origin = card.get("origin") or {}
         if excluded_investigation and origin.get("investigation_id") == excluded_investigation:
             continue

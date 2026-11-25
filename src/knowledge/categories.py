@@ -10,17 +10,16 @@
 
 from __future__ import annotations
 
-#: 首期七类 → 知识卡 attack_category（与 PR #29 的映射逐项一致）
+#: 首期七类 → 知识卡 attack_category（与 PR #40 修订后的新版知识卡类别对齐）
 RELATED_CATEGORIES: dict[str, tuple[str, ...]] = {
     "Scan": ("Information_Gathering", "Discovery"),
     "Brute_Force": ("Credential_Access",),
-    "XSS": ("XSS_RCE",),
+    "XSS_RCE": ("XSS", "Command_Injection", "Remote_Code_Execution"),
+    "File_Upload_Traversal": ("Malicious_Upload", "Path_Traversal_Privilege"),
     "Path_Traversal_Privilege": (
-        "File_Upload_Traversal",
         "Authorization_Failure",
         "Privilege_Escalation",
     ),
-    "Malicious_Upload": ("File_Upload_Traversal",),
     "C2_Exfiltration": ("Command_and_Control", "Exfiltration"),
 }
 

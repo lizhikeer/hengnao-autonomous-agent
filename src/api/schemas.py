@@ -136,6 +136,10 @@ class ErrorBody(BaseModel):
         "evidence_rejected",
         "approval_required",
         "permission_service_unavailable",
+        # W3 受控处置三类：模式未启用 / 审批单不存在 / 审批被拒
+        "response_mode_disabled",
+        "approval_not_found",
+        "approval_rejected",
     ] = Field(description="机器可读错误码", examples=["backend_unavailable"])
     message: str = Field(
         description="人类可读错误说明（中文）",
@@ -351,6 +355,7 @@ class SearchKnowledgeRequest(BaseModel):
     case_id: Optional[str] = Field(
         default=None, min_length=1, max_length=64, description="当前调查编号，用于排除同场景案例"
     )
+    trace_id: Optional[str] = Field(default=None, min_length=1, max_length=128, description="当前日志链编号，与查询记录一并排除")
 
 
 class KnowledgeCard(BaseModel):
@@ -427,7 +432,6 @@ class RequestResponseRequest(BaseModel):
         description="处置目标账号（仅 action=isolate_account 时必填）",
         examples=["admin"],
     )
-    asset_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
     evidence_log_ids: list[str] = Field(
         default_factory=list,
         description="支撑本次处置的证据日志编号列表，必须来自当前 case 已查询返回的 log_id；action=none 时可为空数组",
@@ -438,6 +442,17 @@ class RequestResponseRequest(BaseModel):
         max_length=1000,
         description="处置理由摘要（将进入审批单与审计日志）",
         examples=["攻击源 198.51.100.23 完成账号爆破后 SQL 注入成功，需短时封禁"],
+    )
+    asset_id: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=128,
+        description=(
+            "受影响的资产编号（如 web-prod-01）。enforced/simulation 模式下用于判定 target_types 与证据绑定："
+            "block_ip 只允许作用在 web 资产上，对 host/database 会被策略拦截。"
+            "不填时在 enforced 模式下按 target_ip 反查资产台账。"
+        ),
+        examples=["web-prod-01"],
     )
 
     @model_validator(mode="after")
@@ -466,11 +481,26 @@ class RequestResponseRequest(BaseModel):
 
 
 class RequestResponseResponse(BaseModel):
-    """登记或模拟处置的回执。"""
+    """处置提交响应：兼容 legacy（仅登记）、enforced（状态机）与 simulation（独立审批闭环）。"""
 
-    status: Literal["approval_required", "rejected", "executed", "no_action", "BLOCKED_BY_POLICY", "EXECUTED",
-                    "REJECTED", "INVALID_APPROVAL", "APPROVAL_TIMEOUT", "EXECUTOR_UNAVAILABLE"] = Field(
-        description="处置状态。EXECUTED 且 simulation=true 表示已写入模拟执行审计",
+    status: Literal[
+        "approval_required",
+        "rejected",
+        "executed",
+        "no_action",
+        "blocked_by_policy",
+        "BLOCKED_BY_POLICY",
+        "EXECUTED",
+        "REJECTED",
+        "INVALID_APPROVAL",
+        "APPROVAL_TIMEOUT",
+        "EXECUTOR_UNAVAILABLE",
+    ] = Field(
+        description=(
+            "处置状态：no_action(无需处置)/rejected|REJECTED(校验或审批拒绝)/"
+            "approval_required(已登记待审批)/executed|EXECUTED(状态机已执行模拟审计)/"
+            "blocked_by_policy|BLOCKED_BY_POLICY(策略或白名单拦截)"
+        ),
         examples=["approval_required"],
     )
     approval_id: Optional[str] = Field(
@@ -478,8 +508,9 @@ class RequestResponseResponse(BaseModel):
         description="审批单编号（status=approval_required 时返回）",
         examples=["APPR-20261027-0001"],
     )
-    executed: Literal[False] = Field(
-        description="此服务只支持登记和模拟，真实执行标记恒为 false",
+    executed: bool = Field(
+        default=False,
+        description="状态机是否已流转到执行态（simulation 模式恒为 false）。不代表真实网络处置已生效",
         examples=[False],
     )
     detail: str = Field(
@@ -491,19 +522,118 @@ class RequestResponseResponse(BaseModel):
         description="被程序校验拒绝的证据编号（伪造、不属于本 case 或未被查询返回）",
         examples=[["LOG-FAKE-999"]],
     )
-    mock: Literal[True] = Field(description="Mock 标识：登记动作仅写入本地 Mock 审批表", examples=[True])
-    simulation: bool = Field(default=False, description="是否经过策略网关及模拟处置状态机")
-    deadline: Optional[str] = None
-    policy_reason: Optional[str] = None
+    mock: bool = Field(
+        default=True,
+        description="Mock 标识：所有处置均为本地模拟落盘，不调用真实网络设备",
+        examples=[True],
+    )
+    simulation: bool = Field(
+        default=False,
+        description="是否经过独立凭据校验的模拟处置流程",
+    )
+    policy_reason: Optional[str] = Field(
+        default=None,
+        description="策略网关给出的原因（ALLOWED 或 BLOCKED_BY_POLICY:<原因>）",
+        examples=["BLOCKED_BY_POLICY:allowlist_ip:10.0.0.40"],
+    )
+    action_id: Optional[str] = Field(
+        default=None,
+        description="生效动作编号，sweep_expired / run_post_check 用它定位",
+        examples=["ACT-20261125143000-0001"],
+    )
+    expires_at: Optional[str] = Field(
+        default=None,
+        description="自动解除时间（ISO8601 UTC）；为空表示该动作不自动解除",
+        examples=["2026-11-25T15:00:00+00:00"],
+    )
+    deadline: Optional[str] = Field(
+        default=None,
+        description="审批截止时间（ISO8601 UTC），超时按 on_timeout=reject 自动拒批",
+        examples=["2026-11-25T15:00:00+00:00"],
+    )
 
 
 class ApproveResponseRequest(BaseModel):
-    """只提交工单决定和人工说明。目标、动作与证据从服务端冻结的工单取出。"""
+    """人工审批请求：approve 放行 / reject 拒批（兼容 enforced 与 simulation 两种模式）。"""
 
     model_config = ConfigDict(extra="forbid")
-    case_id: str = Field(min_length=1, max_length=64)
-    approval_id: str = Field(min_length=1, max_length=128)
-    decision: Literal["approve", "reject"]
-    expected_effect: str = Field(default="", max_length=500)
-    rollback_plan: str = Field(default="", max_length=500)
-    reason: str = Field(default="", max_length=500)
+    approval_id: str = Field(
+        min_length=1,
+        max_length=128,
+        description="待审批单编号（由 /tools/request_response 返回的 approval_id）",
+        examples=["APR-20261125143000-0001"],
+    )
+    decision: Literal["approve", "reject"] = Field(
+        description="approve=批准并执行；reject=拒批，不产生任何副作用",
+        examples=["approve"],
+    )
+    case_id: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description="所属案例编号（simulation 模式必填）",
+        examples=["CASE-W3-HTTP"],
+    )
+    reviewer: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description="审批人标识（enforced 模式必填，审计要能追溯到人）",
+        examples=["ops_zhang"],
+    )
+    reason: str = Field(
+        default="",
+        max_length=500,
+        description="审批意见",
+        examples=["确认攻击成立，批准短时封禁"],
+    )
+    expected_effect: str = Field(
+        default="",
+        max_length=500,
+        description="预期效果（decision=approve 时必填，审批单 6 项必填字段之一）",
+        examples=["该源 IP 对 web-prod-01 的请求全部被拒"],
+    )
+    rollback_plan: str = Field(
+        default="",
+        max_length=500,
+        description="回滚方案（decision=approve 时必填，审批单 6 项必填字段之一）",
+        examples=["到期自动解除；如需提前解除执行 sweep_expired"],
+    )
+
+
+class ResponseActionItem(BaseModel):
+    """处置台账中的一条记录（对外只读视图）。"""
+
+    action_id: str = Field(description="生效动作编号", examples=["ACT-20261125143000-0001"])
+    action: str = Field(description="权威动作名", examples=["rate_limit"])
+    target: str = Field(description="处置目标（IP 或账号）", examples=["198.51.100.23"])
+    target_type: str = Field(default="", description="目标资产类型", examples=["web"])
+    lifecycle: str = Field(description="当前生命周期：EXECUTED / REVOKED", examples=["EXECUTED"])
+    case_id: Optional[str] = Field(default=None, description="所属案例编号")
+    executed_at: Optional[str] = Field(default=None, description="执行时间（ISO8601 UTC）")
+    expires_at: Optional[str] = Field(default=None, description="自动解除时间（ISO8601 UTC）")
+    revoked_at: Optional[str] = Field(default=None, description="实际解除时间（ISO8601 UTC）")
+    expired: bool = Field(default=False, description="是否已到期但尚未 sweep")
+
+
+class ResponseStatusResponse(BaseModel):
+    """处置台账：当前生效 / 待审批 / 已回滚。"""
+
+    generated_at: str = Field(description="生成时间（ISO8601 UTC）")
+    mode: str = Field(description="当前运行模式：legacy / enforced", examples=["enforced"])
+    pending: list[dict] = Field(default_factory=list, description="待审批单（含截止时间）")
+    active: list[ResponseActionItem] = Field(default_factory=list, description="仍在生效的处置")
+    revoked: list[ResponseActionItem] = Field(default_factory=list, description="已解除的处置")
+    total_executed: int = Field(default=0, description="历史执行总数")
+    total_revoked: int = Field(default=0, description="历史解除总数")
+
+
+class SweepExpiredResponse(BaseModel):
+    """到期自动解除的结果。"""
+
+    swept_at: str = Field(description="本次扫描时间（ISO8601 UTC）")
+    count: int = Field(description="本次解除的动作数", examples=[1])
+    revoked: list[ResponseActionItem] = Field(default_factory=list, description="被解除的动作明细")
+    pending_expired: list[dict] = Field(
+        default_factory=list, description="顺带结算的超时审批单（on_timeout=reject）"
+    )

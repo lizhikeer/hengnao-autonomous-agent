@@ -36,7 +36,7 @@ def test_seven_categories_declared():
     assert len(codes) == 7
     assert {"Path_Traversal_Privilege", "Malicious_Upload"} <= set(codes)
     missing_cards = [c["code"] for c in catalog if not c["knowledge_card_ready"]]
-    assert missing_cards == ["Scan"]
+    assert missing_cards == []
 
 
 def test_verify_segments_in_sync_with_attack_types():
@@ -73,7 +73,7 @@ def test_invalid_segment_detected():
 def test_zh_name_and_knowledge_category():
     assert attack_types.zh_name("SQL_Injection_After_Brute_Force") == "密码爆破 → SQL 注入"
     assert attack_types.knowledge_category("C2_Exfiltration_After_SQL_Injection") == "C2_Exfiltration"
-    assert attack_types.knowledge_category("Scan") is None
+    assert attack_types.knowledge_category("Scan") == "Scan"
 
 
 def test_infer_from_text():
@@ -225,14 +225,11 @@ def test_seven_categories_are_distinguishable():
 
 
 def test_result_category_maps_to_knowledge_category():
-    """结果分类七个，知识卡分类五个：多对一是允许的，但不能反过来合并结果类。"""
+    """新卡按调查类别过滤；历史复合标签仍可解析。"""
     mapping = {t.code: t.knowledge_category for t in attack_types.ATTACK_TYPES}
-    assert mapping["XSS"] == "XSS_RCE"
-    assert mapping["Malicious_Upload"] == "File_Upload_Traversal"
-    assert mapping["Path_Traversal_Privilege"] == "File_Upload_Traversal"
-    assert mapping["Scan"] is None
-    assert attack_types.knowledge_category("XSS") == "XSS_RCE"
-    assert attack_types.knowledge_category("Path_Traversal_Privilege") == "File_Upload_Traversal"
+    assert all(key == value for key, value in mapping.items())
+    assert attack_types.knowledge_category("XSS") == "XSS"
+    assert attack_types.knowledge_category("Path_Traversal_Privilege") == "Path_Traversal_Privilege"
     # 结果类本身仍然是两个
     assert attack_types.BY_CODE["Malicious_Upload"] is not attack_types.BY_CODE["Path_Traversal_Privilege"]
 

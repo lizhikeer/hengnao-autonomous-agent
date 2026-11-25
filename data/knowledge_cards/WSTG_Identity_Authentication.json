@@ -3,7 +3,7 @@
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-005",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "用户身份识别异常行为调查",
     "summary": "通过身份认证日志、账户标识和访问行为识别异常身份使用情况，判断是否存在账户冒用或身份识别配置问题。",
@@ -37,7 +37,7 @@
     ],
     "recommended_action": "isolate_account",
     "error_revision_note": "用户使用 VPN、移动网络或更换设备可能造成登录地点和客户端变化。不能仅凭地理位置变化判定账户被盗用。 仅在确认账户身份被冒用或存在未授权使用风险后申请账户隔离；需核实账户归属并经人工审批。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2 - Identity Management Testing",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Identity Management Testing https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/03-Identity_Management_Testing/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -45,13 +45,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-006",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "弱口令与默认凭据风险识别",
     "summary": "通过认证失败记录、账户配置和安全审计信息识别弱口令及默认凭据风险，辅助判断账户安全状况。",
@@ -85,7 +85,7 @@
     ],
     "recommended_action": "isolate_account",
     "error_revision_note": "认证失败可能由用户输错密码、客户端配置错误或密码过期造成。不能仅凭失败次数认定存在弱口令。 仅在确认默认/弱凭据账户存在实际未授权使用风险时申请账户隔离；凭据轮换和默认账户清理由维护人员执行并经人工确认。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism and Default Credentials",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism and Default Credentials https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/04-Authentication_Testing/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -93,13 +93,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-007",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "异常登录频率与账户破解风险识别",
     "summary": "关联认证日志和网络访问记录，识别短时间内大量认证失败、账户枚举迹象及异常登录成功事件。",
@@ -135,7 +135,7 @@
     ],
     "recommended_action": "rate_limit",
     "error_revision_note": "共享网络出口、企业代理和用户集中登录可能导致同一来源出现较多认证失败。不能仅凭失败次数判定暴力破解，应结合账户数量、时间分布和后续成功登录行为。 对确认的异常登录频率可限速；不得仅因用户输错密码或共享出口 IP 触发账户隔离。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism; MITRE ATT&CK T1110 Brute Force",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Weak Lock Out Mechanism; MITRE ATT&CK T1110 Brute Force https://attack.mitre.org/techniques/T1110/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -143,13 +143,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-WSTG-008",
-    "version": 1,
+    "version": 2,
     "card_type": "security_knowledge",
     "title": "认证机制与会话管理异常识别",
     "summary": "通过认证状态、会话生命周期和应用访问记录识别认证流程及会话管理异常，辅助发现未经授权的会话使用。",
@@ -184,7 +184,7 @@
     ],
     "recommended_action": "none",
     "error_revision_note": "分布式应用、缓存同步延迟和日志采集时间差可能造成会话记录不一致。应结合认证服务和应用审计日志综合判断。 会话失效与生命周期修复由应用维护人员执行；无明确被盗账户证据时不触发账户隔离，故推荐动作为 none。",
-    "source_reference": "OWASP Web Security Testing Guide v4.2 - Session Management Testing",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Session Management Testing https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/06-Session_Management_Testing/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -192,6 +192,6 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T01:20:33.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   }
 ]

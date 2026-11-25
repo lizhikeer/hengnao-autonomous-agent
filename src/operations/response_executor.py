@@ -80,12 +80,19 @@ ENFORCEMENTS_FILENAME = "executed_enforcements.jsonl"
 BLOCKED_BY_POLICY = "BLOCKED_BY_POLICY"
 ALLOWED = "ALLOWED"
 
-# --- 状态机状态（终态：NO_ACTION / EXECUTED / REJECTED / BLOCKED）---
+# --- 状态机状态（终态：NO_ACTION / REVOKED / REJECTED / BLOCKED）---
 NO_ACTION = "NO_ACTION"
 EXECUTED = "EXECUTED"
 PENDING_APPROVAL = "PENDING_APPROVAL"
 REJECTED = "REJECTED"
 BLOCKED = "BLOCKED"
+#: 生效期已满、由 ``sweep_expired_actions`` 自动解除。EXECUTED 不是终态，REVOKED 才是。
+REVOKED = "REVOKED"
+
+#: 审计事件的两种类型。``executed_enforcements.jsonl`` 是 append-only 的事件流，
+#: 每条有效动作由「executed + revoked」两行表达，读侧按 ``action_id`` 折叠出当前生命周期。
+EVENT_EXECUTED = "executed"
+EVENT_REVOKED = "revoked"
 
 #: 审批事件（审批单的审批结果，非处置终态）
 APPROVED = "APPROVED"
@@ -441,7 +448,21 @@ def state_dir() -> Path:
 
 
 def enforcement_log_path() -> Path:
-    """执行审计文件：``data/state/executed_enforcements.jsonl``。"""
+    """执行审计文件。
+
+    路径优先级：
+
+    1. ``SECLOG_RESPONSE_DB``：与需求文档的环境变量名对齐，用于把状态文件
+       指到显式位置（容器里通常指向持久化卷）；
+    2. ``SECLOG_STATE_DIR`` + ``executed_enforcements.jsonl``：默认布局。
+
+    本项目用 **append-only JSONL** 而不是 SQLite 承载状态机：事件流天然可审计、
+    可 diff、可手工核对，且不需要额外的事务与迁移。``SECLOG_RESPONSE_DB``
+    只是路径覆盖，不会把内容变成数据库文件。
+    """
+    override = os.getenv("SECLOG_RESPONSE_DB", "").strip()
+    if override:
+        return Path(override)
     return state_dir() / ENFORCEMENTS_FILENAME
 
 
@@ -495,9 +516,18 @@ def _build_record(
     case_id: str = "",
     approval_id: str = "",
     ts: Optional[str] = None,
+    action_id: str = "",
+    executed_at: str = "",
+    expires_at: str = "",
+    max_duration_minutes: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """执行审计记录：6 个必备字段 + 审批留痕（``approved_by`` 仅审批放行时出现）。"""
+    """执行审计记录：6 个必备字段 + 审批留痕 + 生命周期字段。
+
+    生命周期三件套（``action_id`` / ``executed_at`` / ``expires_at``）是到期自动解除的依据：
+    没有 ``expires_at`` 的记录不可被 sweep 命中，等价于"永久生效"，因此执行路径必须写全。
+    """
     record: Dict[str, Any] = {
+        "event": EVENT_EXECUTED,
         "ts": ts or _iso(_now()),
         "action": action,
         "target_type": target_type,
@@ -511,6 +541,14 @@ def _build_record(
         record["approval_id"] = str(approval_id)
     if approved_by:
         record["approved_by"] = str(approved_by)
+    if action_id:
+        record["action_id"] = str(action_id)
+    if executed_at:
+        record["executed_at"] = str(executed_at)
+    if expires_at:
+        record["expires_at"] = str(expires_at)
+    if max_duration_minutes is not None:
+        record["max_duration_minutes"] = int(max_duration_minutes)
     return record
 
 
@@ -524,17 +562,37 @@ DEFAULT_APPROVAL_TIMEOUT_MINUTES = 30
 #: 审计只记最终结果（执行记录含 approval_id / approved_by），避免出现两份真相。
 _pending: Dict[str, Dict[str, Any]] = {}
 _approval_seq = {"n": 0}
+_action_seq = {"n": 0}
 
 
 def reset_pending() -> None:
     """清空待审批表（测试隔离用；生产进程内不应调用）。"""
     _pending.clear()
     _approval_seq["n"] = 0
+    _action_seq["n"] = 0
 
 
 def _new_approval_id(now: datetime) -> str:
     _approval_seq["n"] += 1
     return f"APR-{now.strftime('%Y%m%d%H%M%S')}-{_approval_seq['n']:04d}"
+
+
+def _new_action_id(now: datetime) -> str:
+    """生效动作编号：sweep 与后置核验都靠它定位一条具体处置。"""
+    _action_seq["n"] += 1
+    return f"ACT-{now.strftime('%Y%m%d%H%M%S')}-{_action_seq['n']:04d}"
+
+
+def _max_duration_minutes(action: str) -> int:
+    """动作的最长生效时间（分钟）；策略缺失时返回 0 表示不自动解除。"""
+    try:
+        raw = _load_cached()["actions"][action].get("max_duration_minutes")
+    except (PolicyLoadError, KeyError):
+        return 0
+    try:
+        return max(0, int(raw or 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _required_fields() -> List[str]:
@@ -620,6 +678,10 @@ def evaluate_action(
         rule = {"risk": "unknown", "auto_execute": False}
 
     if rule["risk"] == _AUTO_EXECUTE_RISK and rule["auto_execute"]:
+        moment = now or _now()
+        duration = _max_duration_minutes(canonical)
+        action_id = _new_action_id(moment)
+        expires_at = _iso(moment + timedelta(minutes=duration)) if duration > 0 else ""
         record = _build_record(
             action=canonical,
             target_type=context["target_type"],
@@ -627,10 +689,20 @@ def evaluate_action(
             evidence_log_ids=evidence,
             policy_reason=policy_reason,
             case_id=str(case_id or ""),
-            ts=_iso(now or _now()),
+            ts=_iso(moment),
+            action_id=action_id,
+            executed_at=_iso(moment),
+            expires_at=expires_at,
+            max_duration_minutes=duration,
         )
         append_enforcement_record(record)
-        return {"status": EXECUTED, **context, "record": record}
+        return {
+            "status": EXECUTED,
+            **context,
+            "record": record,
+            "action_id": action_id,
+            "expires_at": expires_at,
+        }
 
     moment = now or _now()
     approval_id = _new_approval_id(moment)
@@ -712,6 +784,9 @@ def approve(
         )
 
     moment = now or _now()
+    duration = _max_duration_minutes(record_order["action"])
+    action_id = _new_action_id(moment)
+    expires_at = _iso(moment + timedelta(minutes=duration)) if duration > 0 else ""
     record = _build_record(
         action=record_order["action"],
         target_type=record_order["target_type"],
@@ -722,13 +797,23 @@ def approve(
         case_id=str(order.get("case_id") or record_order.get("case_id") or ""),
         approval_id=record_order["approval_id"],
         ts=_iso(moment),
+        action_id=action_id,
+        executed_at=_iso(moment),
+        expires_at=expires_at,
+        max_duration_minutes=duration,
     )
     append_enforcement_record(record)
 
     record_order.update(
         {"status": APPROVED, "approved_by": record["approved_by"], "resolved_at": record["ts"]}
     )
-    return {"status": EXECUTED, "approval_id": record_order["approval_id"], "record": record}
+    return {
+        "status": EXECUTED,
+        "approval_id": record_order["approval_id"],
+        "record": record,
+        "action_id": action_id,
+        "expires_at": expires_at,
+    }
 
 
 def reject(
@@ -784,3 +869,243 @@ def expire_pending(now: Optional[datetime] = None) -> List[Dict[str, Any]]:
         )
         settled.append(order)
     return settled
+
+
+# ---------------------------------------------------------------------------
+# 到期自动解除：EXECUTED -> REVOKED
+# ---------------------------------------------------------------------------
+def read_enforcement_records() -> List[Dict[str, Any]]:
+    """读取全部审计事件（append-only 文件，按写入顺序）。
+
+    坏行（手工编辑、磁盘截断）直接跳过而不是整份报错——审计是旁路证据，
+    不能因为一行损坏就让整个回滚引擎停摆；跳过数由调用方通过长度差自行核对。
+    """
+    path = enforcement_log_path()
+    if not path.exists():
+        return []
+    records: List[Dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(item, dict):
+            records.append(item)
+    return records
+
+
+def _fold_lifecycle(records: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """把事件流按 ``action_id`` 折叠成「当前生命周期快照」。
+
+    没有 ``action_id`` 的历史记录（W3 之前的旧格式）无法被可靠地关联到撤销事件，
+    因此不参与折叠——宁可少回滚，也不能把两条不同处置混成一条。
+    """
+    folded: Dict[str, Dict[str, Any]] = {}
+    for record in records:
+        action_id = str(record.get("action_id") or "").strip()
+        if not action_id:
+            continue
+        if record.get("event") == EVENT_REVOKED:
+            current = folded.get(action_id)
+            if current is not None:
+                current.update(
+                    {
+                        "lifecycle": REVOKED,
+                        "revoked_at": record.get("ts"),
+                        "revoke_reason": record.get("revoke_reason", ""),
+                    }
+                )
+            continue
+        folded[action_id] = {**record, "lifecycle": EXECUTED}
+    return folded
+
+
+def _parse_iso(value: Any) -> Optional[datetime]:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        moment = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def list_actions(now: Optional[datetime] = None) -> List[Dict[str, Any]]:
+    """返回全部处置动作的当前视图，附带 ``expired`` 判定（只读，不落盘）。"""
+    moment = now or _now()
+    folded = _fold_lifecycle(read_enforcement_records())
+    view: List[Dict[str, Any]] = []
+    for action_id, record in folded.items():
+        expires_at = _parse_iso(record.get("expires_at"))
+        view.append(
+            {
+                **record,
+                "action_id": action_id,
+                "expired": bool(
+                    record["lifecycle"] == EXECUTED and expires_at and moment >= expires_at
+                ),
+            }
+        )
+    view.sort(key=lambda item: (str(item.get("executed_at") or item.get("ts") or ""), item["action_id"]))
+    return view
+
+
+def sweep_expired_actions(now: Optional[datetime] = None) -> List[Dict[str, Any]]:
+    """扫描已到期且仍生效的处置，自动解除并流转为 ``REVOKED``。
+
+    只处理 ``lifecycle == EXECUTED`` 且 ``now >= expires_at`` 的动作：
+    没有 ``expires_at`` 的动作不在此列——「没写到期的」应当被当成配置缺陷去修，
+    而不是被悄悄解除（那会让一次本该持续的封禁提前失效）。
+
+    解除动作本身也写一条 ``event=revoked`` 的审计，保持 append-only：
+    历史上"曾经封过"和"何时解除"都可追溯。
+    """
+    moment = now or _now()
+    swept: List[Dict[str, Any]] = []
+    for action_id, record in _fold_lifecycle(read_enforcement_records()).items():
+        if record["lifecycle"] != EXECUTED:
+            continue
+        expires_at = _parse_iso(record.get("expires_at"))
+        if expires_at is None or moment < expires_at:
+            continue
+        event = {
+            "event": EVENT_REVOKED,
+            "ts": _iso(moment),
+            "action_id": action_id,
+            "action": record.get("action", ""),
+            "target": record.get("target", ""),
+            "target_type": record.get("target_type", ""),
+            "policy_reason": "AUTO_REVOKE: 到达 expires_at 自动解除",
+            "revoke_reason": "expired",
+            "expires_at": record.get("expires_at", ""),
+        }
+        for key in ("case_id", "approval_id"):
+            if record.get(key):
+                event[key] = record[key]
+        append_enforcement_record(event)
+        swept.append(
+            {
+                **record,
+                "action_id": action_id,
+                "lifecycle": REVOKED,
+                "revoked_at": event["ts"],
+                "revoke_reason": "expired",
+            }
+        )
+    return swept
+
+
+# ---------------------------------------------------------------------------
+# 后置核验
+# ---------------------------------------------------------------------------
+#: 视为"仍然在被攻击"的状态码：4xx 说明探测被拒但攻击者仍在尝试，5xx 说明已打穿。
+_MALICIOUS_STATUS = frozenset({400, 401, 403, 404, 405, 500, 502, 503})
+
+
+def _request_status(log: Dict[str, Any]) -> int:
+    try:
+        return int(log.get("status_code") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def run_post_check(
+    action_id: str,
+    recent_logs: Optional[List[Dict[str, Any]]] = None,
+    *,
+    now: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """对一条已执行处置做后置核验，输出两类结论。
+
+    * ``effect_verification``：目标是否还被恶意请求打——目标是封禁/限速对象，
+      它的请求量归零或被拒（4xx/5xx）即视为"攻击未继续成功"；
+    * ``business_impact``：非目标流量是否出现异常 5xx——误伤非目标才是真事故。
+
+    ``recent_logs`` 由调用方提供（处置后的观测窗口）。**不在这里访问 ClickHouse**：
+    执行器保持纯函数式，便于离线复现与单测。
+    """
+    folded = _fold_lifecycle(read_enforcement_records())
+    record = folded.get(str(action_id or "").strip())
+    if record is None:
+        raise ApprovalError(f"找不到处置动作：{action_id}")
+
+    target = str(record.get("target") or "").strip()
+    logs = [item for item in (recent_logs or []) if isinstance(item, dict)]
+    target_logs = [
+        item for item in logs if target and target in (item.get("src_ip"), item.get("dest_ip"))
+    ]
+    other_logs = [item for item in logs if item not in target_logs]
+    target_errors = [item for item in target_logs if _request_status(item) in _MALICIOUS_STATUS]
+    other_errors = [item for item in other_logs if _request_status(item) >= 500]
+
+    effect_ok = len(target_errors) == 0
+    impact_ok = len(other_errors) == 0
+    return {
+        "action_id": record.get("action_id"),
+        "action": record.get("action", ""),
+        "target": target,
+        "target_type": record.get("target_type", ""),
+        "lifecycle": record["lifecycle"],
+        "checked_at": _iso(now or _now()),
+        "effect_verification": {
+            "post_check": "effect_verification",
+            "target_requests": len(target_logs),
+            "malicious_requests": len(target_errors),
+            "passed": effect_ok,
+            "detail": (
+                f"目标 {target or '<未指定>'} 在观测窗口内无异常请求，攻击已停止"
+                if effect_ok
+                else f"目标 {target} 仍有 {len(target_errors)} 条异常请求，处置未完全生效"
+            ),
+        },
+        "business_impact": {
+            "post_check": "business_impact",
+            "non_target_requests": len(other_logs),
+            "server_errors": len(other_errors),
+            "passed": impact_ok,
+            "detail": (
+                "非目标业务未出现 5xx，未观察到误伤"
+                if impact_ok
+                else f"非目标业务出现 {len(other_errors)} 条 5xx，疑似误伤，需人工复核"
+            ),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# 只读查询（供 API 拼审批单与台账，均不改变状态）
+# ---------------------------------------------------------------------------
+def get_pending(approval_id: str) -> Optional[Dict[str, Any]]:
+    """按编号取待审批单的副本；不存在返回 ``None``。
+
+    返回副本而不是引用：调用方拼审批单时不应意外改到状态机内部记录。
+    """
+    order = _pending.get(str(approval_id or "").strip())
+    if order is None:
+        return None
+    return {key: value for key, value in order.items() if key != "deadline_at"}
+
+
+def list_pending(now: Optional[datetime] = None) -> List[Dict[str, Any]]:
+    """全部仍处于 PENDING_APPROVAL 的审批单，附带 ``expired`` 只读判定。
+
+    这里**不结算**超时单——结算由 ``expire_pending`` 显式触发，
+    避免"查一下台账"这种只读操作产生状态副作用。
+    """
+    moment = now or _now()
+    items: List[Dict[str, Any]] = []
+    for order in _pending.values():
+        if order["status"] != PENDING_APPROVAL:
+            continue
+        items.append(
+            {
+                **{key: value for key, value in order.items() if key != "deadline_at"},
+                "expired": moment >= order["deadline_at"],
+            }
+        )
+    items.sort(key=lambda item: str(item.get("created_at") or ""))
+    return items

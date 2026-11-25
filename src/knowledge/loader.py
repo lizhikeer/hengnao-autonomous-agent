@@ -11,6 +11,11 @@ from typing import Any
 import yaml
 
 
+def scenario_key(value: str) -> str:
+    """兼容轨迹和题集使用的 CHAIN-CASE 与 CASE 编号。"""
+    return value.strip().upper().replace("_", "-").removeprefix("CHAIN-")
+
+
 class SourceManifest:
     """清单由维护者管理，采用文件 SHA-256 白名单，Agent 不能自行指定数据划分。"""
 
@@ -18,7 +23,11 @@ class SourceManifest:
         self.root = root.resolve()
         manifest = json.loads(path.read_text(encoding="utf-8"))
         self.files = manifest["files"]
-        self.excluded_scenarios = set(manifest.get("excluded_scenario_ids", []))
+        excluded = list(manifest.get("excluded_scenario_ids", []))
+        policy = self.root / "data/case_memories/manifest.json"
+        if policy.is_file() and policy.resolve() != path.resolve():
+            excluded.extend(json.loads(policy.read_text(encoding="utf-8"))["excluded_scenario_ids"])
+        self.excluded_scenarios = {scenario_key(item) for item in excluded}
 
     def read(self, path: Path, tenant_id: str) -> list[dict[str, Any]]:
         """先验证文件路径、摘要与可信来源，再解析卡片，整个文件有误时不做部分导入。"""
@@ -42,16 +51,37 @@ class SourceManifest:
         expected = set(record.get("card_ids", []))
         if {card.get("card_id") for card in cards} != expected or len(cards) != len(expected):
             raise ValueError("文件卡片编号与来源清单不一致或包含重复卡片")
+        allowed_scenarios = set(record.get("scenario_ids", []))
+        observed_scenarios = set()
         for card in cards:
+            # 拦截来源及正文中的盲测编号，包括只有证据引用、没有声明来源的情况。
+            content_text = json.dumps(card, ensure_ascii=False).upper()
+            references = {scenario_key(s) for s in re.findall(r"CASE[-_]\d+", content_text)}
+            references.update(
+                f"CASE-{suffix[:2]}"
+                for suffix in re.findall(r"LOG-\d{8}-(\d{4})(?!\d)", content_text)
+            )
+            if references & self.excluded_scenarios:
+                raise ValueError("独立评测场景或证据禁止入库")
             split = card.get("dataset_split", "knowledge")
             if split != record["dataset_split"]:
                 raise ValueError("卡片数据划分与可信来源不符")
             scenarios = set(card.get("origin", {}).get("scenario_ids", []))
+            observed_scenarios.update(scenarios)
+            if relative.startswith("data/case_memories/") and (
+                card.get("schema_version") != "1.1"
+                or card.get("card_type") not in {"verified_correct_case", "verified_error_revision"}
+                or not scenarios
+                or not references <= {scenario_key(s) for s in scenarios}
+            ):
+                raise ValueError("案例记忆需要 1.1 案例卡及来源场景")
             if (
-                scenarios != set(record.get("scenario_ids", []))
-                or scenarios & self.excluded_scenarios
+                not scenarios <= allowed_scenarios
+                or {scenario_key(s) for s in scenarios} & self.excluded_scenarios
             ):
                 raise ValueError("案例场景未获来源清单授权或属于独立评测")
+        if observed_scenarios != allowed_scenarios:
+            raise ValueError("文件来源场景与清单不一致")
         return cards
 
 

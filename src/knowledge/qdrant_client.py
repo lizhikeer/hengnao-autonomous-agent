@@ -47,6 +47,7 @@ class VectorStore:
                 "card_id": "keyword",
                 "card_type": "keyword",
                 "attack_category": "keyword",
+                "related_attack_categories": "keyword",
                 "mitre_id": "keyword",
                 "applicable_log_sources": "keyword",
                 "review_status": "keyword",
@@ -110,6 +111,7 @@ class VectorStore:
                 vector={"dense": vector},
                 payload={
                     **metadata,
+                    "related_attack_categories": card.get("related_attack_categories", []),
                     "status": "active",
                     "index_profile": profile,
                     "chunk_index": chunk["chunk_index"],
@@ -165,8 +167,11 @@ class VectorStore:
         )
         if categories:
             conditions.append(
-                models.FieldCondition(
-                    key="attack_category", match=models.MatchAny(any=list(categories))
+                models.Filter(
+                    should=[
+                        models.FieldCondition(key=key, match=models.MatchAny(any=list(categories)))
+                        for key in ("attack_category", "related_attack_categories")
+                    ]
                 )
             )
         hits = []

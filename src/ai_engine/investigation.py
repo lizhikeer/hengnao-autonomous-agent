@@ -1545,7 +1545,7 @@ class InvestigationSession:
         复查只影响**记录与解释**，不直接改写结论——结论必须由日志事实支撑。
         """
         checks: list[dict[str, Any]] = []
-        for card in (self.findings.get("knowledge") or [])[:3]:
+        for card in self.findings.get("knowledge") or []:
             note = str(card.get("error_revision_note") or "")
             if not note:
                 continue

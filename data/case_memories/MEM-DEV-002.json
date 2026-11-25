@@ -1,0 +1,185 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 2,
+  "card_id": "MEM-DEV-002",
+  "card_type": "verified_error_revision",
+  "title": "上传后出现脚本访问与服务器外连：按资产重建多阶段顺序",
+  "summary": "先出现上传与资源访问，随后服务器主动向外建立连接。入站来源与出站目的地分别归因，连接本身不足以确认远控指令执行。",
+  "investigation_goal": "上传后出现脚本访问与服务器外连：按资产重建多阶段顺序",
+  "trigger_conditions": [
+    "上传后出现脚本访问与服务器外连：按资产重建多阶段顺序"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "涉事资产的时间序列与授权记录",
+      "log_sources": [
+        "nginx_access",
+        "zeek_conn"
+      ],
+      "fields": [
+        "timestamp",
+        "src_ip",
+        "dest_ip",
+        "action_or_method",
+        "asset_id"
+      ],
+      "purpose": "按事件时间排序上传、文件访问与服务器出站连接。",
+      "if_missing": "记录缺失字段及其影响，只报告已有证据支持的阶段。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1"
+      ],
+      "condition": "上传及后续资源访问发生在同一资产，随后该资产主动连接外部目的地。",
+      "conclusion": "先出现上传与资源访问，随后服务器主动向外建立连接。入站来源与出站目的地分别归因，连接本身不足以确认远控指令执行。",
+      "next_step": "以受影响资产关联连接方向，核查发起进程或应用审计。保留缺失的阶段及其证据边界。",
+      "source_ids": [
+        "SRC1"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "需核实当前资产和账号的授权，历史案例只能提供调查方法。"
+  ],
+  "attack_category": "Malicious_Upload",
+  "related_attack_categories": ["C2_Exfiltration"],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access",
+    "zeek_conn"
+  ],
+  "keywords": [
+    "复合攻击",
+    "多阶段",
+    "上传",
+    "外连",
+    "时间线"
+  ],
+  "key_indicators": [
+    "上传后出现脚本访问与服务器外连：按资产重建多阶段顺序"
+  ],
+  "investigation_steps": [
+    "按事件时间排序上传、文件访问与服务器出站连接。",
+    "以受影响资产关联连接方向，核查发起进程或应用审计。保留缺失的阶段及其证据边界。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "原调查列出上传和遍历，但漏查随后由同一资产发起的外连。应按日志时间与连接方向逐阶段核对。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-02.json",
+  "sources": [
+    {
+      "source_id": "SRC1",
+      "title": "开发场景 V1 回放",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-02.json",
+      "locator": "attack_type、evidence_log_ids 与场景日志",
+      "accessed_at": "2026-11-19T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-19T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-19T00:00:00.000Z",
+  "updated_at": "2026-11-24T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-02",
+    "investigation_id": "CHAIN-CASE-02",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-02",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-02"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E206",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261028-0206",
+      "locator": "data/full_chain_logs/chain_case_02_webshell_c2.json#LOG-20261028-0206",
+      "observed_at": "2026-10-28T10:05:44.000Z",
+      "snapshot_summary": "2026-10-28T10:05:44Z nginx_access web-prod-01 POST None 203.0.113.45 10.0.0.15",
+      "snapshot_sha256": "5f096a57b1f88b5ab6df797ad3a3388c1dec6968ee4e78d9c764500f568237a9"
+    },
+    {
+      "evidence_id": "E207",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261028-0207",
+      "locator": "data/full_chain_logs/chain_case_02_webshell_c2.json#LOG-20261028-0207",
+      "observed_at": "2026-10-28T10:06:03.000Z",
+      "snapshot_summary": "2026-10-28T10:06:03Z nginx_access web-prod-01 GET None 203.0.113.45 10.0.0.15",
+      "snapshot_sha256": "79cc3925e84f00ea8228e13ef6d29d20a50869183ce8a706511601f9dfc5b105"
+    },
+    {
+      "evidence_id": "E211",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261028-0211",
+      "locator": "data/full_chain_logs/chain_case_02_webshell_c2.json#LOG-20261028-0211",
+      "observed_at": "2026-10-28T10:07:33.000Z",
+      "snapshot_summary": "2026-10-28T10:07:33Z zeek_conn web-prod-01 TCP None 10.0.0.15 45.77.128.203",
+      "snapshot_sha256": "ec18df34d6d562e96107345d2f6030414174313b05117366e1ec34e52101583a"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "上传后出现脚本访问与服务器外连：按资产重建多阶段顺序",
+    "environment_summary": "项目开发集 V1 控制器离线回放",
+    "investigation_summary": [
+      "按事件时间排序上传、文件访问与服务器出站连接。",
+      "以受影响资产关联连接方向，核查发起进程或应用审计。保留缺失的阶段及其证据边界。"
+    ],
+    "original_judgement": "Path_Traversal_Privilege_After_Malicious_Upload",
+    "final_judgement": "先出现上传与资源访问，随后服务器主动向外建立连接。入站来源与出站目的地分别归因，连接本身不足以确认远控指令执行。",
+    "outcome": "inconclusive",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "unknown",
+      "response": "not_applicable"
+    },
+    "error_reason": "原调查列出上传和遍历，但漏查随后由同一资产发起的外连。应按日志时间与连接方向逐阶段核对。",
+    "corrected_steps": [
+      "按事件时间排序上传、文件访问与服务器出站连接。",
+      "以受影响资产关联连接方向，核查发起进程或应用审计。保留缺失的阶段及其证据边界。"
+    ],
+    "lessons": [
+      "先出现上传与资源访问，随后服务器主动向外建立连接。入站来源与出站目的地分别归因，连接本身不足以确认远控指令执行。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "上传后出现脚本访问与服务器外连：按资产重建多阶段顺序",
+        "action": "按事件时间排序上传、文件访问与服务器出站连接。",
+        "evidence_ids": [
+          "E206",
+          "E207",
+          "E211"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "先出现上传与资源访问，随后服务器主动向外建立连接。入站来源与出站目的地分别归因，连接本身不足以确认远控指令执行。",
+        "conclusion": "先出现上传与资源访问，随后服务器主动向外建立连接。入站来源与出站目的地分别归因，连接本身不足以确认远控指令执行。",
+        "next_step": "以受影响资产关联连接方向，核查发起进程或应用审计。保留缺失的阶段及其证据边界。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-02.json",
+      "notes": "依据已归档的受控 V1 回放输出及对应场景日志核对。"
+    },
+    "response_summary": "回放仅用于调查。",
+    "response_result": "not_executed"
+  }
+}

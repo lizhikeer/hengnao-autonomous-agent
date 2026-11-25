@@ -3,10 +3,10 @@
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-FUT-001",
-    "version": 3,
+    "version": 4,
     "card_type": "security_knowledge",
     "title": "Web应用可疑文件上传行为识别与调查",
-    "attack_category": "File_Upload_Traversal",
+    "attack_category": "Malicious_Upload",
     "mitre_id": "T1505.003",
     "applicable_log_sources": [
       "nginx_access",
@@ -36,15 +36,15 @@
       "文件完整性审计显示 Web 可访问目录出现未经授权的新文件，且创建时间与上传请求时间吻合"
     ],
     "investigation_steps": [
-      "检索nginx访问日志，统计上传接口的请求来源、请求频率、状态码和访问路径",
+      "上传入口先按类型、内容和扫描结果决定能否发布。命中恶意规则时直接拒收，待判文件置于不可访问、不可执行的隔离区。",
       "关联zeek_http记录，核对请求方法、请求时间、目标主机和上传请求特征",
       "检查同一来源IP在上传前后是否访问异常管理接口或其他敏感路径",
       "结合应用侧文件审核记录，确认上传文件是否符合业务类型和安全策略",
       "在授权的安全检测环境中核实上传文件是否被服务器当作可执行资源处理，并检查相关访问审计记录"
     ],
     "recommended_action": "block_ip_short_term",
-    "error_revision_note": "正常业务可能上传压缩包、图片或其他特殊格式文件。不能仅凭文件扩展名或Content-Type判定为恶意文件，应结合业务白名单、上传后的访问行为和安全审核结果判断。T1505.003仅适用于有证据支持Web Shell行为的情况。 仅在确认恶意文件已上传并可被服务器执行，或存在 WebShell 证据后，才申请短时封禁；需保全文件、进程和访问证据并经人工审批。",
-    "source_reference": "MITRE ATT&CK T1505.003 Web Shell; OWASP File Upload Cheat Sheet",
+    "error_revision_note": "文件名和声明类型仅是线索。已发布恶意文件应立即禁止访问。整 IP 封禁只针对可归属的入站攻击源并须审批。",
+    "source_reference": "MITRE ATT&CK T1505.003 Web Shell; OWASP File Upload Cheat Sheet https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -52,18 +52,18 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T03:09:42.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z",
     "summary": "通过上传接口日志、文件审核记录和上传后访问行为识别可疑文件上传及潜在Web Shell风险。"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-FUT-002",
-    "version": 3,
+    "version": 4,
     "card_type": "security_knowledge",
     "title": "敏感目录与备份文件异常探测识别",
-    "attack_category": "File_Upload_Traversal",
-    "mitre_id": "T1083",
+    "attack_category": "Scan",
+    "mitre_id": "T1595.003",
     "applicable_log_sources": [
       "nginx_access",
       "zeek_http"
@@ -99,9 +99,9 @@
       "检查相关资源是否对外暴露，并核实是否存在敏感信息访问成功的记录",
       "结合运维扫描计划、爬虫身份和业务访问白名单排除合法访问"
     ],
-    "recommended_action": "rate_limit_ip",
+    "recommended_action": "rate_limit",
     "error_revision_note": "搜索引擎爬虫、网站监测程序和合法运维扫描也可能访问大量路径。应结合爬虫身份、授权扫描记录、请求规律和访问结果综合判断。",
-    "source_reference": "MITRE ATT&CK T1083 File and Directory Discovery; OWASP Web Security Testing Guide",
+    "source_reference": "MITRE ATT&CK T1595.003 Wordlist Scanning https://attack.mitre.org/techniques/T1595/003/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -109,17 +109,17 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T03:09:42.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z",
     "summary": "通过异常路径访问、状态码分布和资源访问结果识别敏感目录及备份文件探测行为。"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-FUT-003",
-    "version": 3,
+    "version": 4,
     "card_type": "security_knowledge",
     "title": "路径穿越异常请求识别与调查",
-    "attack_category": "File_Upload_Traversal",
+    "attack_category": "Path_Traversal_Privilege",
     "mitre_id": "T1190",
     "applicable_log_sources": [
       "nginx_access",
@@ -155,9 +155,9 @@
       "结合应用访问控制和文件访问审计记录，确认是否发生未授权文件访问",
       "核对应用实际解析后的资源路径及访问权限校验结果"
     ],
-    "recommended_action": "rate_limit_ip",
+    "recommended_action": "rate_limit",
     "error_revision_note": "正常文件路径、URL编码和应用路由规则可能产生相似字符串。应结合服务器路径规范化后的实际访问结果和权限校验记录判断，避免仅凭单个特殊字符触发告警。T1190应在有证据表明存在针对公开应用的利用行为时使用。",
-    "source_reference": "MITRE ATT&CK T1190 Exploit Public-Facing Application; OWASP Path Traversal",
+    "source_reference": "MITRE ATT&CK T1190 Exploit Public-Facing Application; OWASP Path Traversal https://attack.mitre.org/techniques/T1190/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -165,18 +165,18 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T03:09:42.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z",
     "summary": "通过HTTP请求路径、应用解析结果和文件访问审计识别疑似路径穿越及未授权文件访问。"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-FUT-004",
-    "version": 3,
+    "version": 4,
     "card_type": "security_knowledge",
     "title": "Slowloris异常连接与服务资源耗尽识别",
-    "attack_category": "File_Upload_Traversal",
-    "mitre_id": "T1499.001",
+    "attack_category": "Denial_of_Service",
+    "mitre_id": "T1499.002",
     "applicable_log_sources": [
       "nginx_access",
       "zeek_conn"
@@ -211,9 +211,9 @@
       "核实服务器资源监控和业务运行情况，判断服务性能下降是否与连接异常相关",
       "检查负载均衡、反向代理和服务端连接管理日志，确认异常连接的影响范围"
     ],
-    "recommended_action": "rate_limit_ip",
-    "error_revision_note": "网络波动、客户端网络质量较差和业务高峰也可能造成连接持续时间增加。应结合并发连接数量、请求完成情况和服务器资源指标判断，不能仅凭连接时间长短认定攻击。该卡片属于服务可用性异常研判，与文件上传和路径遍历分类的关联需要维护者确认。",
-    "source_reference": "MITRE ATT&CK T1499.001 OS Exhaustion Flood; OWASP Denial of Service Cheat Sheet",
+    "recommended_action": "rate_limit",
+    "error_revision_note": "以未完成请求占用服务连接资源和同期可用性下降核实影响，排除业务高峰及网络抖动。仅在归因明确且持续超限时对受影响服务限速。",
+    "source_reference": "MITRE ATT&CK T1499.002 Service Exhaustion Flood https://attack.mitre.org/techniques/T1499/002/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -221,7 +221,7 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T03:09:42.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z",
     "summary": "通过网络连接持续时间、并发连接数量和服务器资源指标识别疑似Slowloris及服务资源耗尽风险。"
   }
 ]
