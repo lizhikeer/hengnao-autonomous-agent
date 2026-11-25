@@ -55,6 +55,7 @@ class EvidenceRegistry:
         self._lock = threading.Lock()
         # bucket -> log_id -> record
         self._buckets: dict[str, dict[str, EvidenceRecord]] = {}
+        self._traces: dict[str, set[str]] = {}
 
     # -- 写入 ---------------------------------------------------------------
 
@@ -62,6 +63,7 @@ class EvidenceRegistry:
         self,
         log_ids: Iterable[str],
         *,
+        trace_ids: Iterable[str | None] = (),
         case_id: str | None = None,
         query_params: dict[str, Any] | None = None,
     ) -> int:
@@ -73,6 +75,9 @@ class EvidenceRegistry:
         now = time.time()
         added = 0
         with self._lock:
+            self._traces.setdefault(bucket.strip().casefold(), set()).update(
+                value.strip() for value in trace_ids if value and value.strip()
+            )
             store = self._buckets.setdefault(bucket, {})
             for log_id in log_ids:
                 if not isinstance(log_id, str) or not log_id.strip():
@@ -139,12 +144,18 @@ class EvidenceRegistry:
     def known_log_ids(self, *, case_id: str) -> set[str]:
         return {r.log_id for r in self.snapshot(case_id=case_id)}
 
+    def trace_ids(self, case_id: str) -> set[str]:
+        """返回本调查查询过的全部日志链，重复查询不会覆盖早先的关联。"""
+        with self._lock:
+            return self._traces.get(case_id.strip().casefold(), set()).copy()
+
     # -- 维护 ---------------------------------------------------------------
 
     def clear(self) -> None:
         """清空全部登记（仅供测试与本地调试）。"""
         with self._lock:
             self._buckets.clear()
+            self._traces.clear()
 
     def stats(self) -> dict[str, int]:
         with self._lock:

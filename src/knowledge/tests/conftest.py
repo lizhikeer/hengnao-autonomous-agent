@@ -46,9 +46,10 @@ def service(tmp_path):
 
 @pytest.fixture
 def card():
-    return json.loads(
+    template = json.loads(
         (PROJECT_ROOT / "data/knowledge_cards/Brute_Force.json").read_text(encoding="utf-8")
     )[0]
+    return {**template, "version": 1}
 
 
 def source_files(

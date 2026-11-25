@@ -433,6 +433,7 @@ def query_logs(req: QueryLogsRequest):
             "limit": req.limit,
             "data_source": result.data_source,
         },
+        trace_ids=[req.trace_id, *(row.trace_id for row in validated_items)],
     )
     _audit(
         "query_logs",
@@ -540,9 +541,14 @@ def get_context(req: GetContextRequest):
 )
 def search_knowledge(req: SearchKnowledgeRequest):
     # 当前案例的经验与答案必须留在评测或审核端。
-    scope = None
-    if req.case_id:
-        scope = {"exclude_investigation_id": req.case_id, "exclude_scenario_ids": [req.case_id]}
+    scope = {"knowledge_only": True}
+    case_id = (req.case_id or "").strip()
+    if case_id:
+        traces = registry.trace_ids(case_id)
+        if req.trace_id and req.trace_id.strip():
+            traces.add(req.trace_id.strip())
+        if traces:
+            scope = {"exclude_investigation_id": case_id, "exclude_scenario_ids": sorted(traces | {case_id})}
     try:
         cards, meta = knowledge_adapter.search(
             req.query, top_k=req.limit, attack_category=req.attack_category, filters=scope

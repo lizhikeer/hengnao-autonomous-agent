@@ -12,32 +12,33 @@ from src.memory.knowledge_store import KnowledgeStore
 
 from .config import KnowledgeConfig
 from .embedding import BGEEncoder, Encoder
-from .loader import SourceManifest
+from .loader import SourceManifest, scenario_key
 from .qdrant_client import VectorStore
 from .schema import CardValidator, canonical_hash, normalize_card, utc_now
-from .text import match_query, sections, terms
+from .text import expand_query, match_query, sections, terms
 
 # 调查分类关联现有知识卡类别，保留已入库卡片原有标签和版本。
 _RELATED_CATEGORIES = {
     "Scan": ("Information_Gathering", "Discovery"),
     "Brute_Force": ("Credential_Access",),
-    "XSS": ("XSS_RCE",),
+    "XSS_RCE": ("XSS", "Command_Injection", "Remote_Code_Execution"),
+    "File_Upload_Traversal": ("Malicious_Upload", "Path_Traversal_Privilege"),
     "Path_Traversal_Privilege": (
-        "File_Upload_Traversal",
         "Authorization_Failure",
         "Privilege_Escalation",
     ),
-    "Malicious_Upload": ("File_Upload_Traversal",),
     "C2_Exfiltration": ("Command_and_Control", "Exfiltration"),
 }
 
 
-def reciprocal_rank_fusion(rankings: list[list[str]]) -> list[tuple[str, float]]:
+def reciprocal_rank_fusion(
+    rankings: list[list[str]], weights: tuple[float, ...] | None = None
+) -> list[tuple[str, float]]:
     """按名次融合，避免直接相加含义不同的余弦距离与 BM25 原始分数。"""
     scores: dict[str, float] = defaultdict(float)
-    for ranking in rankings:
+    for ranking, weight in zip(rankings, weights or (1.0,) * len(rankings), strict=True):
         for rank, key in enumerate(dict.fromkeys(ranking), start=1):
-            scores[key] += 1 / (60 + rank)
+            scores[key] += weight / (60 + rank)
     return sorted(scores.items(), key=lambda item: (-item[1], item[0]))
 
 
@@ -53,9 +54,16 @@ class KnowledgeService:
     ) -> None:
         self.config = config
         self.store = KnowledgeStore(config.sqlite_path)
-        self.vectors = vectors or VectorStore(config)
+        self._vectors = vectors
         self.validator = CardValidator()
         self._encoder = encoder
+
+    @property
+    def vectors(self) -> VectorStore:
+        # 暂存候选时只访问 SQLite，即使向量服务掉线也可送审。
+        if self._vectors is None:
+            self._vectors = VectorStore(self.config)
+        return self._vectors
 
     @property
     def encoder(self) -> Encoder:
@@ -88,7 +96,8 @@ class KnowledgeService:
                 and card["review_status"] != "approved"
             ):
                 raise ValueError("已批准版本不能降回候选；请提交新版本")
-        self.vectors.initialize()
+        if any(card["review_status"] == "approved" for card in cards):
+            self.vectors.initialize()
         return [self._ingest(card) for card in cards]
 
     def _ingest(self, card: dict[str, Any]) -> dict[str, Any]:
@@ -169,7 +178,12 @@ class KnowledgeService:
         return result
 
     def search(
-        self, query: str, *, top_k: int = 5, filters: dict[str, Any] | None = None
+        self,
+        query: str,
+        *,
+        top_k: int = 5,
+        filters: dict[str, Any] | None = None,
+        baseline: bool = False,
     ) -> list[dict[str, Any]]:
         """最终返回前复查 SQLite 发布版本；旧 Qdrant 点不会越过审核、下架和租户边界。"""
         if not isinstance(query, str) or not 2 <= len(query.strip()) <= 500:
@@ -185,6 +199,7 @@ class KnowledgeService:
             "log_sources",
             "exclude_investigation_id",
             "exclude_scenario_ids",
+            "knowledge_only",
         }
         if set(filters) - allowed:
             raise ValueError("不支持的检索过滤参数")
@@ -204,6 +219,9 @@ class KnowledgeService:
                 or any(not isinstance(value, str) for value in filters[name])
             ):
                 raise ValueError(f"{name} 必须是字符串数组")
+        self.vectors.initialize()
+        if not baseline:
+            query = expand_query(query)
         vector, now, profile = self.encoder.encode_query(query), utc_now(), self.encoder.profile
         # 旧点清理可能滞后；有限扩大候选池，补足被最终复核排除的结果。
         depth = max(20, top_k * 2)
@@ -235,7 +253,20 @@ class KnowledgeService:
                 candidates[key] = dict(hit)
             results = []
             seen = set()
-            for key, score in reciprocal_rank_fusion([dense_ids, lexical_ids]):
+            semantic = self.config.semantic_weight
+            weights = (2 * semantic, 2 * (1 - semantic))
+            ranked = reciprocal_rank_fusion([dense_ids, lexical_ids], weights)
+            if not baseline:
+                # 同一卡的规则与纠错段可能分别命中两路，按版本合并两票，并保留最佳段落。
+                identities = {k: (p["card_id"], p["version"]) for k, p in candidates.items()}
+                best = {}
+                for key, _ in ranked:
+                    best.setdefault(identities[key], key)
+                ranked = reciprocal_rank_fusion(
+                    [[best[identities[k]] for k in route] for route in (dense_ids, lexical_ids)],
+                    weights,
+                )
+            for key, score in ranked:
                 item = candidates[key]
                 identity = (item["card_id"], item["version"])
                 if identity in seen or not self.store.visible(
@@ -255,14 +286,28 @@ class KnowledgeService:
                         "matched_section": item["section_path"],
                     }
                 )
-                if len(results) == top_k:
+                if len(results) == top_k and not category:
                     break
             if len(results) >= top_k or depth >= 200:
-                return results
+                if category and top_k > 1 and not baseline:
+                    # V2 已明确调查类别时，给该类别的审核案例保留最多一半名额。
+                    # 先排除同案，再按原排名取案例，剩余名额仍按融合分补齐。
+                    cases = [
+                        r for r in results if r["card_type"] != "security_knowledge"
+                    ][: top_k // 2]
+                    reserved = {r["card_id"] for r in cases}
+                    for hit in results:
+                        if len(reserved) == top_k:
+                            break
+                        reserved.add(hit["card_id"])
+                    return [r for r in results if r["card_id"] in reserved]
+                return results[:top_k]
             depth = min(depth * 2, 200)
 
     @staticmethod
     def _in_scope(card: dict[str, Any], filters: dict[str, Any]) -> bool:
+        if filters.get("knowledge_only") and card["card_type"] != "security_knowledge":
+            return False
         sources = set(card["applicable_log_sources"])
         requested = set(filters.get("log_sources", []))
         if sources and requested and not sources & requested:
@@ -273,9 +318,19 @@ class KnowledgeService:
             and origin.get("investigation_id") == filters["exclude_investigation_id"]
         ):
             return False
-        return not set(origin.get("scenario_ids", [])) & set(
-            filters.get("exclude_scenario_ids", [])
-        )
+        identities = [
+            *origin.get("scenario_ids", []),
+            origin.get("case_id"),
+            origin.get("trace_id"),
+            origin.get("investigation_id"),
+        ]
+        excluded = [
+            *filters.get("exclude_scenario_ids", []),
+            filters.get("exclude_investigation_id"),
+        ]
+        return not {scenario_key(s) for s in identities if s} & {
+            scenario_key(s) for s in excluded if s
+        }
 
     def withdraw(self, card_id: str, *, reviewed_by: str, reason: str) -> None:
         rows = self.store.withdraw(
@@ -289,14 +344,14 @@ class KnowledgeService:
 
     def close(self) -> None:
         self.store.close()
-        self.vectors.close()
+        if self._vectors is not None:
+            self._vectors.close()
 
 
 def hybrid_search(query: str, *, top_k: int = 5, filters: dict | None = None) -> list[dict]:
     """保留基础设施约定的函数签名，供接口负责人封装到 FastAPI/MCP。"""
     service = KnowledgeService(KnowledgeConfig.from_env())
     try:
-        service.vectors.initialize()
         return service.search(query, top_k=top_k, filters=filters)
     finally:
         service.close()

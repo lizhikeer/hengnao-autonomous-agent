@@ -33,7 +33,7 @@ def test_pending_is_sqlite_only(service, card, tmp_path):
     assert result[0]["status"] == "pending"
     assert service.store.get("default", card["card_id"], 1)["review_status"] == "pending"
     for collection in ("security_knowledge", "verified_cases"):
-        assert service.vectors.client.count(collection).count == 0
+        assert not service.vectors.client.collection_exists(collection)
     assert service.search("密码爆破") == []
 
 
@@ -147,7 +147,7 @@ def test_candidate_case_and_approved_revision_are_isolated(service, tmp_path):
     )[2]
     case["tenant_id"] = "default"
     import_cards(service, tmp_path, [case], approve=False, split="development")
-    assert service.vectors.client.count("verified_cases").count == 0
+    assert not service.vectors.client.collection_exists("verified_cases")
     with pytest.raises(ValueError):
         import_cards(service, tmp_path, [case], split="development")
     case["case_details"]["verification"] = {
@@ -207,6 +207,53 @@ def test_all_manifest_cards_validate():
     for path in sorted(files):
         for card in manifest.read(path, "default"):
             validator.validate(normalize_card(card, tenant_id="default"))
+
+
+def test_case_memory_manifest_review_and_case_alias_isolation(service):
+    folder = PROJECT_ROOT / "data/case_memories"
+    manifest = SourceManifest(folder / "manifest.json", PROJECT_ROOT)
+    paths = [PROJECT_ROOT / name for name in manifest.files]
+    pending = service.ingest_files(paths, manifest=manifest)
+    assert all(row["status"] == "pending" for row in pending)
+    assert not service.vectors.client.collection_exists("verified_cases")
+    service.ingest_files(paths, manifest=manifest, reviewed_by="test-review")
+    results = service.search("失误修订", top_k=20)
+    assert {r["card_type"] for r in results} == {"verified_error_revision", "verified_correct_case"}
+    assert not service.search("开发案例", filters={"knowledge_only": True})
+    for card in results:
+        same = card["origin"]["case_id"].lower().removeprefix("chain-")
+        hits = service.search("开发案例", top_k=20, filters={"exclude_scenario_ids": [same]})
+        assert card["card_id"] not in {hit["card_id"] for hit in hits}
+
+
+def test_case_can_be_retrieved_by_either_stage_and_excluded_by_trace(service, monkeypatch):
+    folder = PROJECT_ROOT / "data/case_memories"
+    manifest = SourceManifest(folder / "manifest.json", PROJECT_ROOT)
+    service.ingest_files([folder / "MEM-DEV-002.json"], manifest=manifest, reviewed_by="test")
+    query = "上传后服务器持续外连，如何还原调查顺序"
+    for backend, method in [(service.store, "keyword_search"), (service.vectors, "search")]:
+        with monkeypatch.context() as patch:
+            patch.setattr(backend, method, lambda *args, **kwargs: [])
+            for stage in ("C2_Exfiltration", "Malicious_Upload"):
+                filters = {"attack_category": stage, "exclude_investigation_id": "RUN-A"}
+                hits = service.search(query, top_k=5, filters=filters)
+                assert [card["card_id"] for card in hits] == ["MEM-DEV-002"]
+                filters["exclude_scenario_ids"] = ["CASE-02"]
+                assert service.search(query, top_k=5, filters=filters) == []
+
+
+@pytest.mark.parametrize(
+    "reference", ["来源CHAIN-CASE-13记录", "引用LOG-20261120-2001", "chain_case_13_truth.json"]
+)
+def test_holdout_reference_inside_free_text_is_rejected(service, tmp_path, card, reference):
+    policy = tmp_path / "data/case_memories"
+    policy.mkdir(parents=True)
+    (policy / "manifest.json").write_text(
+        json.dumps({"excluded_scenario_ids": ["CHAIN-CASE-13", "CHAIN-CASE-20"]}), encoding="utf-8"
+    )
+    card["summary"] = reference
+    with pytest.raises(ValueError, match="独立评测"):
+        import_cards(service, tmp_path, [card])
 
 
 def test_markdown_front_matter_and_json_block(card):

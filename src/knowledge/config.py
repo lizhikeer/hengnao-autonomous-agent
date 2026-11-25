@@ -24,8 +24,11 @@ class KnowledgeConfig:
     tenant_id: str = "default"
     knowledge_collection: str = COLLECTIONS[0]
     case_collection: str = COLLECTIONS[1]
+    semantic_weight: float = 0.4
 
     def __post_init__(self) -> None:
+        if not 0 < self.semantic_weight < 1:
+            raise ValueError("语义权重必须在 0 和 1 之间")
         if not self.tenant_id.strip():
             raise ValueError("tenant_id 不能为空")
         if self.knowledge_collection == self.case_collection:
@@ -43,4 +46,5 @@ class KnowledgeConfig:
             tenant_id=os.getenv("KNOWLEDGE_TENANT_ID", "default"),
             knowledge_collection=os.getenv("QDRANT_KNOWLEDGE_COLLECTION", COLLECTIONS[0]),
             case_collection=os.getenv("QDRANT_CASE_COLLECTION", COLLECTIONS[1]),
+            semantic_weight=float(os.getenv("KNOWLEDGE_SEMANTIC_WEIGHT", "0.4")),
         )

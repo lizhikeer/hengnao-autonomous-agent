@@ -45,6 +45,17 @@ def match_query(text: str) -> str:
     return " OR ".join('"' + term.replace('"', '""') + '"' for term in terms(text)[:64])
 
 
+def expand_query(text: str) -> str:
+    """把调查人员的网络现象描述映射到索引术语，保留原问题及不确定性。"""
+    periodic = any(word in text for word in ("定期", "周期", "等间隔", "固定间隔"))
+    outbound = any(word in text for word in ("外部", "外连", "出站", "外联", "公网"))
+    if periodic and outbound:
+        return text + " 周期外连 Zeek 信标 Beacon"
+    if periodic and any(word in text for word in ("联系", "通信", "连接", "联络")):
+        return text + " 周期通信 Zeek 连接间隔 信标"
+    return text
+
+
 def sections(card: dict[str, Any]) -> list[tuple[str, str]]:
     """每条规则包含标题与调查目标；定位标识用于命中后恢复未截断的原文。"""
     header = card["title"] + "\n" + card.get("investigation_goal", "")

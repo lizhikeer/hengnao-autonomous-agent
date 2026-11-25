@@ -3,7 +3,7 @@
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-SQLI-001",
-    "version": 2,
+    "version": 3,
     "card_type": "security_knowledge",
     "title": "SQL注入异常请求的日志识别与调查",
     "summary": "关联 Nginx 访问日志与 Zeek HTTP 记录，分析请求参数、请求方法、状态码、响应大小及来源行为，判断是否存在 SQL 注入探测或利用迹象。",
@@ -47,9 +47,9 @@
       "检查应用日志和数据库审计记录，核实是否存在数据库错误或未授权数据访问迹象",
       "对照正常业务基线和授权安全测试记录，排除正常查询及合法扫描行为"
     ],
-    "recommended_action": "rate_limit_ip",
+    "recommended_action": "rate_limit",
     "error_revision_note": "正常业务查询、搜索筛选和特殊字符输入也可能出现类似特征。不能仅凭单个特殊字符或一次 4xx、5xx 响应判定 SQL 注入，应结合请求频率、参数特征、上下游日志和应用错误信息综合判断。",
-    "source_reference": "OWASP Top 10 A03:2021 Injection; OWASP Web Security Testing Guide; MITRE ATT&CK T1190",
+    "source_reference": "OWASP Top 10 A03:2021 Injection; OWASP Web Security Testing Guide; MITRE ATT&CK T1190 https://attack.mitre.org/techniques/T1190/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -57,13 +57,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T03:09:42.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-SQLI-002",
-    "version": 2,
+    "version": 3,
     "card_type": "security_knowledge",
     "title": "SQL盲注相关异常访问行为识别",
     "summary": "通过比较相似请求的响应时间、状态码和响应大小，并关联应用日志，识别可能的时间型或布尔型 SQL 盲注探测行为。",
@@ -106,9 +106,9 @@
       "结合应用日志核实是否存在异常数据库查询或请求处理延迟",
       "排除网络拥塞、数据库负载变化和正常业务查询导致的响应延迟"
     ],
-    "recommended_action": "rate_limit_ip",
+    "recommended_action": "rate_limit",
     "error_revision_note": "网络拥塞、数据库性能波动和正常业务查询也可能造成响应时间变化。应比较同一接口的正常基线，并排除服务器负载等因素，不能仅凭响应延迟判定盲注。",
-    "source_reference": "OWASP Web Security Testing Guide - Testing for SQL Injection; MITRE ATT&CK T1190",
+    "source_reference": "OWASP Web Security Testing Guide - Testing for SQL Injection; MITRE ATT&CK T1190 https://attack.mitre.org/techniques/T1190/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -116,13 +116,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T03:09:42.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-SQLI-003",
-    "version": 2,
+    "version": 3,
     "card_type": "security_knowledge",
     "title": "数据库异常文件导出行为的关联调查",
     "summary": "将 Web 请求、数据库审计和服务器文件完整性记录进行时间关联，确认是否发生未经授权的数据库文件写入或导出。",
@@ -170,8 +170,8 @@
       "确认攻击行为后，提交人工审核并按照项目授权流程执行处置"
     ],
     "recommended_action": "block_ip",
-    "error_revision_note": "正常数据导出、报表生成和备份任务也可能产生文件操作记录。Nginx 和 Zeek HTTP 日志本身不能证明数据库文件写入成功，必须结合数据库审计、服务器文件完整性和授权记录确认。block_ip 仅适用于确认未经授权的文件写入后，并经人工审批的情形。",
-    "source_reference": "OWASP Top 10 A03:2021 Injection; OWASP Logging Cheat Sheet; MITRE ATT&CK T1190",
+    "error_revision_note": "正常数据导出、报表生成和备份任务也可能产生文件操作记录。Nginx 和 Zeek HTTP 日志本身不能证明数据库文件写入成功，必须结合数据库审计、服务器文件完整性和授权记录确认。block_ip 仅适用于确认未经授权的文件写入后，并经人工审批的情形。缺少文件审计时可用经核验的应用导出记录与数据库审计交叉确认。仅有 Web 请求时记录为尝试，结果待核。",
+    "source_reference": "OWASP Top 10 A03:2021 Injection; OWASP Logging Cheat Sheet; MITRE ATT&CK T1190 https://attack.mitre.org/techniques/T1190/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -179,13 +179,13 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T03:09:42.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   },
   {
     "schema_version": "1.0",
     "tenant_id": "default",
     "card_id": "KB-SQLI-004",
-    "version": 2,
+    "version": 3,
     "card_type": "security_knowledge",
     "title": "SQL自动化扫描工具访问特征识别",
     "summary": "通过分析来源 IP、请求频率、请求路径、User-Agent 和响应状态，识别自动化 SQL 注入扫描行为，并核实是否属于授权测试。",
@@ -230,9 +230,9 @@
       "核对来源 IP 是否属于授权安全测试人员或内部扫描任务",
       "结合应用日志判断是否存在进一步的漏洞利用或异常数据访问迹象"
     ],
-    "recommended_action": "rate_limit_ip",
+    "recommended_action": "rate_limit",
     "error_revision_note": "合法漏洞扫描、安全测试和自动化运维也可能产生类似流量。User-Agent 可以被伪造，不能单独作为识别依据，必须核对测试授权、来源身份和整体请求行为。",
-    "source_reference": "OWASP Web Security Testing Guide; MITRE ATT&CK T1595 Active Scanning",
+    "source_reference": "OWASP Web Security Testing Guide; MITRE ATT&CK T1595 Active Scanning https://attack.mitre.org/techniques/T1595/",
     "review_status": "pending",
     "reviewed_by": null,
     "reviewed_at": null,
@@ -240,6 +240,6 @@
     "valid_until": null,
     "dataset_split": "knowledge",
     "created_at": "2026-11-17T01:20:33.000Z",
-    "updated_at": "2026-11-17T03:09:42.000Z"
+    "updated_at": "2026-11-19T00:00:00.000Z"
   }
 ]

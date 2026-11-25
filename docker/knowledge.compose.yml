@@ -1,0 +1,17 @@
+# 与 docker-compose.yml 叠加以启用 CPU 检索及跨重启的 SQLite 存储。
+services:
+  api:
+    build:
+      args:
+        WITH_KNOWLEDGE: "1"
+    environment:
+      SECLOG_SEARCH_MODE: auto
+      BGE_MODEL_PATH: /app/models/bge-small-zh-v1.5
+      KNOWLEDGE_SQLITE_PATH: /app/work/knowledge.sqlite3
+      OMP_NUM_THREADS: "2"
+    mem_limit: 2g
+    volumes:
+      - ${BGE_HOST_PATH:?set BGE_HOST_PATH to the model directory}:/app/models/bge-small-zh-v1.5:ro
+      - knowledge_work:/app/work
+volumes:
+  knowledge_work:

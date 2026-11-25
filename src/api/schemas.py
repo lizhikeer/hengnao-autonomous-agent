@@ -338,6 +338,7 @@ class SearchKnowledgeRequest(BaseModel):
     case_id: Optional[str] = Field(
         default=None, min_length=1, max_length=64, description="当前调查编号，用于排除同场景案例"
     )
+    trace_id: Optional[str] = Field(default=None, min_length=1, max_length=128, description="当前日志链编号，与查询记录一并排除")
 
 
 class KnowledgeCard(BaseModel):
