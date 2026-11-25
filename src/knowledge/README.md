@@ -79,6 +79,8 @@ NAS 配置使用 `docker/docker-compose.yml` 叠加 `docker/knowledge.compose.ym
 
 部署后运行 `python scripts/eval_knowledge_retrieval.py --url https://主机:端口`。脚本用两个独立调查编号依次查询日志和知识，检查真实混合检索标识、跨阶段召回、错题正文和同案排除。
 
+需要 JSON 同步报告时，用 `scripts/ops/sync_knowledge_index.py --manifest data/case_memories/manifest.json --output work/case-sync.json` 暂存该清单。发布时附加 `--approve-by 审核人标识`，报告记录实际发布数和检索验证结果。词面降级模式只使用知识卡。
+
 ## 配置与验证
 
 配置：`BGE_MODEL_PATH`、`KNOWLEDGE_TENANT_ID`、`KNOWLEDGE_SQLITE_PATH`、`QDRANT_LOCAL_PATH`，以及既有的 `QDRANT_URL/QDRANT_API_KEY/QDRANT_KNOWLEDGE_COLLECTION/QDRANT_CASE_COLLECTION`。

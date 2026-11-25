@@ -29,6 +29,7 @@ COPY data/knowledge_cards/ /app/data/knowledge_cards/
 COPY data/case_memories/ /app/data/case_memories/
 COPY design/knowledge/ /app/design/knowledge/
 COPY scripts/ingest_knowledge.py scripts/eval_knowledge_retrieval.py /app/scripts/
+COPY scripts/ops/sync_knowledge_index.py /app/scripts/ops/
 
 # NAS 混合检索配置启用 CPU 依赖，权重由宿主机只读挂载。
 ARG WITH_KNOWLEDGE=0

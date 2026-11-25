@@ -10,16 +10,13 @@ from uuid import NAMESPACE_URL, uuid5
 
 from src.memory.knowledge_store import KnowledgeStore
 
+from .categories import categories_for
 from .config import KnowledgeConfig
 from .embedding import BGEEncoder, Encoder
 from .loader import SourceManifest, scenario_key
 from .qdrant_client import VectorStore
 from .schema import CardValidator, canonical_hash, normalize_card, utc_now
 from .text import expand_query, match_query, sections, terms
-
-# 调查分类关联现有知识卡类别，保留已入库卡片原有标签和版本。
-# 降级检索（``src/api/knowledge_adapter.py``）复用同一张表，避免两种模式召回范围不同。
-from .categories import RELATED_CATEGORIES as _RELATED_CATEGORIES  # noqa: E402
 
 
 def reciprocal_rank_fusion(
@@ -64,7 +61,12 @@ class KnowledgeService:
         return self._encoder
 
     def ingest_files(
-        self, paths: list[Path], *, manifest: SourceManifest, reviewed_by: str | None = None
+        self,
+        paths: list[Path],
+        *,
+        manifest: SourceManifest,
+        reviewed_by: str | None = None,
+        preserve_approved: bool = False,
     ) -> list[dict[str, Any]]:
         """所有来源和卡片先预检；显式 reviewed_by 表示维护者批准此次导入。"""
         cards = []
@@ -77,6 +79,7 @@ class KnowledgeService:
         if len(identities) != len(cards):
             raise ValueError("同一次导入包含重复卡片版本")
         # 版本冲突也在写入前检查，避免格式错误使整批只导入一半。
+        unchanged = set()
         for card in cards:
             previous = self.store.get(card["tenant_id"], card["card_id"], card["version"])
             if previous and canonical_hash(previous) != canonical_hash(card):
@@ -86,10 +89,23 @@ class KnowledgeService:
                 and previous["review_status"] == "approved"
                 and card["review_status"] != "approved"
             ):
+                if preserve_approved:
+                    unchanged.add((card["card_id"], card["version"]))
+                    continue
                 raise ValueError("已批准版本不能降回候选；请提交新版本")
         if any(card["review_status"] == "approved" for card in cards):
             self.vectors.initialize()
-        return [self._ingest(card) for card in cards]
+        return [
+            {
+                "card_id": c["card_id"],
+                "version": c["version"],
+                "status": "already_approved",
+                "points": 0,
+            }
+            if (c["card_id"], c["version"]) in unchanged
+            else self._ingest(c)
+            for c in cards
+        ]
 
     def _ingest(self, card: dict[str, Any]) -> dict[str, Any]:
         duplicate = self.store.duplicate(card)
@@ -199,7 +215,7 @@ class KnowledgeService:
         category = filters.get("attack_category")
         if category is not None and not isinstance(category, str):
             raise ValueError("attack_category 必须是字符串")
-        categories = (category, *_RELATED_CATEGORIES.get(category, ())) if category else ()
+        categories = categories_for(category)
         if filters.get("exclude_investigation_id") is not None and not isinstance(
             filters["exclude_investigation_id"], str
         ):
@@ -283,9 +299,9 @@ class KnowledgeService:
                 if category and top_k > 1 and not baseline:
                     # V2 已明确调查类别时，给该类别的审核案例保留最多一半名额。
                     # 先排除同案，再按原排名取案例，剩余名额仍按融合分补齐。
-                    cases = [
-                        r for r in results if r["card_type"] != "security_knowledge"
-                    ][: top_k // 2]
+                    cases = [r for r in results if r["card_type"] != "security_knowledge"][
+                        : top_k // 2
+                    ]
                     reserved = {r["card_id"] for r in cases}
                     for hit in results:
                         if len(reserved) == top_k:

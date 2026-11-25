@@ -157,7 +157,13 @@ def _load_manifest_cards(tenant_id: str) -> list[dict[str, Any]]:
             continue
         path = PROJECT_ROOT / relative
         try:
-            cards.extend(source.read(path, tenant_id))
+            # 文件清单证明来源，案例审批和下架状态由 SQLite 管理。
+            # 此降级后端仅读知识卡，案例只经正式索引返回。
+            cards.extend(
+                card for card in source.read(path, tenant_id)
+                if card.get("card_type") == "security_knowledge"
+                and card.get("dataset_split", "knowledge") == "knowledge"
+            )
         except Exception as exc:
             raise KnowledgeUnavailable(
                 f"知识卡 {relative} 未通过来源清单校验",

@@ -46,3 +46,13 @@ def test_lexical_fallback_enforces_same_tenant_as_hybrid(monkeypatch):
     monkeypatch.setenv("KNOWLEDGE_TENANT_ID", "default")
     with pytest.raises(knowledge_adapter.KnowledgeUnavailable, match="租户"):
         knowledge_adapter.search("认证失败", filters={"tenant_id": "other"}, mode="lexical_fallback")
+
+
+def test_lexical_fallback_cannot_publish_case_files(monkeypatch):
+    from api import knowledge_adapter
+
+    manifest = knowledge_adapter.PROJECT_ROOT / "data/case_memories/manifest.json"
+    monkeypatch.setenv("SECLOG_KNOWLEDGE_MANIFEST", str(manifest))
+    cards, meta = knowledge_adapter.search("多账号认证失败", mode="lexical_fallback")
+    assert meta["degraded"]
+    assert not cards
