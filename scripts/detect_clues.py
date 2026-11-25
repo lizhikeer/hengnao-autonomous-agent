@@ -57,26 +57,74 @@ from src.detection.rules import RuleEngine  # noqa: E402
 NEVER_EXEMPT_TYPES = {
     "sql_injection", "malicious_upload", "webshell_access",
     "path_traversal", "suspicious_outbound", "xss_attempt",
+    # 数据外传与 C2 心跳不做窗口降级：这两类一旦成立就是既遂，不该被"运维时间"稀释
+    "data_exfiltration",
 }
+
+#: 内网用户输错口令的次数上限：低于它且最终登录成功，视为正常重试而非爆破。
+#: 与老规则的爆破阈值（5 次）对齐，避免把 CASE-10 这类"忘密码"误判成 critical。
+BENIGN_RETRY_MAX_FAILURES = 5
+
+
+def _is_private_ip(value: str) -> bool:
+    return str(value or "").startswith(("10.", "192.168.", "127."))
+
+
+def _benign_retry_subjects(logs) -> set[tuple[str, str]]:
+    """识别「内网用户输错几次口令后成功登录」的正常重试模式，返回 (src_ip, user_id) 集合。
+
+    CASE-10 的设计意图就是这种情况：用户忘密码重试两次后进入系统，随后访问
+    admin 页面。老规则只看"新 IP + 访问敏感资源"就判 critical，属于只看行为
+    不看强度的误报。
+
+    边界：失败次数必须严格小于阈值，且源必须是内网。外部 IP 哪怕只失败一次
+    也不在此列——那可能是撞库的第一次尝试，不能提前放行。
+    """
+    fails: dict[tuple[str, str], int] = {}
+    succeeded: set[tuple[str, str]] = set()
+    for log in logs:
+        # 归一化后 action 恒为 "login"，成败落在 result 上（fail / success / error）
+        result = str(getattr(log, "result", "") or "").lower()
+        key = (str(getattr(log, "src_ip", "") or ""), str(getattr(log, "user_id", "") or ""))
+        if result in {"fail", "failure", "denied", "reject", "rejected"}:
+            fails[key] = fails.get(key, 0) + 1
+        elif result in {"success", "allow", "allowed", "ok"}:
+            succeeded.add(key)
+    return {
+        key
+        for key, count in fails.items()
+        if count < BENIGN_RETRY_MAX_FAILURES and key in succeeded and _is_private_ip(key[0])
+    }
 
 
 def downgrade_exempt(anomalies, logs, registry) -> int:
-    """把「维护窗口 + 白名单」内的运维类线索降到 medium 以下。
+    """把「维护窗口 + 白名单」或「良性登录重试」主体触发的运维类线索降到 medium。
 
-    判定按 (src_ip, user_id) 配对：同一主体在窗口内且命中白名单，其触发的
-    非攻击类线索（登录异常、越权、权限变更等）属于正常运维，降级并留下痕迹。
+    两条降级依据：
+
+    1. **维护窗口 + 白名单**：同一主体在窗口内且命中白名单，其触发的
+       非攻击类线索（登录异常、越权、权限变更等）属于正常运维；
+    2. **良性登录重试**：内网用户输错少量口令后成功登录（CASE-10），
+       后续的账号类/越权类线索属于正常使用，不构成账号接管。
+
+    两条都只降 `high`/`critical` 到 `medium`，且 `NEVER_EXEMPT_TYPES` 里的
+    攻击既遂类型（注入/上传/webshell/遍历/外连/外传）永不降级。
     """
     exempt: set[tuple[str, str]] = set()
     for log in logs:
         ctx = registry.build(log)
         if ctx.maintenance_window and ctx.allowlisted_context:
             exempt.add((log.src_ip or "", log.user_id or ""))
-    if not exempt:
+    retry_subjects = _benign_retry_subjects(logs)
+    if not exempt and not retry_subjects:
         return 0
 
     changed = 0
     for a in anomalies:
-        if (a.src_ip or "", a.user_id or "") not in exempt:
+        subject = (a.src_ip or "", a.user_id or "")
+        by_window = subject in exempt
+        by_retry = subject in retry_subjects
+        if not (by_window or by_retry):
             continue
         if (a.attack_type or "").lower() in NEVER_EXEMPT_TYPES:
             continue
@@ -84,7 +132,9 @@ def downgrade_exempt(anomalies, logs, registry) -> int:
             a.risk_level = "medium"
             a.risk_score = min(float(a.risk_score), 50.0)
             evidence = dict(a.evidence or {})
-            evidence["downgraded_by"] = "maintenance_window+allowlist"
+            evidence["downgraded_by"] = (
+                "maintenance_window+allowlist" if by_window else "benign_login_retry"
+            )
             a.evidence = evidence
             changed += 1
     return changed
