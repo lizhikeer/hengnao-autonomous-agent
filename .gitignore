@@ -34,3 +34,7 @@ npm-debug.log*
 .env.*
 !.env.example
 *.local
+
+# === W3 运行时产物（可由脚本重建，不入库）===
+/data/state/
+/data/agent_traces/w3_e2e/
