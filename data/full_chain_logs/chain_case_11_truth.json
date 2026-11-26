@@ -1,0 +1,20 @@
+{
+  "case_id": "CHAIN-CASE-11",
+  "is_malicious": true,
+  "attack_type": "Brute_Force",
+  "risk_level": "HIGH",
+  "attacker_ip": "198.51.100.140",
+  "victim_asset": "nas-host-01",
+  "evidence_log_ids": [
+    "LOG-20261117-1102",
+    "LOG-20261117-1104",
+    "LOG-20261117-1106",
+    "LOG-20261117-1112",
+    "LOG-20261117-1114",
+    "LOG-20261117-1118"
+  ],
+  "attack_chain_summary": "攻击源 198.51.100.140 自 2026-11-17 18:00 起对运维跳板机 nas-host-01（10.0.0.20）的 22 端口发起 7 轮 SSH 口令尝试，依次尝试 root、admin、oracle、test、ops、postgres、ftpuser、admin，全部失败（首条 LOG-20261117-1102，末条 1118）；每轮间隔 41~52 分钟、横跨 6 小时，远超短窗口规则（5 分钟 5 次）的触发条件，逐条看均为孤立失败，只有按长周期聚合才能识别为低频爆破；Zeek 侧 7 次 conn_state=S0 的短连接与 auth_log 失败记录一一对应。跳板机台账明确仅允许密钥登录，出现任何密码认证失败即为高危信号。",
+  "recommended_action": "block_ip_short_term",
+  "requires_human_approval": true,
+  "unknown_items": "暂无成功登录记录，无法确认攻击者是否已获得凭据；建议结合登录审计继续观察。"
+}

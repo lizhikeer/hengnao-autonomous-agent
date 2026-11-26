@@ -1,0 +1,18 @@
+{
+  "case_id": "CHAIN-CASE-19",
+  "is_malicious": false,
+  "attack_type": "none",
+  "risk_level": "LOW",
+  "attacker_ip": "10.0.0.45",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261120-1901",
+    "LOG-20261120-1903",
+    "LOG-20261120-1904",
+    "LOG-20261120-1907"
+  ],
+  "attack_chain_summary": "办公网运维账号 ops_li 于 07:30 起排查订单接口：依次请求不存在的 user_id=9999 / 99999（返回 404）、带单引号的 id=1'（返回 500，属于手工验参留下的载荷痕迹）、以及 URL 被重复编码的 /api/user??id=1（返回 400）与空 order_id 的取消请求（500），随后参数修正后均返回 200（LOG-20261120-1901、1903、1904、1907）；07:36 正常登录后台并浏览订单列表，07:50 主动登出。全程源 IP 为办公网段、账号为登记运维、无批量枚举（同一参数仅试 2 次）、无越权读取他人数据、无外连，判定为接口排障而非攻击。",
+  "recommended_action": "none",
+  "requires_human_approval": false,
+  "unknown_items": ""
+}

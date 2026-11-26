@@ -1,0 +1,17 @@
+{
+  "case_id": "CHAIN-CASE-20",
+  "is_malicious": false,
+  "attack_type": "insufficient_evidence",
+  "risk_level": "LOW",
+  "attacker_ip": "203.0.113.222",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261121-2001",
+    "LOG-20261121-2002",
+    "LOG-20261121-2003"
+  ],
+  "attack_chain_summary": "203.0.113.222 于 04:00—04:02 对 /api/login 与 /api/user 连续提交 3 次注入类载荷（OR 1=1--、UNION SELECT password FROM users），全部返回 500；随后尝试 /upload.php 被 403 拦截。但本次仅有 nginx_access 一侧的 4 条记录：Zeek 侧无对应 HTTP/连接日志，认证日志无该 IP 的任何登录记录，也没有后续的访问、导出或外连行为，无法判断注入是否触达数据库、是否成功。在证据不足以支撑「利用成功」或「完全失败」任一结论时，正确答案是弃权并声明缺失面，而不是凭 500 状态码推定攻击结果。",
+  "recommended_action": "none",
+  "requires_human_approval": false,
+  "unknown_items": "缺失 Zeek 侧 HTTP/连接日志与 auth_log，无法确认注入是否成功、是否有数据泄露；建议排查 2026-11-21 04:00—04:05 时间段 Zeek 采集是否中断。"
+}

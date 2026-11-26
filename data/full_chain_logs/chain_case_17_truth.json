@@ -1,0 +1,18 @@
+{
+  "case_id": "CHAIN-CASE-17",
+  "is_malicious": true,
+  "attack_type": "Malicious_Upload_After_Scan",
+  "risk_level": "HIGH",
+  "attacker_ip": "45.155.205.77",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261119-1709",
+    "LOG-20261119-1710",
+    "LOG-20261119-1713",
+    "LOG-20261119-1715"
+  ],
+  "attack_chain_summary": "2026-11-19 14:05—14:30（UTC+8，周四）是 10.0.0.77 安全测试组的登记授权扫描窗口，该 IP 的 7 次探测（Acunetix UA，LOG-20261119-1701~1707）确属授权行为；但同一窗口内出现第二个来源 45.155.205.77：06:12 探测 /upload.php 后 30 秒即以 filename=\"shell.php\" + image/jpeg 上传Webshell（1709），06:13—06:20 连续执行 id、whoami、cat /etc/passwd（1710、1713），06:25 受害主机向 45.77.128.203:4444 外连（1715）。授权窗口只对登记 IP 生效，不构成对其他来源的免死金牌，故本次判定为恶意。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "需确认 45.155.205.77 是否与授权扫描方存在关联（如同一测试团队的另一出口 IP）。"
+}

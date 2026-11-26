@@ -1,0 +1,18 @@
+{
+  "case_id": "CHAIN-CASE-12",
+  "is_malicious": true,
+  "attack_type": "SQL_Injection_After_Scan",
+  "risk_level": "HIGH",
+  "attacker_ip": "203.0.113.61",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261117-1204",
+    "LOG-20261117-1205",
+    "LOG-20261117-1206",
+    "LOG-20261117-1208"
+  ],
+  "attack_chain_summary": "攻击源 203.0.113.61 先用 sqlmap UA 探测 /.env 与 /api/user 参数（LOG-20261117-1202、1203），随后改用 URL 编码的时间盲注：1' AND SLEEP(5)-- 与 IF(ASCII(SUBSTR(database(),1,1))>100,SLEEP(5),0)（1204、1205）——盲注请求的响应体恒为 36 字节，与正常查询完全相同，只看状态码/字节数无法察觉，必须依赖响应耗时特征；确认可注入后以 UNION SELECT 读出 users 表（1206，响应体增至 2140 字节），并调用 /api/export 批量导出 users 与 orders（1208、1217，最大 214KB）。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": ""
+}

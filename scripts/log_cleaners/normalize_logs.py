@@ -70,8 +70,9 @@ FIELD_ORDER = (
     "attack_stage_hint",
 )
 
-LOG_SOURCES = ("nginx_access", "auth_log", "zeek_conn", "zeek_http")
-STAGE_HINTS = ("recon", "brute_force", "exploitation", "c2_callback", "benign")
+LOG_SOURCES = ("nginx_access", "auth_log", "zeek_conn", "zeek_http", "zeek_dns")
+STAGE_HINTS = ("recon", "brute_force", "exploitation", "c2_callback",
+               "lateral_movement", "benign", "unknown")
 
 ISO_Z = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -568,11 +569,59 @@ def parse_zeek_http_line(line, trace_id, asset_id, fields=None, dest_ip=None, de
     )
 
 
+def parse_zeek_dns_line(line, trace_id, asset_id, fields=None, dest_ip=None, dest_port=None):
+    """解析一行 Zeek dns 日志（TSV 需传入 #fields 表头，JSON 行可省略）。
+
+    用途：识别 DNS 隧道类外传——单条查询看不出异常，需按「同一子域家族的高频小包」聚合判断。
+    """
+    obj = _zeek_dict(line, fields)
+    if not obj:
+        return None
+    try:
+        timestamp = _to_utc_iso(_from_epoch(obj["ts"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+    src_ip = _clean(obj.get("id.orig_h"))
+    dest = _clean(obj.get("id.resp_h"))
+    sport = _to_int(obj.get("id.orig_p"))
+    dport = _to_int(obj.get("id.resp_p")) or 53
+    qtype = _clean(obj.get("qtype_name")) or _clean(obj.get("qtype"))
+    query = _clean(obj.get("query"))
+    answers = _clean(obj.get("answers"))
+    payload = None
+    if qtype or query:
+        payload = "qtype=%s;query=%s" % (qtype or "-", query or "-")
+        if answers:
+            payload += ";answers=%s" % answers
+
+    return new_record(
+        trace_id=trace_id,
+        timestamp=timestamp,
+        log_source="zeek_dns",
+        src_ip=src_ip,
+        src_port=sport,
+        dest_ip=dest or dest_ip,
+        dest_port=dport,
+        asset_id=asset_id,
+        user=None,
+        session_id=_clean(obj.get("uid")),
+        action_or_method="DNS",
+        uri_or_target="%s:%s" % (dest, dport) if dest else None,
+        payload_summary=payload,
+        status_code=None,
+        bytes_out=_to_int(obj.get("resp_bytes")),
+        user_agent=None,
+        attack_stage_hint=None,
+    )
+
+
 PARSERS = {
     "nginx_access": parse_nginx_line,
     "auth_log": parse_auth_line,
     "zeek_conn": parse_zeek_conn_line,
     "zeek_http": parse_zeek_http_line,
+    "zeek_dns": parse_zeek_dns_line,
 }
 
 
@@ -634,12 +683,16 @@ def guess_source(path, lines):
         return "zeek_http"
     if "zeek" in name and "conn" in name:
         return "zeek_conn"
+    if "zeek" in name and "dns" in name:
+        return "zeek_dns"
     if "auth" in name or "secure" in name:
         return "auth_log"
     if "nginx" in name or "access" in name:
         return "nginx_access"
     sample = "\n".join(lines[:40])
     if "#fields" in sample:
+        if re.search(r"\bquery\b", sample):
+            return "zeek_dns"
         return "zeek_http" if re.search(r"\bmethod\b", sample) else "zeek_conn"
     if "sshd[" in sample or "auth_event=" in sample:
         return "auth_log"
@@ -738,6 +791,22 @@ _SAMPLE_ZEEK_HTTP_JSON = json.dumps({
 })
 
 # ---- 以下三行摘自 data/full_chain_logs/raw/ 的真实采集样本（2026-11-02 @lizhikeer 交付）
+# ---- W3 新增：DNS 隧道（zeek_dns）
+_SAMPLE_ZEEK_DNS_JSON = json.dumps({
+    "ts": datetime(2026, 11, 19, 2, 0, 5, tzinfo=timezone.utc).timestamp(),
+    "uid": "Cd9f2a4b6e8c1d35",
+    "id.orig_h": "10.0.0.15", "id.orig_p": 53120,
+    "id.resp_h": "91.219.236.7", "id.resp_p": 53,
+    "proto": "udp", "trans_id": 41207,
+    "query": "awjhb3BsYWMudC5iYWQtY2RuLmV4YW1wbGU",
+    "qclass": 1, "qclass_name": "C_INTERNET",
+    "qtype": 16, "qtype_name": "TXT",
+    "rcode": 0, "rcode_name": "NOERROR",
+    "AA": False, "TC": False, "RD": True, "RA": True, "Z": 0,
+    "answers": "1.2.3.4", "TTLs": [60.0], "rejected": False,
+    "resp_bytes": 182,
+})
+
 _REAL_NGINX = (
     '172.17.0.1 - - [01/Nov/2026:16:29:07 +0000] "POST /admin/login.php HTTP/1.1" '
     '401 40 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1" "-"'
@@ -859,6 +928,18 @@ def _selftest():
         uri_or_target="127.0.0.1:18081",
         payload_summary="conn_state=SF;duration=0.000589",
         bytes_out=190, attack_stage_hint="benign",
+    )
+    # ---- W3 新增：DNS 隧道判定依赖 zeek_dns
+    expect(
+        "zeek dns tunnel",
+        parse_zeek_dns_line(_SAMPLE_ZEEK_DNS_JSON, "CHAIN-CASE-15", "web-prod-01"),
+        trace_id="CHAIN-CASE-15",
+        timestamp="2026-11-19T02:00:05Z", log_source="zeek_dns",
+        src_ip="10.0.0.15", src_port=53120, dest_ip="91.219.236.7", dest_port=53,
+        session_id="Cd9f2a4b6e8c1d35", action_or_method="DNS",
+        uri_or_target="91.219.236.7:53",
+        payload_summary="qtype=TXT;query=awjhb3BsYWMudC5iYWQtY2RuLmV4YW1wbGU;answers=1.2.3.4",
+        bytes_out=182,
     )
 
     failures = 0
