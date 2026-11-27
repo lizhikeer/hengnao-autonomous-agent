@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "updated": "2026-11-27",
+  "owner": "@zyh060911（任务包 C）",
+  "description": "全链路评测集分集清单。dev 为开发集，允许用于 V2/V3 的 Prompt 调整、知识卡补全与错题反哺；holdout_test 为独立盲测集，只在封板评测时出分，禁止参与任何调参，否则构成数据泄漏。",
+  "notes": [
+    "case_id 与 data/full_chain_logs/chain_case_*_truth.json 一一对应。",
+    "划分口径为首版建议值（01-07 开发 / 08-10 盲测），如需调整请由 @Snowed-night（评测方案）与 @ribbonfish-jun（日志包）确认后修改本文件并同步台账。",
+    "eval_runner.py 通过 --manifest 本文件 --split dev|holdout_test|all 读取；缺省 --split all 表示全量。",
+    "本文件不是 AgentResults，eval_runner.py 目录扫描时已默认排除，不会被误当作 Agent 输出。"
+  ],
+  "splits": {
+    "dev": [
+      "CHAIN-CASE-01",
+      "CHAIN-CASE-02",
+      "CHAIN-CASE-03",
+      "CHAIN-CASE-04",
+      "CHAIN-CASE-05",
+      "CHAIN-CASE-06",
+      "CHAIN-CASE-07"
+    ],
+    "holdout_test": [
+      "CHAIN-CASE-08",
+      "CHAIN-CASE-09",
+      "CHAIN-CASE-10"
+    ]
+  }
+}

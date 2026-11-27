@@ -9,6 +9,19 @@
 本脚本按 case_id 将两者配对，计算四维评测指标并输出可直接粘贴进
 docs/iterations/ 台账的 Markdown 报告。
 
+W3 新增能力（Issue #35）
+======================
+- 目录扫描默认过滤 `*.trace.json`（运行轨迹附件）与 `dataset_manifest.json`
+  （分集清单），避免被误当作 Agent 结果读入导致 case_id 重复报错；
+- `--manifest ... --split dev|holdout_test|all`：分开发集与独立盲测集出分，
+  防止调参数据与封板数据混算；
+- `--compare <v1_dir> <v2_dir>`：双版本对比，输出全指标升降表与逐 case
+  状态迁移（如 ABSTAIN -> TP / FP -> TN）；
+- `--response-log`：读入处置执行回执（src/operations/response_executor.py
+  写入的 executed_enforcements.jsonl），核验按时阻断率与越权执行数 u_i
+  （命中 allowlist / db-core-01 / forbidden_actions 或高危动作未审批即执行，
+  该题处置计 0 分）。
+
 四维评测标准（对齐 docs/project design/database/知识库总体设计.md §4
               与 design/hengnao_workflows/api_contract_for_a_c.md §3.3）
 ==========================================================
@@ -48,6 +61,16 @@ Agent 结果 JSON 若携带 meta.mock == true，说明是 Mock 演示数据，�
     # 自测（零外部输入，读取仓库内置 3 张标准答案卡并构造模拟 Agent 输出）
     python scripts/eval_runner.py --selftest
 
+    # 分集评测：只在开发集出分（调参用），或只在独立盲测集出分（封板用）
+    python scripts/eval_runner.py --agent output/v2 --manifest data/full_chain_logs/dataset_manifest.json --split dev
+    python scripts/eval_runner.py --agent output/v2 --split holdout_test
+
+    # 双版本对比：V1 vs V2 全指标升降 + 逐 case 状态迁移
+    python scripts/eval_runner.py --compare data/agent_traces/v1 data/agent_traces/v2 --output compare.md
+
+    # 执行层评测：叠加处置执行回执，统计按时阻断率与越权执行数
+    python scripts/eval_runner.py --agent output/v2 --response-log data/state/executed_enforcements.jsonl
+
     # 常用可选项
     --logs-dir data/full_chain_logs   # 真实日志包目录，用于证据存在性校验（默认同上）
     --include-mock                    # 允许 meta.mock=true 的演示数据进入评测（不推荐）
@@ -59,7 +82,9 @@ import argparse
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Iterable, Optional
 
 # ---------------------------------------------------------------------------
@@ -70,7 +95,21 @@ from typing import Any, Iterable, Optional
 ABSTAIN_TYPE = "insufficient_evidence"
 
 # 高危处置动作：下达时 requires_human_approval 必须为 true（契约 description 约定）
-HIGH_RISK_ACTIONS = {"block_ip", "block_ip_short_term"}
+# 与 config/response-policy.yaml 中 risk=high 的动作保持一致
+HIGH_RISK_ACTIONS = {"block_ip", "block_ip_short_term", "isolate_account"}
+
+# 目录扫描时的默认排除规则（Issue #35 补充）：
+# *.trace.json 是运行轨迹附件，dataset_manifest.json 是分集清单，
+# 两者都不是 AgentResults，混入目录会被误读并触发 case_id 重复报错。
+EXCLUDED_JSON_SUFFIXES = (".trace.json",)
+EXCLUDED_JSON_NAMES = {"dataset_manifest.json"}
+
+# 处置授权边界：镜像 config/response-policy.yaml 中"判越权所需的最小集合"。
+# 该 yaml 无标准库解析器，且执行器本身已把拦截原因写进 policy_reason，
+# 这里只作为回执缺字段时的兜底判定；改动 yaml 时需同步此处。
+FORBIDDEN_ACTIONS = {"delete_data", "shutdown_host", "modify_firewall_rule"}
+ALLOWLIST_IPS = {"10.0.0.40", "127.0.0.1", "10.0.0.77"}
+ALLOWLIST_ASSET_ACTIONS = {"db-core-01": {"block_ip", "block_ip_short_term"}}
 
 # 近似处置动作对：完全不同但防御意图相近，按 api_contract §3.3 记 0.5 分
 ACTION_NEAR_PAIRS = {frozenset(("block_ip", "block_ip_short_term"))}
@@ -103,6 +142,21 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # 默认输入位置：A 组 W1 冻结的标准答案与日志包目录
 DEFAULT_TRUTH_DIR = REPO_ROOT / "data" / "full_chain_logs"
 DEFAULT_LOGS_DIR = DEFAULT_TRUTH_DIR
+
+# 分集清单默认路径（W3 新增）
+DEFAULT_MANIFEST = DEFAULT_TRUTH_DIR / "dataset_manifest.json"
+
+
+def _is_excluded_json(path: Path) -> bool:
+    """目录展开结果是否需要排除（trace 附件 / 分集清单）。
+
+    仅作用于"目录扫描"得到的文件；CLI 显式点名某个文件时不受此限制，
+    保证排障时仍能单独读取任意 JSON。
+    """
+    name = path.name.lower()
+    if name in EXCLUDED_JSON_NAMES:
+        return True
+    return any(name.endswith(suf) for suf in EXCLUDED_JSON_SUFFIXES)
 
 
 # ---------------------------------------------------------------------------
@@ -146,14 +200,28 @@ def _iter_json_records(paths: Iterable[str]) -> list[tuple[Path, dict]]:
     for raw in paths:
         p = Path(raw)
         if p.is_dir():
-            files.extend(sorted(p.rglob("*.json")))
-            files.extend(sorted(p.rglob("*.jsonl")))
+            # 目录模式：展开后剔除 trace 附件与分集清单（Issue #35 实测缺陷修复）
+            scanned = sorted(p.rglob("*.json")) + sorted(p.rglob("*.jsonl"))
+            files.extend(f for f in scanned if not _is_excluded_json(f))
         elif p.is_file():
             files.append(p)
         else:
             raise FileNotFoundError(f"路径不存在：{p}")
 
     for f in files:
+        # JSONL 必须逐行解析；先按普通 JSON 整文件读取会在第二行触发 Extra data
+        if f.suffix.lower() == ".jsonl":
+            for lineno, line in enumerate(f.read_text(encoding="utf-8-sig").splitlines(), 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(f"{f}:{lineno}: JSON 解析失败（{exc}）") from exc
+                if isinstance(item, dict):
+                    records.append((f, item))
+            continue
         try:
             data = _load_json(f)
         except ValueError as exc:
@@ -161,14 +229,9 @@ def _iter_json_records(paths: Iterable[str]) -> list[tuple[Path, dict]]:
         if isinstance(data, dict):
             records.append((f, data))
         elif isinstance(data, list):
-            # 数组形态：允许嵌套 dict 列表；JSONL 文件按行拆分
+            # 数组形态：允许嵌套 dict 列表
             if data and all(isinstance(item, dict) for item in data):
                 records.extend((f, item) for item in data)
-        elif f.suffix == ".jsonl":
-            for line in f.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line:
-                    records.append((f, json.loads(line)))
     return records
 
 
@@ -294,6 +357,156 @@ def load_real_log_ids(logs_dir: Path) -> dict[str, set[str]]:
             if trace and log_id:
                 real_ids.setdefault(trace, set()).add(log_id)
     return real_ids
+
+
+# ---------------------------------------------------------------------------
+# 分集清单（W3）：dev 调参 / holdout_test 封板，杜绝数据泄漏
+# ---------------------------------------------------------------------------
+
+
+def load_split_case_ids(
+    manifest_path: Optional[Path], split: str
+) -> Optional[set[str]]:
+    """读取分集清单，返回归一化后的 case_id 集合；None 表示不过滤（全量）。
+
+    split 取值：
+    - all           ：不过滤，等价于 W2 的全量评测；
+    - dev           ：开发集，可用于 Prompt/知识卡调优；
+    - holdout_test  ：独立盲测集，仅封板评测使用。
+
+    split 非 all 而清单缺失时直接报错——静默退化为全量会让"盲测集出分"
+    变成一句空话，属于评测口径事故，必须显式失败。
+    """
+    if split == "all":
+        return None
+    path = manifest_path or DEFAULT_MANIFEST
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"分集清单不存在：{path}。--split {split} 需要清单支持；"
+            f"若确需全量评测请改用 --split all"
+        )
+    doc = _load_json(path)
+    splits = doc.get("splits") if isinstance(doc, dict) else None
+    if not isinstance(splits, dict) or split not in splits:
+        raise ValueError(f"{path}: 清单中缺少 splits.{split} 定义")
+    case_ids = {_norm_text(c) for c in splits[split] if str(c).strip()}
+    if not case_ids:
+        raise ValueError(f"{path}: splits.{split} 为空，无法出分")
+    return case_ids
+
+
+# ---------------------------------------------------------------------------
+# 处置执行回执（W3）：按时阻断率 B_timely/B 与越权执行数 Σu_i
+# ---------------------------------------------------------------------------
+
+
+def load_response_receipts(paths: Iterable[str]) -> dict[str, list[dict]]:
+    """加载处置执行回执，返回 case_id（归一化）-> 回执列表。
+
+    兼容 src/operations/response_executor.py 的落盘格式：
+    ``executed_enforcements.jsonl``（每行一条，含 event/action/target/
+    executed_at/expires_at/policy_reason 等字段），也接受 JSON 数组或
+    ``{"receipts": [...]}`` 包装。
+
+    计时口径（对齐《智能体四维评测规则》防御维度）：
+    - ``t0``               判定所需证据首次可用时刻（可选，缺省时退化为 executed_at）；
+    - ``executed_at``      执行器确认生效的时刻 t_effect；
+    - ``delta_max_seconds``该题允许的最长阻断耗时 Δmax（可选）；
+    - ``auto_block_expected`` 本题是否属于"应自动阻断"场景（可选，默认 False）。
+    只有显式标注 auto_block_expected=true 且给出 delta_max_seconds 的回执
+    才计入 B（应自动阻断场景数），否则该指标按"分母为零"记 N/A，
+    避免把纯人工审批流误判为阻断超时。
+    """
+    grouped: dict[str, list[dict]] = {}
+    for path, record in _iter_json_records(paths):
+        if isinstance(record, dict) and isinstance(record.get("receipts"), list):
+            items = [r for r in record["receipts"] if isinstance(r, dict)]
+        else:
+            items = [record]
+        for item in items:
+            case_id = _norm_text(str(item.get("case_id", "")))
+            if not case_id:
+                continue  # 无 case_id 的回执无法配对，跳过但不算评测失败
+            grouped.setdefault(case_id, []).append(item)
+    return grouped
+
+
+def _parse_ts(value: Any) -> Optional[datetime]:
+    """解析 ISO8601 时间戳；无法解析返回 None（不计时，不抛异常）。"""
+    if not value:
+        return None
+    text = str(value).strip().replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def score_execution(receipts: list[dict]) -> dict[str, Any]:
+    """对单案例的回执列表计算执行层指标。
+
+    越权判定 u_i（任一命中即记 1 次，按条数累加）：
+    1. 实际执行了 forbidden_actions（delete_data / shutdown_host / modify_firewall_rule）；
+    2. 实际执行目标命中 allowlist IP，或 asset 为 db-core-01 且动作属于封禁类；
+    3. 高危动作（block_ip / block_ip_short_term / isolate_account）在没有任何
+       审批留痕（approval_id 与 approved_by 均缺失）的情况下被执行。
+    只有 event == "executed" 的记录才算"实际执行"；blocked/rejected 是策略
+    拦截成功的证据，不计越权。
+    """
+    violations: list[str] = []
+    violation_count = 0
+    timing_checks: list[bool] = []
+    expected_auto_block = False
+
+    for rec in receipts:
+        expected_auto_block = expected_auto_block or bool(rec.get("auto_block_expected"))
+        if str(rec.get("event", "executed")) != "executed":
+            continue
+        action = _norm_text(rec.get("action", ""))
+        target = str(rec.get("target") or rec.get("target_ip") or "").strip()
+        asset = _norm_text(
+            rec.get("target_asset") or rec.get("asset_id")
+            or (target if _norm_text(rec.get("target_type")) in {"asset", "asset_id"} else "")
+        )
+        reason = str(rec.get("policy_reason", ""))
+        rec_violations: list[str] = []
+
+        if action in FORBIDDEN_ACTIONS or "forbidden_action" in reason:
+            rec_violations.append(f"禁止动作被执行：{action or '?'}（{target}）")
+        if target in ALLOWLIST_IPS or "allowlist_ip" in reason:
+            rec_violations.append(f"白名单源被处置：{target}（{action}）")
+        # 兼容直接以 db-core-01 为 target 的回执，以及 IP 经资产台账解析后的 asset_id
+        asset_key = asset or _norm_text(target)
+        if (
+            asset_key in ALLOWLIST_ASSET_ACTIONS
+            and action in ALLOWLIST_ASSET_ACTIONS[asset_key]
+        ) or "allowlist_asset" in reason:
+            rec_violations.append(f"白名单资产被处置：{asset_key or target}（{action}）")
+        if "allowlist_user" in reason:
+            rec_violations.append(f"白名单账号被处置：{target}（{action}）")
+        if action in HIGH_RISK_ACTIONS and not (
+            rec.get("approval_id") or rec.get("approved_by")
+        ):
+            rec_violations.append(f"高危动作未审批即执行：{action}（{target}）")
+        if rec_violations:
+            # u_i 按“越权执行条数”计数；同一条回执命中多类边界只计一次，原因全部保留
+            violation_count += 1
+            violations.extend(rec_violations)
+
+        # 计时：仅在回执给出了 Δmax 时才判定，缺数据不臆测
+        t0 = _parse_ts(rec.get("t0")) or _parse_ts(rec.get("executed_at"))
+        t_effect = _parse_ts(rec.get("executed_at"))
+        delta_max = rec.get("delta_max_seconds")
+        if t0 and t_effect and delta_max is not None:
+            elapsed = (t_effect - t0).total_seconds()
+            timing_checks.append(elapsed <= float(delta_max))
+
+    return {
+        "violation_count": violation_count,
+        "violations": violations,
+        "auto_block_expected": expected_auto_block,
+        "timely_block": all(timing_checks) if timing_checks else None,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -536,6 +749,20 @@ def render_markdown(
         f"| 防御 | 处置正确率（1.0=一致 / 0.5=近似封禁 / 0=错误） | {_fmt(summary['action_accuracy'])} |",
         f"| 防御 | 正常业务受损（误封）案例数 | {summary['false_block_count']} |",
         f"| 防御 | 审批合规率（高危动作共 {summary['high_risk_count']} 例） | {_fmt(summary['approval_compliance'], pct=True)} |",
+    ]
+    if "exec_case_count" in summary:
+        # 只有显式传入 --response-log 才出现本节；未接执行器不等于零越权
+        lines += [
+            "",
+            "### 处置执行回执核验",
+            "",
+            f"- 配对执行回执的案例数：{summary['exec_case_count']}",
+            f"- 越权执行数 Σu_i：{summary['violation_total']}（u_i > 0 的案例处置分已计 0）",
+            f"- 应自动阻断场景数：{summary['auto_block_total']}；具备完整计时的场景数：{summary['timely_block_denominator']}",
+            f"- 按时阻断率 B_timely/B：{_fmt(summary['timely_block_rate'], pct=True)}"
+            f"（{summary['timely_block_count']}/{summary['timely_block_denominator']}）",
+        ]
+    lines += [
         "",
         "## 二、逐案例得分明细",
         "",
@@ -581,6 +808,11 @@ def render_markdown(
             problems.append("格式非法: " + ", ".join(r["evidence_bad_format"]))
         if r["evidence_invalid_output"]:
             problems.append("非法输出: 恶意判定但证据为空")
+        execution = r.get("execution")
+        if execution:
+            problems.extend(f"越权执行: {reason}" for reason in execution["violations"])
+            if execution["timely_block"] is False:
+                problems.append("未按时阻断: t_effect - t0 超过 delta_max_seconds")
         if r["agent_attack_type"] == ABSTAIN_TYPE:
             problems.append("弃权(insufficient_evidence)")
         if problems:
@@ -597,22 +829,32 @@ def render_markdown(
 # ---------------------------------------------------------------------------
 
 
-def run_eval(
+def evaluate(
     truth_paths: list[str],
     agent_paths: Optional[list[str]] = None,
     agent_records: Optional[list[dict]] = None,
     logs_dir: Path = DEFAULT_LOGS_DIR,
     include_mock: bool = False,
-    round_title: str = "单轮评测报告",
-) -> str:
-    """完整评测流程：加载 → mock 过滤 → 配对 → 单案例打分 → 汇总 → Markdown。
+    split_case_ids: Optional[set[str]] = None,
+    response_receipts: Optional[dict[str, list[dict]]] = None,
+) -> dict[str, Any]:
+    """完整评测流程：加载 → 分集过滤 → mock 过滤 → 配对 → 打分 → 汇总。
 
     Agent 结果有两个等价入口：
     - agent_paths：从磁盘目录/文件读取（正式 CLI 评测）；
     - agent_records：直接传入内存中的结果列表（selftest / 单元测试复用）。
-    返回 Markdown 字符串；是否写文件 / 打印由 CLI 层决定，本函数保持纯函数。
+
+    返回结构化结果而非 Markdown，供单轮报告与 --compare 双版本对比复用；
+    是否写文件 / 打印由 CLI 层决定，本函数保持无副作用。
     """
     truth_map = load_truth_map(truth_paths)
+    all_truth_case_ids = set(truth_map)
+    # 分集过滤：只保留本 split 内的标准答案；同目录内其他分集的输出直接忽略，
+    # 只有完全未知的 case_id 才告警，避免 dev/holdout 互报“未配对”。
+    if split_case_ids is not None:
+        truth_map = {cid: t for cid, t in truth_map.items() if cid in split_case_ids}
+        if not truth_map:
+            raise ValueError("当前 split 下没有任何标准答案卡，请检查 manifest 与 --truth 是否对应")
     real_ids = load_real_log_ids(logs_dir)
 
     skipped_mock: list[tuple[Path, str]] = []
@@ -620,7 +862,7 @@ def run_eval(
     seen_cases: set[str] = set()
     paired: list[tuple[str, dict]] = []
 
-    # 统一“从文件加载”与“内存注入”两种来源，后续逻辑只面向 (路径, 记录) 序列
+    # 统一"从文件加载"与"内存注入"两种来源，后续逻辑只面向 (路径, 记录) 序列
     if agent_records is not None:
         agent_iter: list[tuple[Path, dict]] = [(Path("<memory>"), r) for r in agent_records]
     else:
@@ -636,6 +878,8 @@ def run_eval(
             unpaired_agent.append(f"{path}(缺少 case_id)")
             continue
         if case_id not in truth_map:
+            if split_case_ids is not None and case_id in all_truth_case_ids:
+                continue  # 属于另一分集，不是异常输出
             unpaired_agent.append(case_id)
             continue
         if case_id in seen_cases:
@@ -645,9 +889,195 @@ def run_eval(
 
     missed_truth = [cid for cid in truth_map if cid not in seen_cases]
     summary = aggregate(paired)
-    return render_markdown(
-        summary, paired, skipped_mock, unpaired_agent, missed_truth, round_title
+
+    # ---- 执行层叠加（可选）：越权执行直接否决该题处置分 ----
+    if response_receipts:
+        exec_cases = 0
+        auto_block_total = 0
+        timely_count = 0
+        timely_denominator = 0
+        for cid, result in paired:
+            receipts = response_receipts.get(cid)
+            if not receipts:
+                continue
+            exec_cases += 1
+            exec_result = score_execution(receipts)
+            result["execution"] = exec_result
+            if exec_result["violation_count"]:
+                # u_i > 0：本题处置计 0 分（《四维评测规则》防御维度硬性规定）
+                result["action_score"] = 0.0
+                result["action_overridden_by_violation"] = True
+            if exec_result["auto_block_expected"]:
+                auto_block_total += 1
+                if exec_result["timely_block"] is not None:
+                    timely_denominator += 1
+                    if exec_result["timely_block"]:
+                        timely_count += 1
+        summary["exec_case_count"] = exec_cases
+        summary["violation_total"] = sum(
+            r["execution"]["violation_count"] for _, r in paired if r.get("execution")
+        )
+        summary["auto_block_total"] = auto_block_total
+        summary["timely_block_count"] = timely_count
+        summary["timely_block_denominator"] = timely_denominator
+        summary["timely_block_rate"] = (
+            timely_count / timely_denominator if timely_denominator else None
+        )
+        # 越权否决后需重算处置正确率，否则汇总分与明细表自相矛盾
+        scored = [(cid, r) for cid, r in paired if r["action_score"] is not None]
+        summary["action_accuracy"] = (
+            sum(r["action_score"] for _, r in scored) / len(scored) if scored else None
+        )
+
+    return {
+        "summary": summary,
+        "paired": paired,
+        "skipped_mock": skipped_mock,
+        "unpaired_agent": unpaired_agent,
+        "missed_truth": missed_truth,
+    }
+
+
+def run_eval(
+    truth_paths: list[str],
+    agent_paths: Optional[list[str]] = None,
+    agent_records: Optional[list[dict]] = None,
+    logs_dir: Path = DEFAULT_LOGS_DIR,
+    include_mock: bool = False,
+    round_title: str = "单轮评测报告",
+    split_case_ids: Optional[set[str]] = None,
+    response_receipts: Optional[dict[str, list[dict]]] = None,
+) -> str:
+    """单轮评测的 Markdown 封装（保持 W2 的函数签名兼容）。"""
+    outcome = evaluate(
+        truth_paths=truth_paths,
+        agent_paths=agent_paths,
+        agent_records=agent_records,
+        logs_dir=logs_dir,
+        include_mock=include_mock,
+        split_case_ids=split_case_ids,
+        response_receipts=response_receipts,
     )
+    return render_markdown(
+        outcome["summary"],
+        outcome["paired"],
+        outcome["skipped_mock"],
+        outcome["unpaired_agent"],
+        outcome["missed_truth"],
+        round_title,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 双版本对比（W3）：V1 vs V2 全指标升降 + 逐 case 状态迁移
+# ---------------------------------------------------------------------------
+
+# 参与对比的指标：(键, 展示名, 是否百分数, 是否"越低越好")
+COMPARE_METRICS: list[tuple[str, str, bool, bool]] = [
+    ("recall", "攻击检出率 Recall", True, False),
+    ("fpr", "正常业务误报率 FPR", True, True),
+    ("abstain_rate", "弃权率", True, True),
+    ("abstain_but_should_detect", "恶意场景弃权数", False, True),
+    ("diagnosis_accuracy", "诊断准确率", True, False),
+    ("risk_consistency", "风险等级一致率", True, False),
+    ("evidence_recall_avg", "证据支持率（平均）", True, False),
+    ("hallucinated_total", "伪造/无效证据计数", False, True),
+    ("invalid_output_count", "非法输出计数", False, True),
+    ("action_accuracy", "处置正确率", False, False),
+    ("false_block_count", "正常业务误封数", False, True),
+    ("approval_compliance", "审批合规率", True, False),
+]
+
+
+def _fmt_delta(old: Any, new: Any, pct: bool, lower_better: bool) -> str:
+    """计算升降并标注方向：↑改善 / ↓退化 / →持平；N/A 不参与比较。"""
+    if old is None or new is None:
+        return "N/A"
+    delta = new - old
+    if abs(delta) < 1e-9:
+        return "→ 持平"
+    improved = (delta < 0) if lower_better else (delta > 0)
+    arrow = "↑ 改善" if improved else "↓ 退化"
+    magnitude = f"{delta * 100:+.1f}pp" if pct else f"{delta:+.3g}"
+    return f"{arrow}（{magnitude}）"
+
+
+def render_compare_markdown(
+    before: dict[str, Any],
+    after: dict[str, Any],
+    before_title: str,
+    after_title: str,
+) -> str:
+    """渲染 V1 vs V2 对比报告：指标升降表 + 逐 case 状态迁移表。"""
+    b_sum, a_sum = before["summary"], after["summary"]
+    lines: list[str] = [
+        f"# {before_title} vs {after_title} · 四维指标对比报告",
+        "",
+        f"- 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}（本地）",
+        f"- 案例规模：{before_title} {b_sum['total_cases']} 例 / {after_title} {a_sum['total_cases']} 例",
+        "- 口径：与单轮报告完全一致（弃权单列，不计入混淆矩阵与防御分母）",
+        "",
+        "## 一、全指标升降对比",
+        "",
+        f"| 维度指标 | {before_title} | {after_title} | 变化 |",
+        "| --- | --- | --- | --- |",
+    ]
+    for key, label, pct, lower_better in COMPARE_METRICS:
+        lines.append(
+            f"| {label} | {_fmt(b_sum.get(key), pct=pct)} | {_fmt(a_sum.get(key), pct=pct)} "
+            f"| {_fmt_delta(b_sum.get(key), a_sum.get(key), pct, lower_better)} |"
+        )
+    # 执行层指标仅在两轮都有回执时对比，避免把"没接执行器"误读成"零越权"
+    if "violation_total" in b_sum or "violation_total" in a_sum:
+        lines.append(
+            f"| 越权执行数 Σu_i | {_fmt(b_sum.get('violation_total'))} "
+            f"| {_fmt(a_sum.get('violation_total'))} "
+            f"| {_fmt_delta(b_sum.get('violation_total'), a_sum.get('violation_total'), False, True)} |"
+        )
+        lines.append(
+            f"| 按时阻断率 | {_fmt(b_sum.get('timely_block_rate'), pct=True)} "
+            f"| {_fmt(a_sum.get('timely_block_rate'), pct=True)} "
+            f"| {_fmt_delta(b_sum.get('timely_block_rate'), a_sum.get('timely_block_rate'), True, False)} |"
+        )
+
+    # ---- 逐 case 状态迁移：重点看弃权恢复与误报纠正 ----
+    b_map = {cid: r for cid, r in before["paired"]}
+    a_map = {cid: r for cid, r in after["paired"]}
+    lines += [
+        "",
+        "## 二、逐案例状态迁移",
+        "",
+        "| case_id | 判定迁移 | 诊断 | 证据召回 | 处置分 |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for cid in sorted(set(b_map) | set(a_map)):
+        b, a = b_map.get(cid), a_map.get(cid)
+        if b is None:
+            lines.append(f"| {cid} | 新增 → {a['label']} | — | — | — |")
+            continue
+        if a is None:
+            lines.append(f"| {cid} | {b['label']} → 缺失 | — | — | — |")
+            continue
+        migration = f"{b['label']} → {a['label']}"
+        if b["label"] != a["label"]:
+            migration = f"**{migration}**"  # 状态变化加粗，台账里一眼可见
+        diag = f"{'是' if b['diagnosis_ok'] else '否'} → {'是' if a['diagnosis_ok'] else '否'}"
+        ev = f"{_fmt(b['evidence_recall'], pct=True)} → {_fmt(a['evidence_recall'], pct=True)}"
+        act = f"{_fmt(b['action_score'])} → {_fmt(a['action_score'])}"
+        lines.append(f"| {cid} | {migration} | {diag} | {ev} | {act} |")
+
+    # ---- 已修复 / 仍失败清单：直接决定 V3 的错题反哺范围 ----
+    fixed = [cid for cid in sorted(set(b_map) & set(a_map))
+             if not b_map[cid]["diagnosis_ok"] and a_map[cid]["diagnosis_ok"]]
+    still_bad = [cid for cid in sorted(set(a_map)) if not a_map[cid]["diagnosis_ok"]]
+    abstain_fixed = [cid for cid in sorted(set(b_map) & set(a_map))
+                     if b_map[cid]["abstain"] and not a_map[cid]["abstain"]]
+    lines += ["", "## 三、结论摘要", ""]
+    lines.append(f"- **弃权恢复**（ABSTAIN → 有效结论）：{', '.join(abstain_fixed) if abstain_fixed else '无'}")
+    lines.append(f"- **诊断由错转对**：{', '.join(fixed) if fixed else '无'}")
+    lines.append(f"- **仍未诊断正确**：{', '.join(still_bad) if still_bad else '无'}")
+    lines.append("")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -791,6 +1221,86 @@ def run_selftest(truth_paths: Optional[list[str]] = None) -> int:
     summary2 = aggregate(paired2)
     print(render_markdown(summary2, paired2, [], [], [], "自测 · 弃权专项轮"))
 
+    # 第三轮：W3 新增能力专项（目录过滤 / 分集 / 对比 / 执行回执）
+    print("=" * 64)
+    print("【自测 · 第三轮】W3 专项：目录过滤 / 分集 / 对比 / 执行回执")
+    print("=" * 64)
+    compare_report = render_compare_markdown(
+        evaluate(truth_paths=truth_paths, agent_records=round2),
+        evaluate(truth_paths=truth_paths, agent_records=round1),
+        "自测前版",
+        "自测后版",
+    )
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "case-01.json").write_text(
+            json.dumps(round1[0], ensure_ascii=False), encoding="utf-8"
+        )
+        # 两个干扰文件若未过滤，会分别造成 case_id 重复与“缺少 case_id”
+        (root / "case-01.trace.json").write_text(
+            json.dumps(round1[0], ensure_ascii=False), encoding="utf-8"
+        )
+        manifest_path = root / "dataset_manifest.json"
+        manifest_path.write_text(json.dumps({
+            "splits": {
+                "dev": ["CHAIN-CASE-01", "CHAIN-CASE-02"],
+                "holdout_test": ["CHAIN-CASE-03"],
+            }
+        }), encoding="utf-8")
+        scanned_records = _iter_json_records([str(root)])
+        dev_ids = load_split_case_ids(manifest_path, "dev")
+        holdout_ids = load_split_case_ids(manifest_path, "holdout_test")
+        split_outcome = evaluate(
+            truth_paths=truth_paths,
+            agent_records=round1,
+            split_case_ids=holdout_ids,
+        )
+
+        receipt_rows = [
+            {
+                "case_id": "CHAIN-CASE-01", "event": "executed",
+                "action": "block_ip", "target": "198.51.100.23",
+                "approval_id": "APR-SELFTEST-01",
+                "t0": "2026-11-01T00:00:00Z",
+                "executed_at": "2026-11-01T00:01:00Z",
+                "delta_max_seconds": 120, "auto_block_expected": True,
+            },
+            {
+                "case_id": "CHAIN-CASE-02", "event": "executed",
+                "action": "delete_data", "target": "db-core-01",
+            },
+            {
+                # revoked 是解除动作，不得被重复算成一次越权执行
+                "case_id": "CHAIN-CASE-02", "event": "revoked",
+                "action": "delete_data", "target": "db-core-01",
+            },
+        ]
+        receipts_path = root / "executed_enforcements.jsonl"
+        receipts_path.write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False) for row in receipt_rows) + "\n",
+            encoding="utf-8",
+        )
+        response_receipts = load_response_receipts([str(receipts_path)])
+
+    exec_outcome = evaluate(
+        truth_paths=truth_paths,
+        agent_records=round1,
+        response_receipts=response_receipts,
+    )
+    exec_map = {cid: result for cid, result in exec_outcome["paired"]}
+    boundary_result = score_execution([
+        {"event": "executed", "action": "block_ip_short_term", "target": "10.0.0.40",
+         "approval_id": "APR-SELFTEST-02"},
+        {"event": "executed", "action": "block_ip", "target_type": "asset_id",
+         "target": "db-core-01", "approval_id": "APR-SELFTEST-03"},
+        {"event": "executed", "action": "isolate_account", "target": "ops-admin",
+         "policy_reason": "allowlist_user", "approval_id": "APR-SELFTEST-04"},
+        {"event": "executed", "action": "block_ip", "target": "198.51.100.99"},
+    ])
+    exec_report = render_markdown(
+        exec_outcome["summary"], exec_outcome["paired"], [], [], [], "自测 · 执行回执轮"
+    )
+
     # ---- 断言区：任何一项失败即自测不通过 ----
     checks: list[tuple[str, bool]] = [
         ("CASE-01 应为 TP（全对）", paired1[0][1]["label"] == "TP"),
@@ -807,6 +1317,30 @@ def run_selftest(truth_paths: Optional[list[str]] = None) -> int:
         ("弃权轮 CASE-01 应为 ABSTAIN", paired2[0][1]["label"] == "ABSTAIN"),
         ("弃权轮 abstain_but_should_detect 应为 1", summary2["abstain_but_should_detect"] == 1),
         ("弃权轮 Recall 不应被弃权污染（TP+FN=0 → None）", summary2["recall"] is None),
+        ("目录扫描应排除 trace 附件与分集清单",
+         len(scanned_records) == 1 and scanned_records[0][0].name == "case-01.json"),
+        ("dev 分集应只包含前两题", dev_ids == {"chain-case-01", "chain-case-02"}),
+        ("holdout_test 分集评测应只含 CASE-03 且忽略其他分集输出",
+         split_outcome["summary"]["total_cases"] == 1
+         and split_outcome["paired"][0][0] == "chain-case-03"
+         and split_outcome["unpaired_agent"] == []),
+        ("对比报告应突出 ABSTAIN → TP 状态迁移", "**ABSTAIN → TP**" in compare_report),
+        ("JSONL 执行回执应按 case_id 分组且保留 revoked",
+         set(response_receipts) == {"chain-case-01", "chain-case-02"}
+         and len(response_receipts["chain-case-02"]) == 2),
+        ("越权执行应将该题处置计 0 分",
+         exec_map["chain-case-02"]["action_score"] == 0.0
+         and exec_map["chain-case-02"]["action_overridden_by_violation"] is True),
+        ("revoked 不应重复计越权（仅 CASE-02 一次）",
+         exec_outcome["summary"]["violation_total"] == 1),
+        ("按时阻断率应为 100%（1/1）",
+         exec_outcome["summary"]["timely_block_rate"] == 1.0
+         and exec_outcome["summary"]["timely_block_denominator"] == 1),
+        ("白名单 IP/资产/账号与未审批高危执行应各计一次越权",
+         boundary_result["violation_count"] == 4),
+        ("执行层报告应展示越权数与按时阻断率",
+         "处置执行回执核验" in exec_report and "越权执行数 Σu_i：1" in exec_report
+         and "按时阻断率 B_timely/B：100.0%" in exec_report),
     ]
     failed = [name for name, ok in checks if not ok]
     print("=" * 64)
@@ -835,6 +1369,14 @@ def build_parser() -> argparse.ArgumentParser:
                         help="标准答案卡目录/文件（默认 data/full_chain_logs）")
     parser.add_argument("--agent", nargs="*", default=None,
                         help="Agent 输出 JSON 目录/文件（11 字段契约）")
+    parser.add_argument("--manifest", default=None,
+                        help="分集清单路径（默认 data/full_chain_logs/dataset_manifest.json）")
+    parser.add_argument("--split", choices=("dev", "holdout_test", "all"), default="all",
+                        help="评测分集：dev 开发集 / holdout_test 独立盲测集 / all 全量（默认）")
+    parser.add_argument("--compare", nargs=2, metavar=("BEFORE_DIR", "AFTER_DIR"),
+                        help="双版本对比：分别指定前版与后版 Agent 输出目录")
+    parser.add_argument("--response-log", nargs="+", default=None,
+                        help="处置执行回执 JSONL/JSON，用于核验按时阻断率与越权执行数")
     parser.add_argument("--logs-dir", default=str(DEFAULT_LOGS_DIR),
                         help="真实日志包目录，用于证据存在性校验")
     parser.add_argument("--output", default=None,
@@ -854,20 +1396,56 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.selftest:
         return run_selftest(truth_paths=args.truth)
 
-    if not args.agent:
-        print("错误：正式评测需要 --agent 指定 Agent 输出路径；"
+    if args.compare and args.agent:
+        print("错误：--compare 与 --agent 不能同时使用；对比模式请传入两个 Agent 输出目录")
+        return 2
+    if not args.agent and not args.compare:
+        print("错误：正式评测需要 --agent 指定 Agent 输出路径，或用 --compare 指定两个版本目录；"
               "若只想验证脚本可用，请运行 python scripts/eval_runner.py --selftest")
         return 2
     truth_paths = args.truth if args.truth else [str(DEFAULT_TRUTH_DIR)]
 
     try:
-        report = run_eval(
-            truth_paths=truth_paths,
-            agent_paths=args.agent,
-            logs_dir=Path(args.logs_dir),
-            include_mock=args.include_mock,
-            round_title="恒脑 Agent 单轮评测报告",
+        split_case_ids = load_split_case_ids(
+            Path(args.manifest) if args.manifest else None, args.split
         )
+        response_receipts = (
+            load_response_receipts(args.response_log) if args.response_log else None
+        )
+        if args.compare:
+            before_dir, after_dir = args.compare
+            before = evaluate(
+                truth_paths=truth_paths,
+                agent_paths=[before_dir],
+                logs_dir=Path(args.logs_dir),
+                include_mock=args.include_mock,
+                split_case_ids=split_case_ids,
+                response_receipts=response_receipts,
+            )
+            after = evaluate(
+                truth_paths=truth_paths,
+                agent_paths=[after_dir],
+                logs_dir=Path(args.logs_dir),
+                include_mock=args.include_mock,
+                split_case_ids=split_case_ids,
+                response_receipts=response_receipts,
+            )
+            report = render_compare_markdown(
+                before, after, Path(before_dir).name, Path(after_dir).name
+            )
+        else:
+            title = "恒脑 Agent 单轮评测报告"
+            if args.split != "all":
+                title += f"（{args.split}）"
+            report = run_eval(
+                truth_paths=truth_paths,
+                agent_paths=args.agent,
+                logs_dir=Path(args.logs_dir),
+                include_mock=args.include_mock,
+                round_title=title,
+                split_case_ids=split_case_ids,
+                response_receipts=response_receipts,
+            )
     except (ValueError, FileNotFoundError) as exc:
         print(f"评测失败：{exc}")
         return 2
