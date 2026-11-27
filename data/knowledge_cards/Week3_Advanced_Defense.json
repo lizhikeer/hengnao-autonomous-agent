@@ -1,0 +1,96 @@
+[
+  {
+    "schema_version": "1.1",
+    "tenant_id": "default",
+    "card_id": "KB-W3-BF-001",
+    "version": 1,
+    "card_type": "security_knowledge",
+    "title": "SSH 登录失败频率较低且分散在多个账号：识别慢速口令猜测",
+    "summary": "按来源地址、目标主机、账户和滚动时间窗口聚合 SSH 认证事件，识别低频、持续、多账户的异常失败。失败事件只能触发调查；是否发生账户失陷还需成功认证及后续活动证据。",
+    "investigation_goal": "较长时间内分散在多个账户上的 SSH 认证失败，是否构成异常口令猜测，是否存在未经授权的成功登录？",
+    "trigger_conditions": [
+      "同一来源地址在较长时间内多次触发 SSH 认证失败，但单个短窗口内次数不高。",
+      "多个账户持续出现来自同一来源的 SSH 认证失败。",
+      "认证失败分布明显偏离目标主机的正常运维基线。"
+    ],
+    "required_data": [
+      {
+        "data_id": "D1",
+        "description": "SSH 服务端认证事件及对应主机信息",
+        "log_sources": [
+          "auth_log"
+        ],
+        "fields": [
+          "timestamp",
+          "trace_id",
+          "src_ip",
+          "user",
+          "asset_id",
+          "action_or_method",
+          "payload_summary"
+        ],
+        "purpose": "按来源、目标主机、账户和时间聚合认证事件，观察失败分布及后续成功认证。",
+        "if_missing": "缺少认证结果时只能报告连接或认证异常，不能直接认定口令猜测。"
+      },
+      {
+        "data_id": "D2",
+        "description": "相关主机的网络连接记录",
+        "log_sources": [
+          "zeek_conn"
+        ],
+        "fields": [
+          "timestamp",
+          "src_ip",
+          "dest_ip",
+          "dest_port",
+          "asset_id",
+          "payload_summary"
+        ],
+        "purpose": "核对认证事件对应的网络连接及目标服务。",
+        "if_missing": "注明网络侧关联证据缺失，不以连接记录缺失推断认证事件不存在。"
+      }
+    ],
+    "analysis_rules": [
+      {
+        "rule_id": "R1",
+        "data_ids": [
+          "D1",
+          "D2"
+        ],
+        "condition": "同一来源在较长时间内对 SSH 服务产生持续认证失败，涉及多个账户，且偏离正常运维基线。",
+        "conclusion": "存在异常 SSH 认证失败模式，支持进一步调查口令猜测，但尚不能确认攻击成功。",
+        "next_step": "核对账户授权、运维安排及是否存在可关联的成功认证和后续会话。",
+        "source_ids": [
+          "SRC-MITRE-T1110"
+        ]
+      }
+    ],
+    "applicability_limits": [
+      "适用于 SSH 认证调查，不直接替代 Web、VPN 等认证协议的专用规则。",
+      "时间窗口和异常阈值应结合主机基线设定，不存在适用于所有环境的固定阈值。",
+      "共享出口、跳板机和授权运维可能产生相似现象，必须核实来源归属。",
+      "认证失败不等于账户失陷，必须有成功认证及后续活动证据。"
+    ],
+    "attack_category": "Brute_Force",
+    "related_attack_categories": [
+      "Valid_Accounts"
+    ],
+    "mitre_id": "T1110.001",
+    "applicable_log_sources": [
+      "auth_log",
+      "zeek_conn"
+    ],
+    "keywords": [
+      "SSH",
+      "慢速口令猜测",
+      "认证失败",
+      "多账户尝试",
+      "滚动时间窗口"
+    ],
+    "key_indicators": [
+      "同一来源在较长时间范围内持续出现 SSH 认证失败。",
+      "多个账户的失败事件分散在不同时间，单个短窗口内不突出。",
+      "异常失败之后出现可关联的成功认证。"
+    ],
+    "investigation_steps": [
+      "检索 SSH 认证日志，按来源、目标主机和账户整理失败与成功事件。",
