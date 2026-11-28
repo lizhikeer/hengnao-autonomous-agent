@@ -1,0 +1,231 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 2,
+  "card_id": "MEM-DEV-010",
+  "card_type": "verified_error_revision",
+  "title": "同一办公网用户低频输错口令后成功登录：避免仅凭失败标签弃权",
+  "summary": "同一用户和来源在约一分钟间隔内出现两次登录失败，随后成功登录并按正常顺序浏览和退出。应关联 Web 与认证日志、用户、来源、会话和行为节奏，不应仅凭 brute_force 阶段标签认定爆破或弃权。",
+  "investigation_goal": "同一办公网用户的少量登录失败后成功，是否属于人工输错口令？",
+  "trigger_conditions": [
+    "同一用户短时间出现少量认证失败后成功。",
+    "告警标签提示 brute_force，但请求节奏较低且来源位于办公网段。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access",
+        "auth_log"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "账号、资源权限与操作结果",
+      "log_sources": [
+        "authorization_context",
+        "application_audit"
+      ],
+      "fields": [
+        "user",
+        "asset_id",
+        "target_resource",
+        "authorization_scope",
+        "operation_result"
+      ],
+      "purpose": "核验访问是否获准及操作是否生效。",
+      "if_missing": "保留已观察到的请求，注明授权或实际结果待核。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "同一常用来源和账号少量失败后成功登录，后续浏览与退出符合账号基线。",
+      "conclusion": "关联的记录支持正常重试。",
+      "next_step": "以 trace_id、src_ip 和 user 聚合登录失败与成功记录，核对是否为同一用户。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。"
+  ],
+  "attack_category": "Benign_Login_Retry",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access",
+    "auth_log"
+  ],
+  "keywords": [
+    "登录重试",
+    "人工输错",
+    "低频失败",
+    "办公网",
+    "弃权纠错"
+  ],
+  "key_indicators": [
+    "同一用户短时间出现少量认证失败后成功。",
+    "告警标签提示 brute_force，但请求节奏较低且来源位于办公网段。"
+  ],
+  "investigation_steps": [
+    "以 trace_id、src_ip 和 user 聚合登录失败与成功记录，核对是否为同一用户。",
+    "计算失败事件间隔并与后续成功登录时间关联；低频人工输入节奏与高频自动化尝试应分开判断。",
+    "检查成功会话的后续页面访问和登出行为；没有异常行为时，不因单个 brute_force 标签直接定性。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "V1 将阶段提示标签和未核实的账号上下文作为弃权理由，没有优先按同一用户、来源和时间关联 Web 登录与 auth_log 成功事件。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-10.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-10.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景观测日志",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/full_chain_logs/chain_case_10_benign_login_retry.json",
+      "locator": "按 evidence_refs.source_id 定位记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/full_chain_logs/chain_case_10_benign_login_retry.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-28T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-10",
+    "investigation_id": "CHAIN-CASE-10",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-10",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-10"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E1001",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261106-1001",
+      "locator": "data/full_chain_logs/chain_case_10_benign_login_retry.json#LOG-20261106-1001",
+      "observed_at": "2026-11-06T08:20:01.000Z",
+      "snapshot_summary": "timestamp=2026-11-06T08:20:01Z asset_id=web-prod-01 src_ip=10.0.0.52 dest_ip=10.0.0.15 action_or_method=POST user=zhangsan status_code=401 bytes_out=3980",
+      "snapshot_sha256": "8f5872084c4be6ead0f38d1d57e0d55a3a813cb8abff4789b6eb69153500bc5a"
+    },
+    {
+      "evidence_id": "E1005",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261106-1005",
+      "locator": "data/full_chain_logs/chain_case_10_benign_login_retry.json#LOG-20261106-1005",
+      "observed_at": "2026-11-06T08:22:30.000Z",
+      "snapshot_summary": "timestamp=2026-11-06T08:22:30Z asset_id=web-prod-01 src_ip=10.0.0.52 dest_ip=10.0.0.15 action_or_method=POST user=zhangsan session_id=sess-3d81ee status_code=200 bytes_out=4050",
+      "snapshot_sha256": "14e678c30570a9c3ffaaff301ddb6aafcfd9a04f6ab036057007e564f0d138c7"
+    },
+    {
+      "evidence_id": "E1007",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261106-1007",
+      "locator": "data/full_chain_logs/chain_case_10_benign_login_retry.json#LOG-20261106-1007",
+      "observed_at": "2026-11-06T08:22:50.000Z",
+      "snapshot_summary": "timestamp=2026-11-06T08:22:50Z asset_id=web-prod-01 src_ip=10.0.0.52 dest_ip=10.0.0.15 action_or_method=GET user=zhangsan session_id=sess-3d81ee status_code=200 bytes_out=15320",
+      "snapshot_sha256": "1f0f4d882d2ce04ada895c7064e04a97501e6de4fee5d32ce49489988967bcce"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "同一办公网用户低频输错口令后成功登录：避免仅凭失败标签弃权",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "以 trace_id、src_ip 和 user 聚合登录失败与成功记录，核对是否为同一用户。",
+      "计算失败事件间隔并与后续成功登录时间关联；低频人工输入节奏与高频自动化尝试应分开判断。",
+      "检查成功会话的后续页面访问和登出行为；没有异常行为时，不因单个 brute_force 标签直接定性。"
+    ],
+    "original_judgement": "insufficient_evidence（V1 输出）",
+    "final_judgement": "关联的记录支持正常重试。",
+    "outcome": "benign",
+    "risk_level": "low",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "incorrect",
+      "response": "not_applicable"
+    },
+    "error_reason": "V1 将阶段提示标签和未核实的账号上下文作为弃权理由，没有优先按同一用户、来源和时间关联 Web 登录与 auth_log 成功事件。",
+    "corrected_steps": [
+      "以 trace_id、src_ip 和 user 聚合登录失败与成功记录，核对是否为同一用户。",
+      "计算失败事件间隔并与后续成功登录时间关联；低频人工输入节奏与高频自动化尝试应分开判断。",
+      "检查成功会话的后续页面访问和登出行为；没有异常行为时，不因单个 brute_force 标签直接定性。"
+    ],
+    "lessons": [
+      "同一用户和来源在约一分钟间隔内出现两次登录失败，随后成功登录并按正常顺序浏览和退出。应关联 Web 与认证日志、用户、来源、会话和行为节奏，不应仅凭 brute_force 阶段标签认定爆破或弃权。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "同一办公网用户的少量登录失败后成功，是否属于人工输错口令？",
+        "action": "以 trace_id、src_ip 和 user 聚合登录失败与成功记录，核对是否为同一用户。",
+        "evidence_ids": [
+          "E1001",
+          "E1005",
+          "E1007"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "同一常用来源和账号少量失败后成功登录，后续浏览与退出符合账号基线。",
+        "conclusion": "关联的记录支持正常重试。",
+        "next_step": "以 trace_id、src_ip 和 user 聚合登录失败与成功记录，核对是否为同一用户。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-10.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}

@@ -1,0 +1,231 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 2,
+  "card_id": "MEM-DEV-005",
+  "card_type": "verified_error_revision",
+  "title": "目录遍历首次被拒后仍需核查 URL 编码变体及敏感配置读取",
+  "summary": "同一来源的文件访问先被拒绝，后续相关请求返回成功状态且响应大小变化。发生了后续资源访问，应核验响应内容或文件审计以确定读取结果。",
+  "investigation_goal": "首次目录遍历被拒后，是否存在后续编码路径请求成功读取敏感配置？",
+  "trigger_conditions": [
+    "路径遍历请求返回 403，但同一来源继续访问相同下载接口。",
+    "后续请求出现 URL 编码路径片段且返回 200。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access",
+        "zeek_http"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "账号、资源权限与操作结果",
+      "log_sources": [
+        "authorization_context",
+        "application_audit"
+      ],
+      "fields": [
+        "user",
+        "asset_id",
+        "target_resource",
+        "authorization_scope",
+        "operation_result"
+      ],
+      "purpose": "核验访问是否获准及操作是否生效。",
+      "if_missing": "保留已观察到的请求，注明授权或实际结果待核。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "同一来源的文件访问先被拒绝，后续相关请求返回成功状态且响应大小变化。",
+      "conclusion": "发生了后续资源访问，应核验响应内容或文件审计以确定读取结果。",
+      "next_step": "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。"
+  ],
+  "attack_category": "Path_Traversal_Privilege",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access",
+    "zeek_http"
+  ],
+  "keywords": [
+    "目录遍历",
+    "URL编码",
+    "敏感配置",
+    "403",
+    "200"
+  ],
+  "key_indicators": [
+    "路径遍历请求返回 403，但同一来源继续访问相同下载接口。",
+    "后续请求出现 URL 编码路径片段且返回 200。"
+  ],
+  "investigation_steps": [
+    "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+    "比较 403 与后续编码路径请求的状态码和响应字节；不能把首个拦截响应外推为整条链均被拦截。",
+    "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "原调查未完整关联相关阶段。发生了后续资源访问，应核验响应内容或文件审计以确定读取结果。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-05.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-05.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景观测日志",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/full_chain_logs/chain_case_05_path_traversal_idor.json",
+      "locator": "按 evidence_refs.source_id 定位记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/full_chain_logs/chain_case_05_path_traversal_idor.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-28T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-05",
+    "investigation_id": "CHAIN-CASE-05",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-05",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-05"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0502",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0502",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0502",
+      "observed_at": "2026-11-03T14:41:00.000Z",
+      "snapshot_summary": "timestamp=2026-11-03T14:41:00Z asset_id=web-prod-01 src_ip=203.0.113.147 dest_ip=10.0.0.15 action_or_method=GET status_code=403 bytes_out=153",
+      "snapshot_sha256": "6884c255052df65394866e8a6178cf74095d7cfc27dab797ea3ff0c52a0a2586"
+    },
+    {
+      "evidence_id": "E0503",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0503",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0503",
+      "observed_at": "2026-11-03T14:41:20.000Z",
+      "snapshot_summary": "timestamp=2026-11-03T14:41:20Z asset_id=web-prod-01 src_ip=203.0.113.147 dest_ip=10.0.0.15 action_or_method=GET status_code=200 bytes_out=781",
+      "snapshot_sha256": "84461c30cba2fb7de456d3576e89cc13c36fcc50f1f4ce18d086499228760d1d"
+    },
+    {
+      "evidence_id": "E0504",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0504",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0504",
+      "observed_at": "2026-11-03T14:41:45.000Z",
+      "snapshot_summary": "timestamp=2026-11-03T14:41:45Z asset_id=web-prod-01 src_ip=203.0.113.147 dest_ip=10.0.0.15 action_or_method=GET status_code=200 bytes_out=1240",
+      "snapshot_sha256": "534e9aa82f3f996c90ddb3a5b80ae061d7c79da36dbac6fdcb9a975cd527b2ea"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "目录遍历首次被拒后仍需核查 URL 编码变体及敏感配置读取",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+      "比较 403 与后续编码路径请求的状态码和响应字节；不能把首个拦截响应外推为整条链均被拦截。",
+      "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。"
+    ],
+    "original_judgement": "Path_Traversal_Privilege（V1 输出）",
+    "final_judgement": "发生了后续资源访问，应核验响应内容或文件审计以确定读取结果。",
+    "outcome": "confirmed_attack",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "incorrect",
+      "response": "not_applicable"
+    },
+    "error_reason": "原调查未完整关联相关阶段。发生了后续资源访问，应核验响应内容或文件审计以确定读取结果。",
+    "corrected_steps": [
+      "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+      "比较 403 与后续编码路径请求的状态码和响应字节；不能把首个拦截响应外推为整条链均被拦截。",
+      "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。"
+    ],
+    "lessons": [
+      "发生了后续资源访问，应核验响应内容或文件审计以确定读取结果。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "首次目录遍历被拒后，是否存在后续编码路径请求成功读取敏感配置？",
+        "action": "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+        "evidence_ids": [
+          "E0502",
+          "E0503",
+          "E0504"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "同一来源的文件访问先被拒绝，后续相关请求返回成功状态且响应大小变化。",
+        "conclusion": "发生了后续资源访问，应核验响应内容或文件审计以确定读取结果。",
+        "next_step": "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-05.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}

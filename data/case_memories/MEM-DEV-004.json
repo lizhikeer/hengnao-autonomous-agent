@@ -1,0 +1,228 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 2,
+  "card_id": "MEM-DEV-004",
+  "card_type": "verified_error_revision",
+  "title": "存储型 XSS 告警后继续追踪管理员访问与同会话外部复用",
+  "summary": "提交内容后管理员访问相关页面，随后同一会话出现在异常来源。会话复用需要调查。客户端执行情况需浏览器或应用事件确认。",
+  "investigation_goal": "存储型 XSS 是否进一步导致管理员会话被外部来源复用？",
+  "trigger_conditions": [
+    "评论或反馈接口出现存储型脚本载荷。",
+    "管理员访问相关页面后，同一 session_id 从新的外部来源访问后台。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "账号、资源权限与操作结果",
+      "log_sources": [
+        "authorization_context",
+        "application_audit"
+      ],
+      "fields": [
+        "user",
+        "asset_id",
+        "target_resource",
+        "authorization_scope",
+        "operation_result"
+      ],
+      "purpose": "核验访问是否获准及操作是否生效。",
+      "if_missing": "保留已观察到的请求，注明授权或实际结果待核。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "提交内容后管理员访问相关页面，随后同一会话出现在异常来源。",
+      "conclusion": "会话复用需要调查。客户端执行情况需浏览器或应用事件确认。",
+      "next_step": "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。"
+  ],
+  "attack_category": "XSS",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access"
+  ],
+  "keywords": [
+    "存储型XSS",
+    "管理员会话",
+    "会话复用",
+    "多日志关联"
+  ],
+  "key_indicators": [
+    "评论或反馈接口出现存储型脚本载荷。",
+    "管理员访问相关页面后，同一 session_id 从新的外部来源访问后台。"
+  ],
+  "investigation_steps": [
+    "按 trace_id 读取完整场景日志，不在首次发现 XSS 载荷后提前结束。",
+    "关联管理员访问被投毒页面的 session_id、访问时间和来源地址。",
+    "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "原调查未完整关联相关阶段。会话复用需要调查。客户端执行情况需浏览器或应用事件确认。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-04.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-04.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景观测日志",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/full_chain_logs/chain_case_04_xss_session.json",
+      "locator": "按 evidence_refs.source_id 定位记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/full_chain_logs/chain_case_04_xss_session.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-28T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-04",
+    "investigation_id": "CHAIN-CASE-04",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-04",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-04"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0404",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0404",
+      "locator": "data/full_chain_logs/chain_case_04_xss_session.json#LOG-20261103-0404",
+      "observed_at": "2026-11-03T09:14:20.000Z",
+      "snapshot_summary": "timestamp=2026-11-03T09:14:20Z asset_id=web-prod-01 src_ip=198.51.100.61 dest_ip=10.0.0.15 action_or_method=POST status_code=200 bytes_out=640",
+      "snapshot_sha256": "b0e65acb486e7f9893c8812de215c86a143c4c4aa2cf61315c83f7d7d0703397"
+    },
+    {
+      "evidence_id": "E0407",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0407",
+      "locator": "data/full_chain_logs/chain_case_04_xss_session.json#LOG-20261103-0407",
+      "observed_at": "2026-11-03T09:16:10.000Z",
+      "snapshot_summary": "timestamp=2026-11-03T09:16:10Z asset_id=web-prod-01 src_ip=10.0.0.45 dest_ip=10.0.0.15 action_or_method=GET user=ops_li session_id=sess-a91c status_code=200 bytes_out=9120",
+      "snapshot_sha256": "3248d5a327df1a6107aaa8747bde902f68d37b2b89bd963581b86621d4a131fe"
+    },
+    {
+      "evidence_id": "E0409",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0409",
+      "locator": "data/full_chain_logs/chain_case_04_xss_session.json#LOG-20261103-0409",
+      "observed_at": "2026-11-03T09:17:00.000Z",
+      "snapshot_summary": "timestamp=2026-11-03T09:17:00Z asset_id=web-prod-01 src_ip=198.51.100.61 dest_ip=10.0.0.15 action_or_method=GET user=ops_li session_id=sess-a91c status_code=200 bytes_out=15320",
+      "snapshot_sha256": "1a0d697ff47f6439aad9adf1920d9a165c5c96bdb88de1036e9cd15358c2b081"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "存储型 XSS 告警后继续追踪管理员访问与同会话外部复用",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "按 trace_id 读取完整场景日志，不在首次发现 XSS 载荷后提前结束。",
+      "关联管理员访问被投毒页面的 session_id、访问时间和来源地址。",
+      "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。"
+    ],
+    "original_judgement": "XSS（V1 输出）",
+    "final_judgement": "会话复用需要调查。客户端执行情况需浏览器或应用事件确认。",
+    "outcome": "confirmed_attack",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "incorrect",
+      "response": "not_applicable"
+    },
+    "error_reason": "原调查未完整关联相关阶段。会话复用需要调查。客户端执行情况需浏览器或应用事件确认。",
+    "corrected_steps": [
+      "按 trace_id 读取完整场景日志，不在首次发现 XSS 载荷后提前结束。",
+      "关联管理员访问被投毒页面的 session_id、访问时间和来源地址。",
+      "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。"
+    ],
+    "lessons": [
+      "会话复用需要调查。客户端执行情况需浏览器或应用事件确认。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "存储型 XSS 是否进一步导致管理员会话被外部来源复用？",
+        "action": "按 trace_id 读取完整场景日志，不在首次发现 XSS 载荷后提前结束。",
+        "evidence_ids": [
+          "E0404",
+          "E0407",
+          "E0409"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "提交内容后管理员访问相关页面，随后同一会话出现在异常来源。",
+        "conclusion": "会话复用需要调查。客户端执行情况需浏览器或应用事件确认。",
+        "next_step": "关联应用操作审计、权限记录或响应内容，确认尚未查明的影响。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-04.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}
