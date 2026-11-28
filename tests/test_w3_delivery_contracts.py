@@ -56,3 +56,29 @@ def test_lexical_fallback_cannot_publish_case_files(monkeypatch):
     cards, meta = knowledge_adapter.search("多账号认证失败", mode="lexical_fallback")
     assert meta["degraded"]
     assert not cards
+
+
+def test_v2_evaluation_passes_only_truth_cards(monkeypatch, tmp_path):
+    import json
+
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+    truth = {
+        "case_id": "CHAIN-CASE-01",
+        "is_malicious": False,
+        "attack_type": "none",
+        "attacker_ip": "192.0.2.10",
+        "victim_asset": "web-01",
+        "recommended_action": "none",
+        "evidence_log_ids": [],
+    }
+    (dataset / "chain_case_01_truth.json").write_text(json.dumps(truth), encoding="utf-8")
+    other_truth = {**truth, "case_id": "CHAIN-CASE-02"}
+    (dataset / "chain_case_02_truth.json").write_text(json.dumps(other_truth), encoding="utf-8")
+    (dataset / "dataset_manifest.json").write_text('{"splits":{}}', encoding="utf-8")
+    (tmp_path / "CHAIN-CASE-01.json").write_text(json.dumps(truth), encoding="utf-8")
+    monkeypatch.setattr(run_v2_traces, "DATASET", dataset)
+    monkeypatch.setattr(run_v2_traces, "OUT_DIR", tmp_path)
+    report = run_v2_traces.write_evaluation([truth]).read_text(encoding="utf-8")
+    assert "chain-case-01" in report.lower()
+    assert "chain-case-02" not in report.lower()

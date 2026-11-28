@@ -54,6 +54,127 @@
         "CHAIN-CASE-09"
       ],
       "sha256": "76af03d3c4028a192fa584d5820abcb02e8513a093eb3e7866f25da00621f518"
+    },
+    "data/case_memories/MEM-DEV-001.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-001"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-01"
+      ],
+      "sha256": "968751b291ce491326d77147f57d7fcdc0fd9425b1732f6edc0bcbba3d24ad14"
+    },
+    "data/case_memories/MEM-DEV-003.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-003"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-03"
+      ],
+      "sha256": "37928523379247957f209af419943bbfa5df64b7a65dd5fa09c2248c0532ad16"
+    },
+    "data/case_memories/MEM-DEV-004.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-004"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-04"
+      ],
+      "sha256": "861fc933938ce940a44d983a6f3b2b93fe21b3c3559c80f91fec948adcfebc31"
+    },
+    "data/case_memories/MEM-DEV-005.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-005"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-05"
+      ],
+      "sha256": "a36b29105b2e1fd3508c3ca48a0e549d88f889ea338b6a15292ddc28809db0b0"
+    },
+    "data/case_memories/MEM-DEV-007.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-007"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-07"
+      ],
+      "sha256": "5ca3dac4341afb87708df9dbb22987f83f426bc3d03186f98beba005b69b7683"
+    },
+    "data/case_memories/MEM-DEV-010.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-010"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-10"
+      ],
+      "sha256": "3e76574ebd8b8a615c6fc09e919b3823d80142b966031e1ac1ace14a0caccf32"
+    },
+    "data/case_memories/MEM-DEV-011.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-011"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-01"
+      ],
+      "sha256": "f1c82baab11484713388353ea8fcd71b2cd068b1d7bcef449daf21a914fae197"
+    },
+    "data/case_memories/MEM-DEV-012.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-012"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-04"
+      ],
+      "sha256": "24aed2b5cff9517c78f55fb9f2fa61bc9603cff7c4a446153a9abe106708cb0b"
+    },
+    "data/case_memories/MEM-DEV-013.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-013"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-05"
+      ],
+      "sha256": "09c6fedb2f40cd25e8d067163c6b0cc5cb60e65a5a0c38fc6a541a3daf8a20d7"
+    },
+    "data/case_memories/MEM-DEV-014.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-014"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-03"
+      ],
+      "sha256": "38c70ce88fb9fca1cdd2382a80d8534d7cf0f6b364318c4329009bfef8e57aa9"
+    },
+    "data/case_memories/MEM-DEV-015.json": {
+      "tenant_id": "default",
+      "dataset_split": "development",
+      "card_ids": [
+        "MEM-DEV-015"
+      ],
+      "scenario_ids": [
+        "CHAIN-CASE-10"
+      ],
+      "sha256": "ad7d9a265cc37bca1b65121f3681d41e0d4cbdbd616290bfb514958b2ec12d43"
     }
   }
 }

@@ -1,0 +1,214 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 2,
+  "card_id": "MEM-DEV-007",
+  "card_type": "verified_correct_case",
+  "title": "自动化漏洞扫描探测：识别恶意侦察但不夸大为成功入侵",
+  "summary": "同一来源在短时间内使用扫描器特征连续探测多个敏感路径和漏洞路径，响应均为 404、403 或 400，未发现成功访问证据。可确认自动化扫描行为，但不能据此声称主机已失陷。",
+  "investigation_goal": "短时间多路径探测是否构成自动化漏洞扫描，且是否有成功利用证据？",
+  "trigger_conditions": [
+    "同一来源短时间访问多个敏感路径或常见漏洞路径。",
+    "User-Agent 呈现扫描器特征，且响应集中为拒绝或未找到。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access",
+        "zeek_conn"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "账号、资源权限与操作结果",
+      "log_sources": [
+        "authorization_context",
+        "application_audit"
+      ],
+      "fields": [
+        "user",
+        "asset_id",
+        "target_resource",
+        "authorization_scope",
+        "operation_result"
+      ],
+      "purpose": "核验访问是否获准及操作是否生效。",
+      "if_missing": "保留已观察到的请求，注明授权或实际结果待核。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "来源在短时内枚举多个路径、响应多为拒绝或未找到，且授权核验显示无对应扫描任务。",
+      "conclusion": "可确认未授权探测；失陷及数据暴露仍须独立证据。",
+      "next_step": "保存逐项核验结果，并将结论限定在已检查的账号、资产、时间和操作范围内。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。"
+  ],
+  "attack_category": "Scan",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access",
+    "zeek_conn"
+  ],
+  "keywords": [
+    "自动化扫描",
+    "漏洞探测",
+    "侦察",
+    "未成功利用"
+  ],
+  "key_indicators": [
+    "同一来源短时间访问多个敏感路径或常见漏洞路径。",
+    "User-Agent 呈现扫描器特征，且响应集中为拒绝或未找到。"
+  ],
+  "investigation_steps": [
+    "按 trace_id、src_ip、asset_id、user 和 session_id 关联场景日志。",
+    "逐项核对账号、来源、目标资产、时间窗口、实际动作及后续网络行为。",
+    "保存证据编号并注明结论覆盖范围；超出授权或缺失数据时另行调查。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-07.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-07.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景观测日志",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/full_chain_logs/chain_case_07_recon_scanner.json",
+      "locator": "按 evidence_refs.source_id 定位记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/full_chain_logs/chain_case_07_recon_scanner.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-28T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-07",
+    "investigation_id": "CHAIN-CASE-07",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-07",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-07"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0702",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261104-0702",
+      "locator": "data/full_chain_logs/chain_case_07_recon_scanner.json#LOG-20261104-0702",
+      "observed_at": "2026-11-04T20:05:02.000Z",
+      "snapshot_summary": "timestamp=2026-11-04T20:05:02Z asset_id=web-prod-01 src_ip=45.155.205.233 dest_ip=10.0.0.15 action_or_method=GET status_code=404 bytes_out=153",
+      "snapshot_sha256": "6bf1f50a47dc19cb105caf88574cbb71732d7ed98aef0869db23098a70e4348d"
+    },
+    {
+      "evidence_id": "E0714",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261104-0714",
+      "locator": "data/full_chain_logs/chain_case_07_recon_scanner.json#LOG-20261104-0714",
+      "observed_at": "2026-11-04T20:05:23.000Z",
+      "snapshot_summary": "timestamp=2026-11-04T20:05:23Z asset_id=web-prod-01 src_ip=45.155.205.233 dest_ip=10.0.0.15 action_or_method=GET status_code=404 bytes_out=153",
+      "snapshot_sha256": "d97208bac4555dfebcf83dd6e7825a651066d05f24d216907d96fc7000cedca9"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "自动化漏洞扫描探测：识别恶意侦察但不夸大为成功入侵",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "按完整场景日志核对账号、来源、资产、时间和实际动作。",
+      "结合标准场景记录核验备份或会话行为，并限定正常结论的覆盖范围。"
+    ],
+    "original_judgement": "Scan（V1 输出）",
+    "final_judgement": "可确认未授权探测；失陷及数据暴露仍须独立证据。",
+    "outcome": "confirmed_attack",
+    "risk_level": "medium",
+    "dimension_labels": {
+      "diagnosis": "correct",
+      "evidence": "correct",
+      "response": "not_applicable"
+    },
+    "error_reason": "",
+    "corrected_steps": [],
+    "lessons": [
+      "同一来源在短时间内使用扫描器特征连续探测多个敏感路径和漏洞路径，响应均为 404、403 或 400，未发现成功访问证据。可确认自动化扫描行为，但不能据此声称主机已失陷。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "短时间多路径探测是否构成自动化漏洞扫描，且是否有成功利用证据？",
+        "action": "按场景编号读取完整日志，逐项核对账号、来源、资产、时间、行为及后续连接。",
+        "evidence_ids": [
+          "E0702",
+          "E0714"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "来源在短时内枚举多个路径、响应多为拒绝或未找到，且授权核验显示无对应扫描任务。",
+        "conclusion": "可确认未授权探测；失陷及数据暴露仍须独立证据。",
+        "next_step": "记录扫描范围，核验后续访问与业务影响。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-07.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}

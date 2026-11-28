@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
@@ -68,6 +69,23 @@ class KnowledgeService:
         reviewed_by: str | None = None,
         preserve_approved: bool = False,
     ) -> list[dict[str, Any]]:
+        return list(
+            self.iter_ingest_files(
+                paths,
+                manifest=manifest,
+                reviewed_by=reviewed_by,
+                preserve_approved=preserve_approved,
+            )
+        )
+
+    def iter_ingest_files(
+        self,
+        paths: list[Path],
+        *,
+        manifest: SourceManifest,
+        reviewed_by: str | None = None,
+        preserve_approved: bool = False,
+    ) -> Iterator[dict[str, Any]]:
         """所有来源和卡片先预检；显式 reviewed_by 表示维护者批准此次导入。"""
         cards = []
         for path in paths:
@@ -95,17 +113,16 @@ class KnowledgeService:
                 raise ValueError("已批准版本不能降回候选；请提交新版本")
         if any(card["review_status"] == "approved" for card in cards):
             self.vectors.initialize()
-        return [
-            {
-                "card_id": c["card_id"],
-                "version": c["version"],
-                "status": "already_approved",
-                "points": 0,
-            }
-            if (c["card_id"], c["version"]) in unchanged
-            else self._ingest(c)
-            for c in cards
-        ]
+        for card in cards:
+            if (card["card_id"], card["version"]) in unchanged:
+                yield {
+                    "card_id": card["card_id"],
+                    "version": card["version"],
+                    "status": "already_approved",
+                    "points": 0,
+                }
+            else:
+                yield self._ingest(card)
 
     def _ingest(self, card: dict[str, Any]) -> dict[str, Any]:
         duplicate = self.store.duplicate(card)
@@ -114,6 +131,7 @@ class KnowledgeService:
             return {
                 "card_id": card["card_id"],
                 "status": "duplicate",
+                "version": card["version"],
                 "points": 0,
                 "duplicate_of": duplicate["card_id"],
                 "existing_review_status": duplicate["review_status"],
@@ -128,10 +146,17 @@ class KnowledgeService:
         if card["review_status"] != "approved":
             return result
         now = utc_now()
-        if card["valid_from"] > now or (
+        not_yet_valid = card["valid_from"] > now
+        if not_yet_valid or (
             card["valid_until"] is not None and card["valid_until"] <= now
         ):
-            return {**result, "status": "outside_validity"}
+            return {
+                **result,
+                "status": "outside_validity",
+                "reason": "not_yet_valid" if not_yet_valid else "expired",
+                "valid_from": card["valid_from"],
+                "valid_until": card["valid_until"],
+            }
         profile = self.encoder.profile
         generation, job = self.store.begin_publish(card, profile)
         try:

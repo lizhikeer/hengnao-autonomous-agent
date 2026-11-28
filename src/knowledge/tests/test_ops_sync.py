@@ -5,7 +5,7 @@ import json
 from scripts.ops import sync_knowledge_index as sync
 from src.knowledge.search import KnowledgeService
 
-from .conftest import source_files
+from .conftest import FakeEncoder, source_files
 
 
 def test_sync_reports_staged_unchanged_and_content_conflict(service, card, tmp_path, monkeypatch):
@@ -56,3 +56,34 @@ def test_sync_reports_vector_failure_and_dry_run_is_read_only(card, tmp_path, mo
     assert result["verdict"] == "failed"
     assert result["qdrant"]["status"] == "unverified"
     assert result["failures"][0]["stage"] == "sync"
+
+
+def test_partly_published_batch_reports_every_card(card, tmp_path, monkeypatch):
+    future = {**card, "card_id": "KB-FUTURE", "valid_from": "2099-01-01T00:00:00.000Z"}
+    duplicate = {**card, "card_id": "KB-DUPLICATE"}
+    source_files(tmp_path, [card, future, duplicate])
+    monkeypatch.setattr(sync, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(KnowledgeService, "encoder", property(lambda _: FakeEncoder()))
+    report = tmp_path / "report.json"
+    code = sync.main(
+        [
+            "--manifest",
+            str(tmp_path / "manifest.json"),
+            "--approve-by",
+            "test",
+            "--sqlite-path",
+            str(tmp_path / "store.sqlite3"),
+            "--qdrant-path",
+            str(tmp_path / "qdrant"),
+            "--output",
+            str(report),
+        ]
+    )
+    result = json.loads(report.read_text("utf-8"))
+    assert code != 0 and result["verdict"] == "partial"
+    assert result["smoke_test"]["ok"] and result["qdrant"]["published"] == 1
+    rows = {r["card_id"]: r for r in result["qdrant"]["cards"]}
+    assert rows[card["card_id"]]["status"] == "published"
+    assert rows["KB-FUTURE"]["status"] == "outside_validity"
+    assert rows["KB-FUTURE"]["reason"] == "not_yet_valid"
+    assert rows["KB-DUPLICATE"]["duplicate_of"] == card["card_id"]

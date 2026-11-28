@@ -134,8 +134,13 @@ def write_evaluation(rows: list[dict]) -> Path:
     """用现有评测器算分：只喂 11 字段结果文件，不动评分逻辑与标准答案。"""
     runner = _load_eval_runner()
     agent_paths = [str(OUT_DIR / f"{row['case_id']}.json") for row in rows]
+    # 只为本次执行的场景配对答案，避免部分回放被误报为缺失其他场景。
+    truth_paths = [
+        str(DATASET / f"{row['case_id'].lower().replace('-', '_')}_truth.json")
+        for row in rows
+    ]
     markdown = runner.run_eval(
-        [str(DATASET)],
+        truth_paths,
         agent_paths=agent_paths,
         logs_dir=DATASET,
         round_title=f"V2 单轮评测报告（{ORIGIN}）",

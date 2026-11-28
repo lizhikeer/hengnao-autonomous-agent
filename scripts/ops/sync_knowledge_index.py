@@ -68,11 +68,11 @@ def _verify_files(
     return file_reports, cards, failures
 
 
-def _sync(config, manifest, paths, reviewer, dry_run, failures):
+def _sync(config, manifest, paths, cards, reviewer, dry_run, failures):
     """校验通过后走管理端审核流程，发布后通过实际接口确认可检索。"""
     status = "dry_run" if dry_run else "skipped"
     sqlite = {"status": status, "path": config.sqlite_path, "saved": 0, "skipped": 0, "errors": []}
-    qdrant = {"status": status}
+    qdrant = {"status": status, "cards": []}
     smoke = {"status": status, "ok": None}
     if failures or dry_run:
         return sqlite, qdrant, smoke
@@ -83,14 +83,22 @@ def _sync(config, manifest, paths, reviewer, dry_run, failures):
 
         Path(config.sqlite_path).parent.mkdir(parents=True, exist_ok=True)
         service = KnowledgeService(config)
-        rows = service.ingest_files(
+        rows = qdrant["cards"]
+        for row in service.iter_ingest_files(
             paths, manifest=manifest, reviewed_by=reviewer, preserve_approved=True
-        )
+        ):
+            rows.append(row)
         published = [row for row in rows if row["status"] == "published"]
-        sqlite.update(status="ok", saved=sum(r["status"] in {"published", "pending"} for r in rows))
+        sqlite.update(
+            status="ok",
+            saved=sum(r["status"] in {"published", "pending", "outside_validity"} for r in rows),
+        )
         sqlite["skipped"] = len(rows) - sqlite["saved"]
         if reviewer:
-            qdrant.update(status="ok" if published else "skipped", published=len(published))
+            qdrant.update(status="ok", published=len(published))
+            if len(published) != len(cards):
+                qdrant["status"] = "incomplete"
+                failures.append({"stage": "publish", "error": "部分卡片未发布，详见 qdrant.cards"})
         if published:
             first = published[0]
             card = service.store.get(config.tenant_id, first["card_id"], first["version"])
@@ -108,6 +116,19 @@ def _sync(config, manifest, paths, reviewer, dry_run, failures):
         sqlite["status"] = "error"
         if reviewer:
             qdrant["status"] = "unverified"
+            completed = {(r["card_id"], r["version"]) for r in qdrant["cards"]}
+            qdrant["published"] = sum(r["status"] == "published" for r in qdrant["cards"])
+            for card in cards:
+                version = card.get("version", 1)
+                if (card["card_id"], version) not in completed:
+                    qdrant["cards"].append(
+                        {
+                            "card_id": card["card_id"],
+                            "version": version,
+                            "status": "unverified",
+                            "reason": str(exc),
+                        }
+                    )
     finally:
         if service is not None:
             service.close()
@@ -146,14 +167,14 @@ def main(argv: list[str] | None = None) -> int:
     if not cards and not failures:
         failures.append({"stage": "manifest", "error": "清单无卡片"})
     sqlite_report, qdrant_report, smoke = _sync(
-        config, manifest, paths, args.approve_by, args.dry_run, failures
+        config, manifest, paths, cards, args.approve_by, args.dry_run, failures
     )
     if args.approve_by and not args.dry_run and not failures and not smoke["ok"]:
         failures.append({"stage": "smoke", "error": "未验证已发布内容可检索"})
 
     verdict = "ok"
     if failures:
-        verdict = "failed"
+        verdict = "partial" if 0 < qdrant_report.get("published", 0) < len(cards) else "failed"
     elif args.dry_run:
         verdict = "dry_run_ok"
     elif not args.approve_by:

@@ -81,11 +81,18 @@ def verify_endpoint(url: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", help="验证已部署的 REST 服务，例如 https://host:port")
+    parser.add_argument(
+        "--extra-queries", type=Path, help="追加开发评测题 JSON，每项包含 query 和 expected"
+    )
     args = parser.parse_args()
     if args.url:
         verify_endpoint(args.url)
         return
     config = KnowledgeConfig.from_env()
+    queries = list(QUERIES)
+    if args.extra_queries:
+        for item in json.loads(args.extra_queries.read_text("utf-8")):
+            queries.append((item["query"], item["expected"]))
     service = KnowledgeService(config)
     try:
         active = service.store.db.execute(
@@ -93,22 +100,24 @@ def main() -> None:
             (config.tenant_id,),
         ).fetchall()
         ids = {row["card_id"] for row in active}
-        missing = {expected for _, expected in QUERIES} - ids
+        missing = {expected for _, expected in queries} - ids
         if missing:
             raise ValueError(f"测试库缺少已发布的目标卡：{sorted(missing)}")
         excluded = json.loads((ROOT / "data/case_memories/manifest.json").read_text("utf-8"))[
             "excluded_scenario_ids"
         ]
         blocked = {scenario_key(s) for s in excluded}
+        origins = {}
         for row in active:
             origin = json.loads(row["origin_json"] or "{}")
+            origins[row["card_id"]] = origin
             identifiers = [origin.get("case_id"), *origin.get("scenario_ids", [])]
             if {scenario_key(s) for s in identifiers if s} & blocked:
                 raise ValueError(f"发现已发布的盲测来源：{row['card_id']}")
         for weight, grouped in [(0.5, False), (config.semantic_weight, True)]:
             service.config = replace(config, semantic_weight=weight)
             rows = []
-            for question, expected in QUERIES:
+            for question, expected in queries:
                 hits = service.search(question, top_k=3, baseline=not grouped)
                 ids = [hit["card_id"] for hit in hits]
                 rows.append({"expected": expected, "top3": ids, "hit": expected in ids})
@@ -123,16 +132,17 @@ def main() -> None:
                     ensure_ascii=False,
                 )
             )
-        for question, expected in QUERIES:
-            if expected.startswith("MEM-DEV-"):
-                current = "CASE-" + expected[-2:]
+        for question, expected in queries:
+            for current in origins[expected].get("scenario_ids", []):
                 hits = service.search(
                     question, top_k=20, filters={"exclude_scenario_ids": [current]}
                 )
                 for hit in hits:
                     source = hit.get("origin", {})
                     identifiers = [source.get("case_id"), *source.get("scenario_ids", [])]
-                    if {scenario_key(s) for s in identifiers if s} & (blocked | {current}):
+                    if {scenario_key(s) for s in identifiers if s} & (
+                        blocked | {scenario_key(current)}
+                    ):
                         raise ValueError(f"检索泄漏：{hit['card_id']}")
         # 使用 V2 实际请求的类别、自然语言问题和 limit。检查跨案召回与同案排除。
         question = V2_C2_QUERY
