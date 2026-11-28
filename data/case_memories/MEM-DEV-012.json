@@ -1,0 +1,233 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 1,
+  "card_id": "MEM-DEV-012",
+  "card_type": "verified_error_revision",
+  "title": "管理员会话被外部来源复用后：继续核查数据导出和权限变更",
+  "summary": "相同管理员 session_id 从原管理员来源切换到攻击来源后，继续出现用户数据导出和角色修改请求。会话来源变化是重要关联线索，后续操作用于界定影响范围。",
+  "investigation_goal": "外部来源复用管理员会话后，是否实施了数据导出或权限变更？",
+  "trigger_conditions": [
+    "同一 session_id 在短时间内从不同来源地址出现。",
+    "来源变化后访问后台导出或用户权限修改接口。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "场景标准判定与授权上下文记录",
+      "log_sources": [
+        "scenario_truth",
+        "authorization_context"
+      ],
+      "fields": [
+        "case_id",
+        "attack_type",
+        "risk_level",
+        "evidence_log_ids",
+        "account_scope",
+        "source_scope",
+        "asset_scope",
+        "time_scope",
+        "action_scope"
+      ],
+      "purpose": "核对日志事实与场景判定、账号和行为授权边界。",
+      "if_missing": "明确标注授权或影响尚未核实，不把白名单、阶段标签或单个响应码当作最终结论。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "同一场景中的日志可按时间、来源、资产、用户或会话可靠关联，并与标准判定及授权上下文进行核对。",
+      "conclusion": "攻击来源复用管理员会话后导出用户数据并提交角色修改请求。",
+      "next_step": "以 session_id 关联管理员访问和后续请求，核对来源地址变化。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。",
+    "CASE-13 至 CASE-20 属 holdout_test 盲测集，不得用于本卡证据或规则归纳。"
+  ],
+  "attack_category": "XSS",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access"
+  ],
+  "keywords": [
+    "会话劫持",
+    "会话复用",
+    "数据导出",
+    "角色变更"
+  ],
+  "key_indicators": [
+    "同一 session_id 在短时间内从不同来源地址出现。",
+    "来源变化后访问后台导出或用户权限修改接口。"
+  ],
+  "investigation_steps": [
+    "以 session_id 关联管理员访问和后续请求，核对来源地址变化。",
+    "检查会话复用后的敏感读取、导出和权限修改操作。",
+    "分别记录请求证据与实际变更结果；仅有请求记录时，不把权限修改请求直接写成已确认生效。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "V1 未关联同一会话的来源变化及后续后台操作，未覆盖会话劫持后的影响阶段。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-04.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-04.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景标准判定记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_04_truth.json",
+      "locator": "case_id、attack_type、risk_level、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_04_xss_session.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-04",
+    "investigation_id": "CHAIN-CASE-04",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-04",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-04"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0409",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0409",
+      "locator": "data/full_chain_logs/chain_case_04_xss_session.json#LOG-20261103-0409",
+      "observed_at": "2026-11-03T09:17:00.000Z",
+      "snapshot_summary": "2026-11-03T09:17:00Z nginx_access web-prod-01 GET ops_li 198.51.100.61 10.0.0.15",
+      "snapshot_sha256": "7bce617e2f1a44dd6bfc314fbfca1bc8d635beeb92b1067152ff59f0e0976550"
+    },
+    {
+      "evidence_id": "E0411",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0411",
+      "locator": "data/full_chain_logs/chain_case_04_xss_session.json#LOG-20261103-0411",
+      "observed_at": "2026-11-03T09:17:40.000Z",
+      "snapshot_summary": "2026-11-03T09:17:40Z nginx_access web-prod-01 GET ops_li 198.51.100.61 10.0.0.15",
+      "snapshot_sha256": "9789d4abc56693370affe3b08078abae6208142092e84c9c702e3b530f4bd2e6"
+    },
+    {
+      "evidence_id": "E0412",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0412",
+      "locator": "data/full_chain_logs/chain_case_04_xss_session.json#LOG-20261103-0412",
+      "observed_at": "2026-11-03T09:18:10.000Z",
+      "snapshot_summary": "2026-11-03T09:18:10Z nginx_access web-prod-01 POST ops_li 198.51.100.61 10.0.0.15",
+      "snapshot_sha256": "21a9f02b3d8a46aaf5c3788f0df79b91674fa35246760eba1ac3ae3992e4eaae"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "管理员会话被外部来源复用后：继续核查数据导出和权限变更",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "以 session_id 关联管理员访问和后续请求，核对来源地址变化。",
+      "检查会话复用后的敏感读取、导出和权限修改操作。",
+      "分别记录请求证据与实际变更结果；仅有请求记录时，不把权限修改请求直接写成已确认生效。"
+    ],
+    "original_judgement": "仅识别 XSS 提交，未识别会话劫持后的后台操作（V1 输出）",
+    "final_judgement": "攻击来源复用管理员会话后导出用户数据并提交角色修改请求。",
+    "outcome": "confirmed_attack",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "incorrect",
+      "response": "not_applicable"
+    },
+    "error_reason": "V1 未关联同一会话的来源变化及后续后台操作，未覆盖会话劫持后的影响阶段。",
+    "corrected_steps": [
+      "以 session_id 关联管理员访问和后续请求，核对来源地址变化。",
+      "检查会话复用后的敏感读取、导出和权限修改操作。",
+      "分别记录请求证据与实际变更结果；仅有请求记录时，不把权限修改请求直接写成已确认生效。"
+    ],
+    "lessons": [
+      "相同管理员 session_id 从原管理员来源切换到攻击来源后，继续出现用户数据导出和角色修改请求。会话来源变化是重要关联线索，后续操作用于界定影响范围。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "外部来源复用管理员会话后，是否实施了数据导出或权限变更？",
+        "action": "以 session_id 关联管理员访问和后续请求，核对来源地址变化。",
+        "evidence_ids": [
+          "E0409",
+          "E0411",
+          "E0412"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "相同管理员 session_id 从原管理员来源切换到攻击来源后，继续出现用户数据导出和角色修改请求。会话来源变化是重要关联线索，后续操作用于界定影响范围。",
+        "conclusion": "攻击来源复用管理员会话后导出用户数据并提交角色修改请求。",
+        "next_step": "分别记录请求证据与实际变更结果；仅有请求记录时，不把权限修改请求直接写成已确认生效。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-04.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}

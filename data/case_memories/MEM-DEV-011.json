@@ -1,0 +1,222 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 1,
+  "card_id": "MEM-DEV-011",
+  "card_type": "verified_error_revision",
+  "title": "SQL 注入请求后出现大响应与导出接口：核实利用结果和数据影响",
+  "summary": "SQL 注入请求返回后响应字节明显增大，随后同源访问导出接口并返回大体量响应。应将注入请求、响应变化和导出行为串联，确认已发生的数据访问影响，而不是停留在注入尝试层面。",
+  "investigation_goal": "SQL 注入请求是否进一步导致数据读取或导出？",
+  "trigger_conditions": [
+    "注入请求响应大小明显偏离登录页基线。",
+    "同一来源随后访问导出接口并产生大体量响应。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "场景标准判定与授权上下文记录",
+      "log_sources": [
+        "scenario_truth",
+        "authorization_context"
+      ],
+      "fields": [
+        "case_id",
+        "attack_type",
+        "risk_level",
+        "evidence_log_ids",
+        "account_scope",
+        "source_scope",
+        "asset_scope",
+        "time_scope",
+        "action_scope"
+      ],
+      "purpose": "核对日志事实与场景判定、账号和行为授权边界。",
+      "if_missing": "明确标注授权或影响尚未核实，不把白名单、阶段标签或单个响应码当作最终结论。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "同一场景中的日志可按时间、来源、资产、用户或会话可靠关联，并与标准判定及授权上下文进行核对。",
+      "conclusion": "场景标准记录显示 SQL 注入后访问用户数据导出接口，支持已发生未授权数据读取。",
+      "next_step": "比较注入请求与同接口正常响应的状态和 bytes_out。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。",
+    "CASE-13 至 CASE-20 属 holdout_test 盲测集，不得用于本卡证据或规则归纳。"
+  ],
+  "attack_category": "SQL_Injection",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access"
+  ],
+  "keywords": [
+    "SQL注入",
+    "响应大小",
+    "数据导出",
+    "影响核验"
+  ],
+  "key_indicators": [
+    "注入请求响应大小明显偏离登录页基线。",
+    "同一来源随后访问导出接口并产生大体量响应。"
+  ],
+  "investigation_steps": [
+    "比较注入请求与同接口正常响应的状态和 bytes_out。",
+    "按同一来源、资产和时间继续查询导出接口访问。",
+    "结合应用/数据库审计确认数据范围；若缺少审计，明确区分已观察到的导出响应与尚未核实的数据内容。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "调查没有继续把 SQL 注入请求与后续导出接口访问、响应大小变化关联，导致影响范围判断不足。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-01.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-01.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景标准判定记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_01_truth.json",
+      "locator": "case_id、attack_type、risk_level、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_01_sqli.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-01",
+    "investigation_id": "CHAIN-CASE-01",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-01",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-01"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0126",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261027-0126",
+      "locator": "data/full_chain_logs/chain_case_01_sqli.json#LOG-20261027-0126",
+      "observed_at": "2026-10-27T14:14:52.000Z",
+      "snapshot_summary": "2026-10-27T14:14:52Z nginx_access web-prod-01 POST admin 198.51.100.23 10.0.0.15",
+      "snapshot_sha256": "248fa6a3cbcf924e22637b2344888eeac1b3f5b45df7b7e6a3c765c5c7c0f571"
+    },
+    {
+      "evidence_id": "E0127",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261027-0127",
+      "locator": "data/full_chain_logs/chain_case_01_sqli.json#LOG-20261027-0127",
+      "observed_at": "2026-10-27T14:15:40.000Z",
+      "snapshot_summary": "2026-10-27T14:15:40Z nginx_access web-prod-01 GET None 198.51.100.23 10.0.0.15",
+      "snapshot_sha256": "e3d35cd359f81d2feead312af4a83932eb34637c851a59459a25fa667718f72b"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "SQL 注入请求后出现大响应与导出接口：核实利用结果和数据影响",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "比较注入请求与同接口正常响应的状态和 bytes_out。",
+      "按同一来源、资产和时间继续查询导出接口访问。",
+      "结合应用/数据库审计确认数据范围；若缺少审计，明确区分已观察到的导出响应与尚未核实的数据内容。"
+    ],
+    "original_judgement": "仅记录 SQL 注入尝试，未确认利用成功（V1 输出摘要）",
+    "final_judgement": "场景标准记录显示 SQL 注入后访问用户数据导出接口，支持已发生未授权数据读取。",
+    "outcome": "confirmed_attack",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "incorrect",
+      "response": "not_applicable"
+    },
+    "error_reason": "调查没有继续把 SQL 注入请求与后续导出接口访问、响应大小变化关联，导致影响范围判断不足。",
+    "corrected_steps": [
+      "比较注入请求与同接口正常响应的状态和 bytes_out。",
+      "按同一来源、资产和时间继续查询导出接口访问。",
+      "结合应用/数据库审计确认数据范围；若缺少审计，明确区分已观察到的导出响应与尚未核实的数据内容。"
+    ],
+    "lessons": [
+      "SQL 注入请求返回后响应字节明显增大，随后同源访问导出接口并返回大体量响应。应将注入请求、响应变化和导出行为串联，确认已发生的数据访问影响，而不是停留在注入尝试层面。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "SQL 注入请求是否进一步导致数据读取或导出？",
+        "action": "比较注入请求与同接口正常响应的状态和 bytes_out。",
+        "evidence_ids": [
+          "E0126",
+          "E0127"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "SQL 注入请求返回后响应字节明显增大，随后同源访问导出接口并返回大体量响应。应将注入请求、响应变化和导出行为串联，确认已发生的数据访问影响，而不是停留在注入尝试层面。",
+        "conclusion": "场景标准记录显示 SQL 注入后访问用户数据导出接口，支持已发生未授权数据读取。",
+        "next_step": "结合应用/数据库审计确认数据范围；若缺少审计，明确区分已观察到的导出响应与尚未核实的数据内容。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-01.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}

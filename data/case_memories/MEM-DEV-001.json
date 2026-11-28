@@ -1,0 +1,247 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 1,
+  "card_id": "MEM-DEV-001",
+  "card_type": "verified_error_revision",
+  "title": "扫描与口令爆破后出现 SQL 注入及批量导出：不能只概括为请求尝试",
+  "summary": "V1 已识别同一来源的扫描、口令尝试和 SQL 注入线索，但没有把成功注入与后续批量导出纳入最终判断。应按同一场景时间线关联 Web 与认证记录，区分探测、利用和数据影响。",
+  "investigation_goal": "同一来源在扫描和口令尝试后，是否进一步利用 SQL 注入并导出数据？",
+  "trigger_conditions": [
+    "同一来源先出现敏感路径探测，随后出现登录异常和 SQL 结构请求。",
+    "SQL 注入请求响应大小显著变化，或随后出现导出接口访问。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access",
+        "auth_log"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "场景标准判定与授权上下文记录",
+      "log_sources": [
+        "scenario_truth",
+        "authorization_context"
+      ],
+      "fields": [
+        "case_id",
+        "attack_type",
+        "risk_level",
+        "evidence_log_ids",
+        "account_scope",
+        "source_scope",
+        "asset_scope",
+        "time_scope",
+        "action_scope"
+      ],
+      "purpose": "核对日志事实与场景判定、账号和行为授权边界。",
+      "if_missing": "明确标注授权或影响尚未核实，不把白名单、阶段标签或单个响应码当作最终结论。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "同一场景中的日志可按时间、来源、资产、用户或会话可靠关联，并与标准判定及授权上下文进行核对。",
+      "conclusion": "同一来源先扫描和尝试口令，随后出现 SQL 注入利用及用户数据导出行为。",
+      "next_step": "按 trace_id、src_ip、asset_id 和时间排序，分别标记扫描、认证尝试、注入请求与导出请求。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。",
+    "CASE-13 至 CASE-20 属 holdout_test 盲测集，不得用于本卡证据或规则归纳。"
+  ],
+  "attack_category": "SQL_Injection",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access",
+    "auth_log"
+  ],
+  "keywords": [
+    "SQL注入",
+    "扫描",
+    "口令爆破",
+    "多阶段攻击",
+    "数据导出"
+  ],
+  "key_indicators": [
+    "同一来源先出现敏感路径探测，随后出现登录异常和 SQL 结构请求。",
+    "SQL 注入请求响应大小显著变化，或随后出现导出接口访问。"
+  ],
+  "investigation_steps": [
+    "按 trace_id、src_ip、asset_id 和时间排序，分别标记扫描、认证尝试、注入请求与导出请求。",
+    "将 SQL 注入请求与响应状态、bytes_out 变化及应用/数据库审计关联；不能仅凭 SQL 关键字或 HTTP 200 判断利用成功。",
+    "继续核查同源后续导出接口及其响应规模；只把可关联证据支持的数据访问范围写入结论。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "V1 虽识别恶意来源和前置阶段，但将后续利用仅作为待查线索，未充分关联 SQL 注入响应变化与导出请求，造成攻击链阶段和影响判断不完整。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-01.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-01.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景标准判定记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_01_truth.json",
+      "locator": "case_id、attack_type、risk_level、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_01_sqli.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-01",
+    "investigation_id": "CHAIN-CASE-01",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-01",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-01"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0103",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261027-0103",
+      "locator": "data/full_chain_logs/chain_case_01_sqli.json#LOG-20261027-0103",
+      "observed_at": "2026-10-27T14:02:18.000Z",
+      "snapshot_summary": "2026-10-27T14:02:18Z nginx_access web-prod-01 GET None 198.51.100.23 10.0.0.15",
+      "snapshot_sha256": "c5c01aa26fe9f02625a0edd763f7a8c8c2562e3fd0bbdffd13c26f527d8d2ee9"
+    },
+    {
+      "evidence_id": "E0112",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261027-0112",
+      "locator": "data/full_chain_logs/chain_case_01_sqli.json#LOG-20261027-0112",
+      "observed_at": "2026-10-27T14:05:09.000Z",
+      "snapshot_summary": "2026-10-27T14:05:09Z nginx_access web-prod-01 POST admin 198.51.100.23 10.0.0.15",
+      "snapshot_sha256": "23aa109aac8370a9167866d20fbecfd19e9724fe3396c0175242d41b1e88e474"
+    },
+    {
+      "evidence_id": "E0126",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261027-0126",
+      "locator": "data/full_chain_logs/chain_case_01_sqli.json#LOG-20261027-0126",
+      "observed_at": "2026-10-27T14:14:52.000Z",
+      "snapshot_summary": "2026-10-27T14:14:52Z nginx_access web-prod-01 POST admin 198.51.100.23 10.0.0.15",
+      "snapshot_sha256": "248fa6a3cbcf924e22637b2344888eeac1b3f5b45df7b7e6a3c765c5c7c0f571"
+    },
+    {
+      "evidence_id": "E0127",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261027-0127",
+      "locator": "data/full_chain_logs/chain_case_01_sqli.json#LOG-20261027-0127",
+      "observed_at": "2026-10-27T14:15:40.000Z",
+      "snapshot_summary": "2026-10-27T14:15:40Z nginx_access web-prod-01 GET None 198.51.100.23 10.0.0.15",
+      "snapshot_sha256": "e3d35cd359f81d2feead312af4a83932eb34637c851a59459a25fa667718f72b"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "扫描与口令爆破后出现 SQL 注入及批量导出：不能只概括为请求尝试",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "按 trace_id、src_ip、asset_id 和时间排序，分别标记扫描、认证尝试、注入请求与导出请求。",
+      "将 SQL 注入请求与响应状态、bytes_out 变化及应用/数据库审计关联；不能仅凭 SQL 关键字或 HTTP 200 判断利用成功。",
+      "继续核查同源后续导出接口及其响应规模；只把可关联证据支持的数据访问范围写入结论。"
+    ],
+    "original_judgement": "SQL_Injection_After_Brute_Force_After_Scan（V1 输出）",
+    "final_judgement": "同一来源先扫描和尝试口令，随后出现 SQL 注入利用及用户数据导出行为。",
+    "outcome": "confirmed_attack",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "incorrect",
+      "response": "not_applicable"
+    },
+    "error_reason": "V1 虽识别恶意来源和前置阶段，但将后续利用仅作为待查线索，未充分关联 SQL 注入响应变化与导出请求，造成攻击链阶段和影响判断不完整。",
+    "corrected_steps": [
+      "按 trace_id、src_ip、asset_id 和时间排序，分别标记扫描、认证尝试、注入请求与导出请求。",
+      "将 SQL 注入请求与响应状态、bytes_out 变化及应用/数据库审计关联；不能仅凭 SQL 关键字或 HTTP 200 判断利用成功。",
+      "继续核查同源后续导出接口及其响应规模；只把可关联证据支持的数据访问范围写入结论。"
+    ],
+    "lessons": [
+      "V1 已识别同一来源的扫描、口令尝试和 SQL 注入线索，但没有把成功注入与后续批量导出纳入最终判断。应按同一场景时间线关联 Web 与认证记录，区分探测、利用和数据影响。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "同一来源在扫描和口令尝试后，是否进一步利用 SQL 注入并导出数据？",
+        "action": "按 trace_id、src_ip、asset_id 和时间排序，分别标记扫描、认证尝试、注入请求与导出请求。",
+        "evidence_ids": [
+          "E0103",
+          "E0112",
+          "E0126",
+          "E0127"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "V1 已识别同一来源的扫描、口令尝试和 SQL 注入线索，但没有把成功注入与后续批量导出纳入最终判断。应按同一场景时间线关联 Web 与认证记录，区分探测、利用和数据影响。",
+        "conclusion": "同一来源先扫描和尝试口令，随后出现 SQL 注入利用及用户数据导出行为。",
+        "next_step": "继续核查同源后续导出接口及其响应规模；只把可关联证据支持的数据访问范围写入结论。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-01.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}

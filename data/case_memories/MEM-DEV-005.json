@@ -1,0 +1,236 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 1,
+  "card_id": "MEM-DEV-005",
+  "card_type": "verified_error_revision",
+  "title": "目录遍历首次被拒后仍需核查 URL 编码变体及敏感配置读取",
+  "summary": "一次明文路径遍历请求返回 403，不能据此认定后续访问均被阻断。应按同一来源和目标继续检查编码后的路径请求、响应状态和返回字节，并核对 Zeek 侧记录。",
+  "investigation_goal": "首次目录遍历被拒后，是否存在后续编码路径请求成功读取敏感配置？",
+  "trigger_conditions": [
+    "路径遍历请求返回 403，但同一来源继续访问相同下载接口。",
+    "后续请求出现 URL 编码路径片段且返回 200。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access",
+        "zeek_http"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "场景标准判定与授权上下文记录",
+      "log_sources": [
+        "scenario_truth",
+        "authorization_context"
+      ],
+      "fields": [
+        "case_id",
+        "attack_type",
+        "risk_level",
+        "evidence_log_ids",
+        "account_scope",
+        "source_scope",
+        "asset_scope",
+        "time_scope",
+        "action_scope"
+      ],
+      "purpose": "核对日志事实与场景判定、账号和行为授权边界。",
+      "if_missing": "明确标注授权或影响尚未核实，不把白名单、阶段标签或单个响应码当作最终结论。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "同一场景中的日志可按时间、来源、资产、用户或会话可靠关联，并与标准判定及授权上下文进行核对。",
+      "conclusion": "同一来源在明文遍历请求被拒后，使用编码路径读取 .env 和数据库配置文件。",
+      "next_step": "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。",
+    "CASE-13 至 CASE-20 属 holdout_test 盲测集，不得用于本卡证据或规则归纳。"
+  ],
+  "attack_category": "Path_Traversal_Privilege",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access",
+    "zeek_http"
+  ],
+  "keywords": [
+    "目录遍历",
+    "URL编码",
+    "敏感配置",
+    "403",
+    "200"
+  ],
+  "key_indicators": [
+    "路径遍历请求返回 403，但同一来源继续访问相同下载接口。",
+    "后续请求出现 URL 编码路径片段且返回 200。"
+  ],
+  "investigation_steps": [
+    "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+    "比较 403 与后续编码路径请求的状态码和响应字节；不能把首个拦截响应外推为整条链均被拦截。",
+    "关联 nginx_access 与 zeek_http 中相同目标请求，记录已确认读取的文件类型及证据边界。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "V1 将初次阻断和部分目录遍历请求作为主要结论，没有完整比较后续编码请求的响应结果，漏判成功读取敏感配置。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-05.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-05.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景标准判定记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_05_truth.json",
+      "locator": "case_id、attack_type、risk_level、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_05_path_traversal_idor.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-05",
+    "investigation_id": "CHAIN-CASE-05",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-05",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-05"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0502",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0502",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0502",
+      "observed_at": "2026-11-03T14:41:00.000Z",
+      "snapshot_summary": "2026-11-03T14:41:00Z nginx_access web-prod-01 GET None 203.0.113.147 10.0.0.15",
+      "snapshot_sha256": "f0c4caf09a61624c4982a8214136acc73165554e1ab057294341038c26a4daf2"
+    },
+    {
+      "evidence_id": "E0503",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0503",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0503",
+      "observed_at": "2026-11-03T14:41:20.000Z",
+      "snapshot_summary": "2026-11-03T14:41:20Z nginx_access web-prod-01 GET None 203.0.113.147 10.0.0.15",
+      "snapshot_sha256": "5f61297418cb753c202d4f100071f334bca17785cc1b3b3ab67bfcf0d968200a"
+    },
+    {
+      "evidence_id": "E0504",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0504",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0504",
+      "observed_at": "2026-11-03T14:41:45.000Z",
+      "snapshot_summary": "2026-11-03T14:41:45Z nginx_access web-prod-01 GET None 203.0.113.147 10.0.0.15",
+      "snapshot_sha256": "fa87acec27a90d4516122e4c8554a82f1e5ce19f1dff88edde928387fd840727"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "目录遍历首次被拒后仍需核查 URL 编码变体及敏感配置读取",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+      "比较 403 与后续编码路径请求的状态码和响应字节；不能把首个拦截响应外推为整条链均被拦截。",
+      "关联 nginx_access 与 zeek_http 中相同目标请求，记录已确认读取的文件类型及证据边界。"
+    ],
+    "original_judgement": "Path_Traversal_Privilege（V1 输出）",
+    "final_judgement": "同一来源在明文遍历请求被拒后，使用编码路径读取 .env 和数据库配置文件。",
+    "outcome": "confirmed_attack",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "incorrect",
+      "response": "not_applicable"
+    },
+    "error_reason": "V1 将初次阻断和部分目录遍历请求作为主要结论，没有完整比较后续编码请求的响应结果，漏判成功读取敏感配置。",
+    "corrected_steps": [
+      "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+      "比较 403 与后续编码路径请求的状态码和响应字节；不能把首个拦截响应外推为整条链均被拦截。",
+      "关联 nginx_access 与 zeek_http 中相同目标请求，记录已确认读取的文件类型及证据边界。"
+    ],
+    "lessons": [
+      "一次明文路径遍历请求返回 403，不能据此认定后续访问均被阻断。应按同一来源和目标继续检查编码后的路径请求、响应状态和返回字节，并核对 Zeek 侧记录。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "首次目录遍历被拒后，是否存在后续编码路径请求成功读取敏感配置？",
+        "action": "按 src_ip、asset_id、接口路径和时间排列连续请求。",
+        "evidence_ids": [
+          "E0502",
+          "E0503",
+          "E0504"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "一次明文路径遍历请求返回 403，不能据此认定后续访问均被阻断。应按同一来源和目标继续检查编码后的路径请求、响应状态和返回字节，并核对 Zeek 侧记录。",
+        "conclusion": "同一来源在明文遍历请求被拒后，使用编码路径读取 .env 和数据库配置文件。",
+        "next_step": "关联 nginx_access 与 zeek_http 中相同目标请求，记录已确认读取的文件类型及证据边界。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-05.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}

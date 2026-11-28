@@ -1,0 +1,235 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 1,
+  "card_id": "MEM-DEV-013",
+  "card_type": "verified_error_revision",
+  "title": "目录遍历之后继续核查对象级授权：识别水平越权访问",
+  "summary": "目录遍历读取敏感配置后，同一来源继续改变订单查询中的 user_id 并访问多个对象。调查不能只停留在路径遍历类别，还要检查同会话或同来源的对象级授权边界。",
+  "investigation_goal": "目录遍历之后是否还发生跨用户订单访问？",
+  "trigger_conditions": [
+    "已发现敏感文件路径访问，且同一来源继续请求业务 API。",
+    "对象标识参数连续变化，接口响应持续成功。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access",
+        "zeek_http"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "场景标准判定与授权上下文记录",
+      "log_sources": [
+        "scenario_truth",
+        "authorization_context"
+      ],
+      "fields": [
+        "case_id",
+        "attack_type",
+        "risk_level",
+        "evidence_log_ids",
+        "account_scope",
+        "source_scope",
+        "asset_scope",
+        "time_scope",
+        "action_scope"
+      ],
+      "purpose": "核对日志事实与场景判定、账号和行为授权边界。",
+      "if_missing": "明确标注授权或影响尚未核实，不把白名单、阶段标签或单个响应码当作最终结论。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "同一场景中的日志可按时间、来源、资产、用户或会话可靠关联，并与标准判定及授权上下文进行核对。",
+      "conclusion": "同一来源在目录遍历后连续请求不同 user_id 的订单，构成路径遍历与水平越权组合行为。",
+      "next_step": "沿同一 trace_id 和 src_ip 查询目录遍历之后的 API 请求。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。",
+    "CASE-13 至 CASE-20 属 holdout_test 盲测集，不得用于本卡证据或规则归纳。"
+  ],
+  "attack_category": "Path_Traversal_Privilege",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access",
+    "zeek_http"
+  ],
+  "keywords": [
+    "水平越权",
+    "IDOR",
+    "对象级授权",
+    "目录遍历"
+  ],
+  "key_indicators": [
+    "已发现敏感文件路径访问，且同一来源继续请求业务 API。",
+    "对象标识参数连续变化，接口响应持续成功。"
+  ],
+  "investigation_steps": [
+    "沿同一 trace_id 和 src_ip 查询目录遍历之后的 API 请求。",
+    "比较对象标识参数与当前主体授权范围；连续访问其他用户对象时，核对服务端授权结果。",
+    "将路径遍历和对象级越权分别记录为阶段，不因已识别前一阶段而停止调查。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "V1 主要聚焦目录遍历，未充分检查同一来源后续 API 对象标识变化，漏掉水平越权访问阶段。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-05.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-05.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景标准判定记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_05_truth.json",
+      "locator": "case_id、attack_type、risk_level、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_05_path_traversal_idor.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-05",
+    "investigation_id": "CHAIN-CASE-05",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-05",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-05"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0506",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0506",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0506",
+      "observed_at": "2026-11-03T14:42:45.000Z",
+      "snapshot_summary": "2026-11-03T14:42:45Z nginx_access web-prod-01 GET None 203.0.113.147 10.0.0.15",
+      "snapshot_sha256": "19fdfd0da652050393e50a5cad08fd6dbc9a77abffa9505759b3fe5f428d0b5e"
+    },
+    {
+      "evidence_id": "E0507",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0507",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0507",
+      "observed_at": "2026-11-03T14:43:00.000Z",
+      "snapshot_summary": "2026-11-03T14:43:00Z nginx_access web-prod-01 GET None 203.0.113.147 10.0.0.15",
+      "snapshot_sha256": "d4eb9ba44b4e425efc91b1bdd34ecfade837e69c037b90a759a178b932987841"
+    },
+    {
+      "evidence_id": "E0510",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261103-0510",
+      "locator": "data/full_chain_logs/chain_case_05_path_traversal_idor.json#LOG-20261103-0510",
+      "observed_at": "2026-11-03T14:44:00.000Z",
+      "snapshot_summary": "2026-11-03T14:44:00Z zeek_http web-prod-01 GET None 203.0.113.147 10.0.0.15",
+      "snapshot_sha256": "a61608ef95d599bbaac7dd88e6bf0f97a470e2b999d7fbe34ba5ca045efb0e77"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "目录遍历之后继续核查对象级授权：识别水平越权访问",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "沿同一 trace_id 和 src_ip 查询目录遍历之后的 API 请求。",
+      "比较对象标识参数与当前主体授权范围；连续访问其他用户对象时，核对服务端授权结果。",
+      "将路径遍历和对象级越权分别记录为阶段，不因已识别前一阶段而停止调查。"
+    ],
+    "original_judgement": "Path_Traversal_Privilege（V1 输出）",
+    "final_judgement": "同一来源在目录遍历后连续请求不同 user_id 的订单，构成路径遍历与水平越权组合行为。",
+    "outcome": "confirmed_attack",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "incorrect",
+      "response": "not_applicable"
+    },
+    "error_reason": "V1 主要聚焦目录遍历，未充分检查同一来源后续 API 对象标识变化，漏掉水平越权访问阶段。",
+    "corrected_steps": [
+      "沿同一 trace_id 和 src_ip 查询目录遍历之后的 API 请求。",
+      "比较对象标识参数与当前主体授权范围；连续访问其他用户对象时，核对服务端授权结果。",
+      "将路径遍历和对象级越权分别记录为阶段，不因已识别前一阶段而停止调查。"
+    ],
+    "lessons": [
+      "目录遍历读取敏感配置后，同一来源继续改变订单查询中的 user_id 并访问多个对象。调查不能只停留在路径遍历类别，还要检查同会话或同来源的对象级授权边界。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "目录遍历之后是否还发生跨用户订单访问？",
+        "action": "沿同一 trace_id 和 src_ip 查询目录遍历之后的 API 请求。",
+        "evidence_ids": [
+          "E0506",
+          "E0507",
+          "E0510"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "目录遍历读取敏感配置后，同一来源继续改变订单查询中的 user_id 并访问多个对象。调查不能只停留在路径遍历类别，还要检查同会话或同来源的对象级授权边界。",
+        "conclusion": "同一来源在目录遍历后连续请求不同 user_id 的订单，构成路径遍历与水平越权组合行为。",
+        "next_step": "将路径遍历和对象级越权分别记录为阶段，不因已识别前一阶段而停止调查。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-05.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}

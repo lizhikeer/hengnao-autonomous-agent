@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 1,
+  "card_id": "MEM-DEV-014",
+  "card_type": "verified_correct_case",
+  "title": "运维白名单不能替代行为授权：逐项核对账号、来源、资产、时段和动作",
+  "summary": "正常运维判断需要多项授权上下文共同支持：账号身份、来源地址、目标资产、维护时段和实际动作均应匹配。仅命中运维白名单不足以自动豁免所有行为。",
+  "investigation_goal": "当前运维会话及其操作是否均处于明确授权范围？",
+  "trigger_conditions": [
+    "运维账号在非常规时段登录。",
+    "运维白名单账号执行批量导出或其他敏感操作。"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "同一场景的 Web、认证或网络连接日志",
+      "log_sources": [
+        "nginx_access",
+        "auth_log"
+      ],
+      "fields": [
+        "timestamp",
+        "trace_id",
+        "src_ip",
+        "dest_ip",
+        "asset_id",
+        "user",
+        "session_id",
+        "action_or_method",
+        "uri_or_target",
+        "status_code",
+        "bytes_out"
+      ],
+      "purpose": "按场景、来源、资产、用户、会话和时间关联多阶段行为。",
+      "if_missing": "列出缺失日志源和字段，保留未知项，不用单条告警推断未观察到的阶段。"
+    },
+    {
+      "data_id": "D2",
+      "description": "场景标准判定与授权上下文记录",
+      "log_sources": [
+        "scenario_truth",
+        "authorization_context"
+      ],
+      "fields": [
+        "case_id",
+        "attack_type",
+        "risk_level",
+        "evidence_log_ids",
+        "account_scope",
+        "source_scope",
+        "asset_scope",
+        "time_scope",
+        "action_scope"
+      ],
+      "purpose": "核对日志事实与场景判定、账号和行为授权边界。",
+      "if_missing": "明确标注授权或影响尚未核实，不把白名单、阶段标签或单个响应码当作最终结论。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1",
+        "D2"
+      ],
+      "condition": "同一场景中的日志可按时间、来源、资产、用户或会话可靠关联，并与标准判定及授权上下文进行核对。",
+      "conclusion": "本场景账号、来源、资产、时间和已核对操作与授权运维上下文一致。",
+      "next_step": "保存逐项核验结果，并将结论限定在已检查的账号、资产、时间和操作范围内。",
+      "source_ids": [
+        "SRC-TRACE",
+        "SRC-TRUTH",
+        "SRC-LOGS"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "本卡来自项目开发集 V1 dataset_replay 与归档场景日志，不代表恒脑平台模型实跑。",
+    "仅适用于本卡所列现象和已核验的数据范围；不得把单一字段、阶段标签或 HTTP 状态码当作充分结论。",
+    "CASE-13 至 CASE-20 属 holdout_test 盲测集，不得用于本卡证据或规则归纳。"
+  ],
+  "attack_category": "Normal_Maintenance_Operation",
+  "related_attack_categories": [],
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "nginx_access",
+    "auth_log"
+  ],
+  "keywords": [
+    "运维白名单",
+    "行为授权",
+    "维护窗口",
+    "权限边界"
+  ],
+  "key_indicators": [
+    "运维账号在非常规时段登录。",
+    "运维白名单账号执行批量导出或其他敏感操作。"
+  ],
+  "investigation_steps": [
+    "按 trace_id、src_ip、asset_id、user 和 session_id 关联场景日志。",
+    "逐项核对账号、来源、目标资产、时间窗口、实际动作及后续网络行为。",
+    "保存证据编号并注明结论覆盖范围；超出授权或缺失数据时另行调查。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-03.json",
+  "sources": [
+    {
+      "source_id": "SRC-TRACE",
+      "title": "V1 AgentResults 回放记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-03.json",
+      "locator": "case_id、attack_type、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-TRUTH",
+      "title": "开发场景标准判定记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_03_truth.json",
+      "locator": "case_id、attack_type、risk_level、evidence_log_ids 与 attack_chain_summary",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    },
+    {
+      "source_id": "SRC-LOGS",
+      "title": "场景原始日志记录",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/full_chain_logs/chain_case_03_benign_ops.json",
+      "locator": "对应 evidence_refs 中的 log_id 记录",
+      "accessed_at": "2026-11-27T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-27T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-27T00:00:00.000Z",
+  "updated_at": "2026-11-27T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-03",
+    "investigation_id": "CHAIN-CASE-03",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-03",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-03"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E0301",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261029-0301",
+      "locator": "data/full_chain_logs/chain_case_03_benign_ops.json#LOG-20261029-0301",
+      "observed_at": "2026-10-29T18:00:05.000Z",
+      "snapshot_summary": "2026-10-29T18:00:05Z nginx_access web-prod-01 POST ops_zhang 10.0.0.66 10.0.0.15",
+      "snapshot_sha256": "e001c9c4e172ff540cbae008c954890674b9d73de06be8476e4ce4f413de5805"
+    },
+    {
+      "evidence_id": "E0302",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261029-0302",
+      "locator": "data/full_chain_logs/chain_case_03_benign_ops.json#LOG-20261029-0302",
+      "observed_at": "2026-10-29T18:00:05.000Z",
+      "snapshot_summary": "2026-10-29T18:00:05Z auth_log web-prod-01 login_success ops_zhang 10.0.0.66 10.0.0.15",
+      "snapshot_sha256": "e4ff90918d66b5ce8d8ab29c58216d85b1da849b0a61a4ecf2b39bb9fb36d30a"
+    },
+    {
+      "evidence_id": "E0313",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261029-0313",
+      "locator": "data/full_chain_logs/chain_case_03_benign_ops.json#LOG-20261029-0313",
+      "observed_at": "2026-10-29T18:15:00.000Z",
+      "snapshot_summary": "2026-10-29T18:15:00Z nginx_access web-prod-01 GET None 10.0.0.66 10.0.0.15",
+      "snapshot_sha256": "969e0e1003e6c69fd25c4402b93fa7e7b7652ed27177acba76f7e997fec799ac"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "运维白名单不能替代行为授权：逐项核对账号、来源、资产、时段和动作",
+    "environment_summary": "项目开发集 V1 dataset_replay；rule_based_v1_controller；非恒脑平台模型实跑。",
+    "investigation_summary": [
+      "按完整场景日志核对账号、来源、资产、时间和实际动作。",
+      "结合标准场景记录核验备份或会话行为，并限定正常结论的覆盖范围。"
+    ],
+    "original_judgement": "none（V1 输出）",
+    "final_judgement": "本场景账号、来源、资产、时间和已核对操作与授权运维上下文一致。",
+    "outcome": "benign",
+    "risk_level": "low",
+    "dimension_labels": {
+      "diagnosis": "correct",
+      "evidence": "correct",
+      "response": "not_applicable"
+    },
+    "error_reason": "",
+    "corrected_steps": [],
+    "lessons": [
+      "正常运维判断需要多项授权上下文共同支持：账号身份、来源地址、目标资产、维护时段和实际动作均应匹配。仅命中运维白名单不足以自动豁免所有行为。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "当前运维会话及其操作是否均处于明确授权范围？",
+        "action": "按场景编号读取完整日志，逐项核对账号、来源、资产、时间、行为及后续连接。",
+        "evidence_ids": [
+          "E0301",
+          "E0302",
+          "E0313"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "正常运维判断需要多项授权上下文共同支持：账号身份、来源地址、目标资产、维护时段和实际动作均应匹配。仅命中运维白名单不足以自动豁免所有行为。",
+        "conclusion": "本场景账号、来源、资产、时间和已核对操作与授权运维上下文一致。",
+        "next_step": "记录已核验的正常行为范围；出现超范围行为时另行调查。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/main/data/agent_traces/v1/CHAIN-CASE-03.json",
+      "notes": "依据仓库归档的 V1 dataset_replay 输出、标准场景判定文件和对应 full_chain_logs 记录核对；该回放不是恒脑平台模型实跑。"
+    },
+    "response_summary": "V1 回放未执行处置动作；本卡仅沉淀调查结论与纠错方法。",
+    "response_result": "not_executed"
+  }
+}
