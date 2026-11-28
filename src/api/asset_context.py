@@ -225,14 +225,12 @@ def get_user_profile(user: str) -> Optional[dict[str, Any]]:
                 "matched_rule": pattern,
                 "allowlist_reason": rule.get("reason"),
                 "allowlist_scope": rule.get("scope"),
-                # 行为授权范围是否由配置提供：目前没有，必须如实标 false，
-                # 否则调用方会把"豁免名单"当成"授权清单"。
-                "source_scope_provided": False,
-                "asset_scope_provided": False,
-                "authorization_source": (
-                    "config/response-policy.yaml#allowlist.users（仅处置豁免；"
-                    "未提供账号-来源/账号-资产授权范围）"
-                ),
+                # 行为授权范围独立于处置豁免，按显式字段是否存在判断配置状态。
+                "common_src_ips": list(rule.get("common_src_ips") or []),
+                "allowed_assets": list(rule.get("allowed_assets") or []),
+                "source_scope_provided": "common_src_ips" in rule,
+                "asset_scope_provided": "allowed_assets" in rule,
+                "authorization_source": "config/response-policy.yaml#allowlist.users",
                 "config_source": "config/response-policy.yaml#allowlist.users",
             }
     return None

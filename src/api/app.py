@@ -39,11 +39,12 @@ import sys
 import threading
 from typing import Any, Optional
 
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from . import asset_context, datasource, knowledge_adapter
+from . import asset_context, datasource, knowledge_adapter, response_http
 from .config import (
     HIGH_RISK_ACTIONS,
     LIMIT_DEFAULT,
@@ -59,6 +60,7 @@ from .mock_data import (
     search_mock_knowledge,
 )
 from .schemas import (
+    ApproveResponseRequest,
     ErrorBody,
     GetContextRequest,
     GetContextResponse,
@@ -70,10 +72,18 @@ from .schemas import (
     QueryMeta,
     RequestResponseRequest,
     RequestResponseResponse,
+    ResponseActionItem,
+    ResponseStatusResponse,
     SearchKnowledgeRequest,
     SearchKnowledgeResponse,
+    SweepExpiredResponse,
     VerifyResultsRequest,
 )
+
+try:  # 正常跑法：src 在 sys.path 上，包名是 operations
+    from operations import notify_bridge, response_executor
+except ImportError:  # pragma: no cover - 以 src.api 包形式导入时
+    from ..operations import notify_bridge, response_executor
 
 SERVICE_NAME = "seclog-tool-service"
 SERVICE_VERSION = "0.1.0"
@@ -120,6 +130,12 @@ _PROBE_BODY: dict[str, Any] = {
 }
 
 
+#: 天然不需要请求体的端点：空 body 是正常调用，不能当成平台连通性探测拦掉。
+#: ``/tools/sweep_expired`` 是触发式动作（无参数），若被探测兜底拦截，
+#: 调用方会收到 200 + probe 响应而误以为回滚执行了。
+_EMPTY_BODY_ENDPOINTS = {"/tools/sweep_expired"}
+
+
 @app.middleware("http")
 async def _probe_and_debug(request: Request, call_next):
     """空请求体探测兜底 + 可选请求日志。"""
@@ -132,7 +148,7 @@ async def _probe_and_debug(request: Request, call_next):
                 f"ua={request.headers.get('user-agent')} body={raw[:1500]!r}\n"
             )
             sys.stderr.flush()
-        if not raw:
+        if not raw and request.url.path not in _EMPTY_BODY_ENDPOINTS:
             _audit("probe", {"path": request.url.path, "ua": request.headers.get("user-agent")})
             return JSONResponse(status_code=200, content=_PROBE_BODY)
     return await call_next(request)
@@ -192,6 +208,141 @@ def _real_backend_guard() -> Optional[JSONResponse]:
         "已要求使用真实后端，但 ClickHouse / Qdrant / 权限网关本周尚未接入；"
         "为使下游可区分，本次查询不返回任何 Mock 数据冒充结果",
         {"backend_available": False, "requested": "real"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# 处置执行器接线（SECLOG_RESPONSE_MODE）
+# ---------------------------------------------------------------------------
+def _response_mode() -> str:
+    """处置运行模式。
+
+    * ``legacy``（默认）：沿用 W2 的「只登记、不执行」语义，保证既有测试与平台联调不变；
+    * ``enforced``：接 ``operations.response_executor`` 的真实状态机（模拟落盘，不碰真实设备）。
+    """
+    return os.getenv("SECLOG_RESPONSE_MODE", "legacy").strip().lower()
+
+
+def _resolve_target_type(req: RequestResponseRequest) -> str:
+    """确定本次处置作用的资产类型，供 ABAC 的 target_types 约束使用。
+
+    优先级：显式 ``asset_id`` > 用 ``target_ip`` 反查台账 > 空。
+    查不到就返回空串——空类型不会命中任何 ``target_types`` 白名单，
+    于是高危动作会被网关拒绝而不是被放行，符合 fail-closed。
+    """
+    for key in (
+        (req.asset_id or "").strip(),
+        (req.target_ip or "").strip(),
+        (req.target_user or "").strip(),
+    ):
+        if not key:
+            continue
+        try:
+            asset = asset_context.get_asset_context(key)
+        except asset_context.AssetContextUnavailable:
+            return ""
+        if asset:
+            # 资产台账里类型字段叫 ``role``（web/database/host），``type`` 是旧写法，保留兜底
+            return str(asset.get("role") or asset.get("type") or "")
+    return ""
+
+
+def _safe_notify(event: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """通知是旁路：任何异常都吞掉并记进返回值，绝不影响处置结论。"""
+    try:
+        return notify_bridge.notify_response_event(event, payload)
+    except Exception as exc:  # pragma: no cover - 兜底，正常路径已在通知桥内部处理
+        return {"status": "skipped", "reason": f"{type(exc).__name__}: {exc}"}
+
+
+def _request_response_enforced(req: RequestResponseRequest) -> RequestResponseResponse:
+    """enforced 模式：证据校验 → ABAC/状态机 → 返回真实生命周期。"""
+    if req.action == "none":
+        result = response_executor.evaluate_action("none", case_id=req.case_id)
+        _audit("request_response:none", {"case_id": req.case_id, "mode": "enforced"})
+        return RequestResponseResponse(
+            status="no_action",
+            detail="action=none 表示本案例无需处置，未产生任何副作用",
+            policy_reason=result.get("policy_reason"),
+        )
+
+    check = registry.check(req.evidence_log_ids, case_id=req.case_id)
+    if not check.ok:
+        rejected = check.unknown + check.foreign
+        _audit(
+            "request_response:rejected",
+            {"case_id": req.case_id, "action": req.action, "unknown": check.unknown,
+             "foreign": check.foreign, "mode": "enforced"},
+        )
+        return RequestResponseResponse(
+            status="rejected",
+            detail=(
+                "证据校验未通过，处置请求已拒绝（未产生任何副作用）。"
+                "请先用 /tools/query_logs 在本 case 下查询并引用真实返回的 log_id。"
+            ),
+            rejected_evidence_ids=rejected,
+        )
+
+    target_type = _resolve_target_type(req)
+    result = response_executor.evaluate_action(
+        req.action,
+        target_type=target_type,
+        target_ip=req.target_ip or "",
+        target_user=req.target_user or "",
+        evidence_log_ids=req.evidence_log_ids,
+        case_id=req.case_id,
+    )
+    state = result.get("status")
+    payload = {
+        "case_id": req.case_id,
+        "action": result.get("action") or req.action,
+        "target": result.get("target") or req.target_ip or req.target_user,
+        "target_type": target_type,
+        "evidence_log_ids": req.evidence_log_ids,
+        "policy_reason": result.get("policy_reason"),
+        "approval_id": result.get("approval_id"),
+        "detail": req.reason,
+    }
+
+    if state == response_executor.BLOCKED:
+        _audit("request_response:blocked", {**payload, "mode": "enforced"})
+        _safe_notify("blocked", payload)
+        return RequestResponseResponse(
+            status="blocked_by_policy",
+            detail=f"策略网关拦截：{result.get('policy_reason')}；未产生任何副作用",
+            policy_reason=result.get("policy_reason"),
+        )
+
+    if state == response_executor.EXECUTED:
+        _audit("request_response:executed", {**payload, "mode": "enforced"})
+        _safe_notify("executed", payload)
+        expires_at = result.get("expires_at")
+        return RequestResponseResponse(
+            status="executed",
+            executed=True,
+            detail=(
+                f"动作 {result.get('action')} 已由状态机执行并写入审计，"
+                f"到期时间 {expires_at or '未设置（不自动解除）'}。"
+                "本项目为模拟处置，未调用真实网络设备。"
+            ),
+            policy_reason=result.get("policy_reason"),
+            action_id=result.get("action_id"),
+            expires_at=expires_at or None,
+        )
+
+    # 其余一律是待审批：高危动作、风险未知、auto_execute=false
+    _audit("request_response:approval_required", {**payload, "mode": "enforced"})
+    _safe_notify("approval_required", payload)
+    return RequestResponseResponse(
+        status="approval_required",
+        approval_id=result.get("approval_id"),
+        detail=(
+            f"动作 {result.get('action')} 已登记为待审批单 {result.get('approval_id')}，"
+            f"截止 {result.get('deadline')}；超时按 on_timeout=reject 自动拒批。"
+            "审批通过前未产生任何副作用。"
+        ),
+        policy_reason=result.get("policy_reason"),
+        deadline=result.get("deadline"),
     )
 
 
@@ -420,8 +571,12 @@ def query_logs(req: QueryLogsRequest):
 
     # 登记证据：本次查询返回的 log_id 才能被后续处置引用
     registered = registry.register(
-        (r["log_id"] for r in result.items if r.get("log_id")),
+        (row.log_id for row in validated_items),
         case_id=req.case_id,
+        facts={
+            row.log_id: (row.asset_id, tuple(ip for ip in (row.src_ip, row.dest_ip) if ip), row.user)
+            for row in validated_items
+        },
         query_params={
             "src_ip": req.src_ip,
             "dest_ip": req.dest_ip,
@@ -433,6 +588,7 @@ def query_logs(req: QueryLogsRequest):
             "limit": req.limit,
             "data_source": result.data_source,
         },
+        trace_ids=[req.trace_id, *(row.trace_id for row in validated_items)],
     )
     _audit(
         "query_logs",
@@ -533,15 +689,24 @@ def get_context(req: GetContextRequest):
     summary="检索安全知识卡与已确认正反案例卡（RAG 混合检索入口）",
     description=(
         "调用知识库检索：返回 OWASP/MITRE 安全知识卡、已确认正确案例卡、错误修订卡。"
-        "当前为 Mock 关键词匹配（score 为演示值），真实 BGE 向量 + 关键词混合检索由知识库模块提供。"
+        "返回调查步骤、命中规则与来源，运行模式以 meta.mock 为准。"
         "零命中返回 200 且 items=[]。"
     ),
     tags=["调查工具"],
 )
 def search_knowledge(req: SearchKnowledgeRequest):
+    # 当前案例的经验与答案必须留在评测或审核端。
+    scope = {"knowledge_only": True}
+    case_id = (req.case_id or "").strip()
+    if case_id:
+        traces = registry.trace_ids(case_id)
+        if req.trace_id and req.trace_id.strip():
+            traces.add(req.trace_id.strip())
+        if traces:
+            scope = {"exclude_investigation_id": case_id, "exclude_scenario_ids": sorted(traces | {case_id})}
     try:
         cards, meta = knowledge_adapter.search(
-            req.query, top_k=req.limit, attack_category=req.attack_category
+            req.query, top_k=req.limit, attack_category=req.attack_category, filters=scope
         )
     except knowledge_adapter.KnowledgeUnavailable as exc:
         # 缺模型/服务时如实报 503，不用固定答案冒充检索结果
@@ -563,16 +728,29 @@ def search_knowledge(req: SearchKnowledgeRequest):
             "attack_category": req.attack_category,
             "hits": len(cards),
             "retrieval_mode": meta.get("retrieval_mode"),
+            "degraded": bool(meta.get("degraded")),
         },
     )
+    notes: list[str] = []
+    if not cards:
+        notes.append("检索未命中任何卡片")
+    if meta.get("degraded"):
+        notes.append(
+            "检索为降级模式（"
+            + str(meta.get("retrieval_mode"))
+            + "）："
+            + str(meta.get("degraded_reason") or "混合检索后端不可用")
+        )
     return SearchKnowledgeResponse(
         meta=QueryMeta(
             total=len(cards),
             data_source="mock" if meta.get("mock") else "hybrid_search",
             mock=bool(meta.get("mock")),
             backend_available=True,
+            degraded=bool(meta.get("degraded")),
+            retrieval_mode=meta.get("retrieval_mode"),
             dataset=meta.get("backend"),
-            notes=[] if cards else ["检索未命中任何卡片"],
+            notes=notes,
         ),
         items=[KnowledgeCard(**c) for c in cards],
     )
@@ -583,10 +761,13 @@ def search_knowledge(req: SearchKnowledgeRequest):
 # ---------------------------------------------------------------------------
 
 
+_response_bearer = HTTPBearer(auto_error=False)
+
+
 @app.post(
     "/tools/request_response",
     response_model=RequestResponseResponse,
-    summary="提交处置动作与证据编号（高危动作进入人工审批，本周不执行）",
+    summary="提交处置申请；enforced/simulation 模式启用策略网关和人工审批",
     description=(
         "Agent 提交处置动作时必须附上支撑证据的 log_id，服务端做程序性校验："
         "证据必须来自本次调查真实查询返回，伪造编号或引用其它调查任务的编号一律拒绝。"
@@ -595,10 +776,25 @@ def search_knowledge(req: SearchKnowledgeRequest):
     ),
     tags=["处置工具"],
 )
+def request_response_http(
+    req: RequestResponseRequest,
+    auth: HTTPAuthorizationCredentials | None = Depends(_response_bearer),
+):
+    if response_http.mode() == "simulation":
+        return response_http.submit(req, auth.credentials if auth else "")
+    return request_response(req)
+
+
 def request_response(req: RequestResponseRequest):
+    if response_http.mode() == "simulation":
+        raise HTTPException(503, "此入口只用于旧版登记。模拟处置须走受控 HTTP 入口")
     guard = _real_backend_guard()
     if guard is not None:
         return guard
+
+    # enforced 模式走真实状态机；默认 legacy 保持 W2 的「只登记」语义不变。
+    if _response_mode() == "enforced":
+        return _request_response_enforced(req)
 
     # action=none：无需处置，不要求证据
     if req.action == "none":
@@ -673,6 +869,219 @@ def request_response(req: RequestResponseRequest):
         detail=detail,
         rejected_evidence_ids=[],
         mock=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 6. 处置台账与人工审批（SECLOG_RESPONSE_MODE=enforced）
+# ---------------------------------------------------------------------------
+HTTP_404 = 404
+HTTP_409 = 409
+
+
+def _enforced_guard() -> Optional[JSONResponse]:
+    """审批/台账/回滚三类接口只在 enforced 模式开放。
+
+    legacy 模式下状态机没有单据可查，返回 409 而不是空列表——
+    空列表会被误读成"确实没有待审工单"，那是错误的确定性。
+    """
+    if _response_mode() == "enforced":
+        return None
+    return _error(
+        HTTP_409,
+        "response_mode_disabled",
+        "当前为 legacy 模式，审批/台账/回滚接口未启用；设置 SECLOG_RESPONSE_MODE=enforced 后可用",
+        {"mode": "legacy", "required": "enforced"},
+    )
+
+
+def _to_action_item(record: dict[str, Any]) -> ResponseActionItem:
+    return ResponseActionItem(
+        action_id=str(record.get("action_id") or ""),
+        action=str(record.get("action") or ""),
+        target=str(record.get("target") or ""),
+        target_type=str(record.get("target_type") or ""),
+        lifecycle=str(record.get("lifecycle") or ""),
+        case_id=record.get("case_id"),
+        executed_at=record.get("executed_at") or record.get("ts"),
+        expires_at=record.get("expires_at"),
+        revoked_at=record.get("revoked_at"),
+        expired=bool(record.get("expired")),
+    )
+
+
+@app.post(
+    "/tools/approve_response",
+    response_model=RequestResponseResponse,
+    summary="人工审批处置工单（approve 执行 / reject 拒批）",
+    description=(
+        "对 /tools/request_response 产生的待审批单做人工裁决（兼容 enforced 与 simulation 模式）。"
+        "approve 必须补齐 expected_effect 与 rollback_plan 两项，否则 422；"
+        "审批通过后状态机落盘执行审计并计算到期时间，reject 不产生任何副作用。"
+    ),
+    tags=["处置工具"],
+)
+def approve_response(
+    req: ApproveResponseRequest,
+    auth: HTTPAuthorizationCredentials | None = Depends(_response_bearer),
+):
+    if response_http.mode() == "simulation":
+        if not (req.case_id and req.case_id.strip()):
+            return _error(
+                HTTP_422,
+                "invalid_params",
+                "simulation 模式下 case_id 必填",
+                {"field": "case_id"},
+            )
+        return response_http.settle(req, auth.credentials if auth else "")
+
+    guard = _enforced_guard()
+    if guard is not None:
+        return guard
+
+    if not (req.reviewer and req.reviewer.strip()):
+        return _error(
+            HTTP_422,
+            "invalid_params",
+            "enforced 模式下 reviewer 必填",
+            {"field": "reviewer"},
+        )
+    reviewer = req.reviewer.strip()
+
+    pending = response_executor.get_pending(req.approval_id)
+    if pending is None:
+        return _error(
+            HTTP_404,
+            "approval_not_found",
+            f"审批单不存在或已结算：{req.approval_id}",
+            {"approval_id": req.approval_id},
+        )
+
+    try:
+        if req.decision == "approve":
+            order = {
+                "case_id": pending.get("case_id") or "",
+                "action": pending.get("action") or "",
+                "target_ip": pending.get("target_ip") or "",
+                "evidence_log_ids": pending.get("evidence_log_ids") or [],
+                "expected_effect": req.expected_effect,
+                "rollback_plan": req.rollback_plan,
+            }
+            result = response_executor.approve(req.approval_id, order, reviewer)
+        else:
+            result = response_executor.reject(
+                req.approval_id, reviewer, reason=req.reason
+            )
+    except response_executor.ApprovalError as exc:
+        _audit(
+            "approve_response:rejected",
+            {"approval_id": req.approval_id, "decision": req.decision, "error": str(exc)},
+        )
+        return _error(
+            HTTP_422,
+            "approval_rejected",
+            str(exc),
+            {"approval_id": req.approval_id, "decision": req.decision},
+        )
+
+    event = "executed" if result.get("status") == response_executor.EXECUTED else "rejected"
+    payload = {
+        "case_id": pending.get("case_id"),
+        "action": pending.get("action"),
+        "target": pending.get("target"),
+        "target_type": pending.get("target_type"),
+        "evidence_log_ids": pending.get("evidence_log_ids"),
+        "approval_id": req.approval_id,
+        "detail": req.reason or f"{req.decision} by {reviewer}",
+    }
+    _audit(f"approve_response:{event}", {**payload, "reviewer": reviewer})
+    _safe_notify(event, payload)
+
+    if event == "executed":
+        return RequestResponseResponse(
+            status="executed",
+            executed=True,
+            approval_id=req.approval_id,
+            action_id=result.get("action_id"),
+            expires_at=result.get("expires_at") or None,
+            detail=(
+                f"审批单 {req.approval_id} 已由 {reviewer} 批准并执行，"
+                f"到期时间 {result.get('expires_at') or '未设置'}。模拟处置，未调用真实网络设备。"
+            ),
+        )
+    return RequestResponseResponse(
+        status="rejected",
+        approval_id=req.approval_id,
+        detail=f"审批单 {req.approval_id} 已被 {reviewer} 拒批，未产生任何副作用",
+    )
+
+
+@app.get(
+    "/tools/response_status",
+    response_model=ResponseStatusResponse,
+    summary="查询处置台账（生效 / 待审 / 已回滚）",
+    description="只读接口。pending 为待审批单，active 为仍在生效的处置，revoked 为已解除的处置。",
+    tags=["处置工具"],
+)
+def response_status():
+    guard = _enforced_guard()
+    if guard is not None:
+        return guard
+
+    actions = response_executor.list_actions()
+    active = [_to_action_item(item) for item in actions if item["lifecycle"] == response_executor.EXECUTED]
+    revoked = [_to_action_item(item) for item in actions if item["lifecycle"] == response_executor.REVOKED]
+    return ResponseStatusResponse(
+        generated_at=_dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+        mode=_response_mode(),
+        pending=response_executor.list_pending(),
+        active=active,
+        revoked=revoked,
+        total_executed=len(active) + len(revoked),
+        total_revoked=len(revoked),
+    )
+
+
+@app.post(
+    "/tools/sweep_expired",
+    response_model=SweepExpiredResponse,
+    summary="触发到期自动解除（EXECUTED → REVOKED）",
+    description=(
+        "扫描所有已过 expires_at 的生效处置，自动解除并写入撤销审计；"
+        "顺带结算超时的待审批单（on_timeout=reject）。返回本次解除明细。"
+    ),
+    tags=["处置工具"],
+)
+def sweep_expired():
+    guard = _enforced_guard()
+    if guard is not None:
+        return guard
+
+    swept = response_executor.sweep_expired_actions()
+    settled = response_executor.expire_pending()
+    _audit(
+        "sweep_expired",
+        {"revoked": [item.get("action_id") for item in swept], "pending_settled": len(settled)},
+    )
+    for item in swept:
+        _safe_notify(
+            "revoked",
+            {
+                "case_id": item.get("case_id"),
+                "action": item.get("action"),
+                "target": item.get("target"),
+                "target_type": item.get("target_type"),
+                "evidence_log_ids": item.get("evidence_log_ids"),
+                "detail": item.get("revoke_reason") or "expired",
+            },
+        )
+    return SweepExpiredResponse(
+        swept_at=_dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+        count=len(swept),
+        revoked=[_to_action_item(item) for item in swept],
+        pending_expired=[
+            {key: value for key, value in item.items() if key != "deadline_at"} for item in settled
+        ],
     )
 
 

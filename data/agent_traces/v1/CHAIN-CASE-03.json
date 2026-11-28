@@ -1,7 +1,7 @@
 {
   "case_id": "CHAIN-CASE-03",
   "is_malicious": false,
-  "attack_type": "insufficient_evidence",
+  "attack_type": "none",
   "risk_level": "LOW",
   "attacker_ip": "unknown",
   "victim_asset": "web-prod-01",
@@ -11,8 +11,8 @@
     "LOG-20261029-0318",
     "LOG-20261029-0320"
   ],
-  "attack_chain_summary": "未确认攻击成立，也未取得充分的授权依据，不判定为正常，交人工复核。",
+  "attack_chain_summary": "未发现攻击载荷或外连迹象；账号 ops_zhang 经上下文核对（账号已登记、账号类型可执行该操作、来源 IP 符合授权范围、目标资产在授权范围、全部行为在维护窗口内、资产已登记）与授权范围一致，判定为授权运维/业务行为。",
   "recommended_action": "none",
-  "requires_human_approval": true,
-  "unknown_items": "证据不足未定论。缺失项：授权核对未通过：来源授权范围、资产授权范围；配置未提供该账号的来源授权范围（allowlist 只是处置豁免），无法确认来源 ['10.0.0.66'] 是否被允许；配置未提供该账号的资产授权范围，无法确认 ['web-prod-01'] 是否属于授权资产"
+  "requires_human_approval": false,
+  "unknown_items": "未调用知识检索工具。"
 }

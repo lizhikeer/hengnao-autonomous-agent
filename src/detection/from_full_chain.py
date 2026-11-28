@@ -150,6 +150,8 @@ def to_normalized(row: dict[str, Any]) -> NormalizedLog:
         payload_summary=str(row.get("payload_summary") or "") or None,
         # 补充规则（扫描探测）需要状态码，NormalizedLog 无此字段，走 extra 透传
         status_code=row.get("status_code"),
+        # 外连外传判定需要出向字节数（CASE-08 的 C2 大流量外传），同样走 extra
+        bytes_out=row.get("bytes_out"),
         # 老模型的两个必填字段：message 供人读，raw_log 供取证回溯
         message=f"{log_source} {method} {uri}".strip(),
         raw_log=str(row.get("raw_log") or "") or f"{log_source} {method} {uri}".strip(),

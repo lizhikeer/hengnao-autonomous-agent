@@ -1,6 +1,9 @@
 [
   {
+    "schema_version": "1.0",
+    "tenant_id": "default",
     "card_id": "KB-BF-001",
+    "version": 4,
     "card_type": "security_knowledge",
     "title": "Web后台口令爆破行为识别与调查",
     "attack_category": "Brute_Force",
@@ -9,25 +12,56 @@
       "nginx_access",
       "auth_log"
     ],
+    "keywords": [
+      "Web登录",
+      "口令爆破",
+      "认证失败",
+      "异常请求频率",
+      "多账户尝试",
+      "登录接口",
+      "Brute Force",
+      "Password Guessing",
+      "Web Login",
+      "HTTP 401",
+      "HTTP 403",
+      "src_ip",
+      "request_uri",
+      "request_method",
+      "status",
+      "User-Agent"
+    ],
     "key_indicators": [
-      "同一来源IP在短时间内对登录接口发起大量重复请求",
-      "登录接口连续出现401、403或其他认证失败状态",
-      "同一来源IP尝试访问多个用户名或账户",
-      "请求频率明显高于该系统正常登录行为基线"
+      "同一 src_ip 在 5 分钟窗口内对相同登录 request_uri 发起大量 POST 请求，request_method、status（401/403）和时间分布明显偏离该接口基线",
+      "nginx_access 中同一 src_ip 对多个用户名标识发起登录请求，且失败次数、账户数量和请求速率同步升高",
+      "登录失败后出现 status=200 或认证成功事件，需与 auth_log 的 user、src_ip 和 timestamp 对齐核实",
+      "相同 src_ip 的 User-Agent、请求间隔和 URI 参数呈现高度重复的自动化特征",
+      "异常登录成功后，相关账户访问敏感 URI 或产生非日常操作审计事件"
     ],
     "investigation_steps": [
       "检索异常时间窗口内的nginx访问日志，统计来源IP、登录路径、请求次数和状态码",
       "关联认证日志，核对失败登录记录、账户名称和时间分布",
       "检查异常来源IP是否同时访问其他敏感接口，判断是否存在连续探测行为",
-      "核对相关账户后续是否出现成功登录及异常操作记录"
+      "核对相关账户后续是否出现成功登录及异常操作记录",
+      "结合正常业务基线、测试任务和用户反馈排除误报"
     ],
-    "recommended_action": "rate_limit_ip",
-    "error_revision_note": "正常用户输错密码、自动化测试和企业统一认证系统也可能产生连续失败记录。应结合请求频率、账户数量、来源IP及后续登录结果综合判断，避免仅凭失败次数封禁。",
-    "source_reference": "MITRE ATT&CK T1110.001 Password Guessing; OWASP Authentication Cheat Sheet",
-    "review_status": "approved"
+    "recommended_action": "rate_limit",
+    "error_revision_note": "共享出口可能聚合多个用户。源地址为代理或网关时，用可信代理记录或 NAT 映射关联客户端。缺少映射时标注来源未知，保留网关流量。",
+    "source_reference": "MITRE ATT&CK T1110.001 Password Guessing; OWASP Authentication Cheat Sheet https://nginx.org/en/docs/http/ngx_http_realip_module.html",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z",
+    "summary": "通过Web访问日志和认证日志识别短时间内集中出现的登录失败、多账户尝试及异常成功登录行为。"
   },
   {
+    "schema_version": "1.0",
+    "tenant_id": "default",
     "card_id": "KB-BF-002",
+    "version": 4,
     "card_type": "security_knowledge",
     "title": "SSH与VPN远程登录暴力破解识别",
     "attack_category": "Brute_Force",
@@ -36,75 +70,166 @@
       "auth_log",
       "zeek_conn"
     ],
+    "keywords": [
+      "SSH",
+      "VPN",
+      "远程登录",
+      "认证失败",
+      "口令猜测",
+      "异常连接",
+      "SSH Brute Force",
+      "VPN Authentication",
+      "Failed password",
+      "sshd",
+      "TCP/22",
+      "src_ip",
+      "dst_ip",
+      "dst_port",
+      "conn_state",
+      "auth_log",
+      "SSH爆破",
+      "VPN认证",
+      "远程登录失败"
+    ],
     "key_indicators": [
-      "同一来源IP在短时间内产生大量SSH或VPN认证失败记录",
-      "多个不同账户在相近时间出现连续认证失败",
-      "远程登录服务出现异常集中的连接请求",
-      "认证失败后紧接着出现成功登录，需要进一步核实账户和来源"
+      "auth_log 在短时间内对同一 src_ip 记录多条 sshd/VPN authentication failure，包含 user、timestamp 和 result 字段",
+      "auth_log 中多个 user 从同一 src_ip 连续出现 Failed password 或认证失败事件，失败时间集中且账户分布异常",
+      "按认证服务端、源地址和时间关联已建立的连接。S0 表示未见应答，REJ 表示连接被拒，仅用于统计网络探测。",
+      "同一 id.orig_h 在短时间内连接多台目标主机或多个远程登录服务，连接次数偏离运维基线",
+      "认证失败序列后出现同源成功登录，需关联 auth_log 的认证结果与主机登录审计确认"
     ],
     "investigation_steps": [
       "检索auth_log中的SSH和VPN认证事件，统计来源IP、账户及失败次数",
       "关联zeek_conn连接记录，核对连接时间、目标主机和连接频率",
       "检查同一来源IP是否对多台服务器或多个远程服务发起连接",
-      "核实异常登录成功记录对应的账户归属、登录时间和后续操作"
+      "核实异常登录成功记录对应的账户归属、登录时间和后续操作",
+      "结合运维排班、跳板机记录和授权信息排除正常运维行为"
     ],
-    "recommended_action": "rate_limit_ip",
-    "error_revision_note": "企业运维人员可能通过跳板机集中登录多台服务器，导致短时间内出现大量认证事件。应结合运维时间窗口、来源网络和授权记录进行区分。",
-    "source_reference": "MITRE ATT&CK T1110.001 Password Guessing; OpenSSH Server Logging Documentation",
-    "review_status": "approved"
+    "recommended_action": "rate_limit",
+    "error_revision_note": "按来源和目标服务聚合多个账号的认证失败。成功登录后核对账号授权与会话内操作。缺少认证日志时只报告连接异常。",
+    "source_reference": "MITRE ATT&CK T1110.001 Password Guessing; OpenSSH Server Logging Documentation https://docs.zeek.org/en/current/scripts/base/protocols/conn/main.zeek.html",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z",
+    "summary": "关联SSH、VPN认证日志与网络连接记录，识别异常远程登录失败和疑似口令猜测行为。"
   },
   {
+    "schema_version": "1.0",
+    "tenant_id": "default",
     "card_id": "KB-BF-003",
+    "version": 4,
     "card_type": "security_knowledge",
-    "title": "账户撞库行为识别与调查",
+    "title": "多账号登录失败后的异常认证与凭据复用核查",
     "attack_category": "Brute_Force",
     "mitre_id": "T1110.004",
     "applicable_log_sources": [
       "nginx_access",
       "auth_log"
     ],
+    "keywords": [
+      "账户撞库",
+      "Credential Stuffing",
+      "多账户登录",
+      "认证异常",
+      "账户风险",
+      "异常成功登录",
+      "HTTP 401",
+      "HTTP 429",
+      "src_ip",
+      "username",
+      "login_attempt",
+      "User-Agent",
+      "凭证填充"
+    ],
     "key_indicators": [
-      "同一来源IP在较短时间内尝试登录多个不同账户",
-      "多个账户出现相似时间分布的认证失败记录",
-      "登录请求集中访问同一认证接口且请求频率异常",
-      "部分账户在连续失败后出现来源异常的成功登录记录"
+      "同一 src_ip 在短时间内对多个 username 发起登录尝试，认证日志中账户分布广且单账户失败次数相对分散",
+      "多个账户在相近 timestamp 出现认证失败，且登录接口 request_uri、request_method 和 User-Agent 高度相似",
+      "nginx_access 中同一 src_ip 对登录 URI 产生异常 POST 频率，并出现 HTTP 401/403 或 429 集中响应",
+      "部分账户在连续失败后出现认证成功，auth_log 的 user、src_ip、result 和 timestamp 偏离该账户历史记录",
+      "成功登录后出现异常敏感资源访问或权限操作，需用 username 与审计日志关联确认"
     ],
     "investigation_steps": [
       "检索登录接口访问日志，统计来源IP、账户标识和认证请求时间分布",
       "关联auth_log，识别多个账户是否存在集中失败或异常成功登录",
       "对比相关账户的历史登录来源和正常访问时间，判断是否偏离行为基线",
-      "核查异常成功登录后的账户操作记录，评估是否存在账户被未授权使用的风险"
+      "核查异常成功登录后的账户操作记录，评估是否存在账户被未授权使用的风险",
+      "联系账户所有者或管理员核实异常登录事件"
     ],
     "recommended_action": "isolate_account",
-    "error_revision_note": "企业统一登录、共享出口IP和批量账户管理可能造成多个账户在短时间内登录。不能仅凭账户数量判断撞库，应结合来源、失败与成功比例及历史行为进行核实。",
-    "source_reference": "MITRE ATT&CK T1110.004 Credential Stuffing; OWASP Credential Stuffing Prevention Cheat Sheet",
-    "review_status": "approved"
+    "error_revision_note": "多账号失败可定位批量口令尝试。确认撞库还需泄露凭据复用的独立证据。来源共享时先核对设备和账号，证实账户被盗用后再申请隔离。",
+    "source_reference": "MITRE ATT&CK T1110.004 Credential Stuffing; OWASP Credential Stuffing Prevention Cheat Sheet https://attack.mitre.org/techniques/T1110/004/",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z",
+    "summary": "通过多个账户的认证失败分布、异常成功登录和历史行为偏差识别疑似凭证填充攻击。"
   },
   {
+    "schema_version": "1.0",
+    "tenant_id": "default",
     "card_id": "KB-BF-004",
+    "version": 4,
     "card_type": "security_knowledge",
     "title": "异常认证与疑似未授权账户访问识别",
-    "attack_category": "Brute_Force",
+    "attack_category": "Valid_Accounts",
     "mitre_id": "T1078",
     "applicable_log_sources": [
       "auth_log",
       "nginx_access"
     ],
+    "keywords": [
+      "异常登录",
+      "有效账户滥用",
+      "未授权访问",
+      "异地登录",
+      "权限异常",
+      "账户行为分析",
+      "Valid Accounts",
+      "Account Compromise",
+      "Anomalous Login",
+      "Successful Authentication",
+      "src_ip",
+      "username",
+      "login_time",
+      "auth_result",
+      "asset_id",
+      "异常成功登录",
+      "未授权账户访问"
+    ],
     "key_indicators": [
-      "账户在非正常时间段或异常来源网络发生成功登录",
-      "同一账户在短时间内从多个地理位置或不常见来源出现登录记录",
-      "登录成功后访问与账户职责不匹配的敏感接口",
-      "认证日志显示账户权限、认证方式或登录设备出现异常变化"
+      "auth_log 出现 auth_event=login_success 且 result=success 的记录，user、src_ip 或 timestamp 偏离该账户历史基线",
+      "同一 user 在短时间内从多个不常见 src_ip 或不同设备产生成功登录记录",
+      "成功登录后 nginx_access 或应用审计出现与账户职责不匹配的敏感 URI、管理操作或数据访问，并可按 user 与登录事件关联",
+      "认证日志显示认证方式、权限组或账户状态在非预期时间发生变化，且无对应变更记录",
+      "异常成功登录的 user、src_ip、timestamp 与敏感数据访问、权限变更或账户配置操作在审计日志中形成时间关联"
     ],
     "investigation_steps": [
       "检索auth_log中的成功认证事件，核对账户、来源IP、认证方式和登录时间",
       "对比账户历史登录记录及授权信息，识别异常来源和不符合日常规律的行为",
       "关联nginx_access记录，检查登录成功后访问的接口和资源是否符合账户职责",
-      "核实账户所有者及管理员记录，确认是否存在异常授权或未授权访问"
+      "核实账户所有者及管理员记录，确认是否存在异常授权或未授权访问",
+      "检查异常登录后的操作审计记录，评估是否需要进一步限制账户权限"
     ],
     "recommended_action": "isolate_account",
-    "error_revision_note": "员工出差、VPN切换、代理网络和合法权限调整都可能产生异常登录特征。处置前应核实用户身份、设备和授权变更记录，避免误隔离正常账户。",
-    "source_reference": "MITRE ATT&CK T1078 Valid Accounts; OWASP Authentication Cheat Sheet",
-    "review_status": "approved"
+    "error_revision_note": "员工出差、VPN切换、代理网络和合法权限调整都可能产生异常登录特征。处置前应核实用户身份、设备和授权变更记录。只有确认账户存在未授权使用风险后，才建议执行账户隔离，并经过人工确认。 样本中的共享出口、VPN 和 Docker bridge 地址可能造成来源归因偏差；应结合 asset_id、账户归属和设备记录确认，不得仅凭异常地理位置或 src_ip 隔离账户。",
+    "source_reference": "MITRE ATT&CK T1078 Valid Accounts; OWASP Authentication Cheat Sheet https://attack.mitre.org/techniques/T1078/",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z",
+    "summary": "通过成功认证事件、账户历史行为和操作审计记录识别疑似有效账户滥用及未授权访问。"
   }
 ]

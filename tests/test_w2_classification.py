@@ -36,7 +36,7 @@ def test_seven_categories_declared():
     assert len(codes) == 7
     assert {"Path_Traversal_Privilege", "Malicious_Upload"} <= set(codes)
     missing_cards = [c["code"] for c in catalog if not c["knowledge_card_ready"]]
-    assert missing_cards == ["Scan"]
+    assert missing_cards == []
 
 
 def test_verify_segments_in_sync_with_attack_types():
@@ -73,7 +73,7 @@ def test_invalid_segment_detected():
 def test_zh_name_and_knowledge_category():
     assert attack_types.zh_name("SQL_Injection_After_Brute_Force") == "密码爆破 → SQL 注入"
     assert attack_types.knowledge_category("C2_Exfiltration_After_SQL_Injection") == "C2_Exfiltration"
-    assert attack_types.knowledge_category("Scan") is None
+    assert attack_types.knowledge_category("Scan") == "Scan"
 
 
 def test_infer_from_text():
@@ -225,14 +225,11 @@ def test_seven_categories_are_distinguishable():
 
 
 def test_result_category_maps_to_knowledge_category():
-    """结果分类七个，知识卡分类五个：多对一是允许的，但不能反过来合并结果类。"""
+    """新卡按调查类别过滤；历史复合标签仍可解析。"""
     mapping = {t.code: t.knowledge_category for t in attack_types.ATTACK_TYPES}
-    assert mapping["XSS"] == "XSS_RCE"
-    assert mapping["Malicious_Upload"] == "File_Upload_Traversal"
-    assert mapping["Path_Traversal_Privilege"] == "File_Upload_Traversal"
-    assert mapping["Scan"] is None
-    assert attack_types.knowledge_category("XSS") == "XSS_RCE"
-    assert attack_types.knowledge_category("Path_Traversal_Privilege") == "File_Upload_Traversal"
+    assert all(key == value for key, value in mapping.items())
+    assert attack_types.knowledge_category("XSS") == "XSS"
+    assert attack_types.knowledge_category("Path_Traversal_Privilege") == "Path_Traversal_Privilege"
     # 结果类本身仍然是两个
     assert attack_types.BY_CODE["Malicious_Upload"] is not attack_types.BY_CODE["Path_Traversal_Privilege"]
 
@@ -283,11 +280,12 @@ def test_trace_keeps_decision_evidence_not_ellipsis():
         assert first.get(key) not in (None, "", "…"), f"{key} 被脱敏掉了"
     assert evidence.get("evaluated_at"), "必须保留窗口判断所用时间"
     assert isinstance(evidence.get("per_log_in_window"), dict) and evidence["per_log_in_window"]
-    # 语义变化：config/ 未提供账号-来源/资产授权范围，
-    # 依据里要如实标 scope_provided=False，而不是伪造一个"允许列表"
+    # 最新 main 已为 ops_* 配置明确的来源与资产行为授权范围。
     assert evidence.get("observed_src_ips")
-    assert evidence.get("source_scope_provided") is False
-    assert evidence.get("asset_scope_provided") is False
+    assert evidence.get("source_scope_provided") is True
+    assert evidence.get("asset_scope_provided") is True
+    assert "10.0.0.0/24" in evidence.get("allowed_src_ips", [])
+    assert "web-prod-01" in evidence.get("allowed_assets", [])
 
     # 成功 / 零命中 / 失败仍可区分
     statuses = {s["status"] for s in trace["trace"]["steps"]}

@@ -79,9 +79,17 @@ def test_hit_maps_fields_and_drops_extras(monkeypatch):
                 "key_indicators": ["UNION SELECT", "sleep("],
                 "recommended_action": "block_ip_short_term",
                 "score": 0.82,
-                # 真实检索会带出很多内部字段，对外应被裁掉
+                # 保留已命中的完整规则和引用，内部排名及未命中的规则不进入上下文。
                 "version": 3,
-                "matched_section": "detection/body",
+                "matched_section": "analysis_rules.R2",
+                "analysis_rules": [
+                    {"rule_id": "R1", "data_ids": ["D1"], "source_ids": ["S1"]},
+                    {"rule_id": "R2", "data_ids": ["D2"], "source_ids": ["S2"], "condition": "核对同次请求"},
+                ],
+                "required_data": [{"data_id": "D1"}, {"data_id": "D2"}],
+                "sources": [{"source_id": "S1"}, {"source_id": "S2"}],
+                "source_reference": "OWASP WSTG",
+                "investigation_steps": ["查询相关应用请求"],
                 "rrf_score": 0.03,
             }
         ]
@@ -97,7 +105,60 @@ def test_hit_maps_fields_and_drops_extras(monkeypatch):
     assert card["card_type"] == "security_knowledge"
     assert card["key_indicators"] == ["UNION SELECT", "sleep("]
     assert card["score"] == 0.82
-    assert "version" not in card and "rrf_score" not in card
+    assert card["version"] == 3 and "rrf_score" not in card
+    assert card["analysis_rules"][0]["condition"] == "核对同次请求"
+    assert len(card["analysis_rules"]) == 1
+    assert card["required_data"] == [{"data_id": "D2"}]
+    assert card["sources"] == [{"source_id": "S2"}]
+    assert card["source_reference"] == "OWASP WSTG"
+    assert card["investigation_steps"] == ["查询相关应用请求"]
+
+
+def test_rest_passes_case_scope_and_returns_investigation_content(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from api.app import app
+
+    def fake_hybrid(query, *, top_k=5, filters=None):
+        assert filters == {
+            "attack_category": "Scan",
+            "exclude_investigation_id": "CASE-01",
+            "exclude_scenario_ids": ["CASE-01"],
+        }
+        return [{"card_id": "KB-SCAN", "investigation_steps": ["核对授权范围"], "source_reference": "WSTG 4.1"}]
+
+    _inject_hybrid(monkeypatch, fake_hybrid)
+    with TestClient(app) as client:
+        result = client.post(
+            "/tools/search_knowledge",
+            json={"query": "扫描探测", "attack_category": "Scan", "case_id": "CASE-01", "trace_id": "CASE-01"},
+        )
+    assert result.status_code == 200
+    item = result.json()["items"][0]
+    assert item["source_reference"] == "WSTG 4.1"
+    assert item["investigation_steps"] == ["核对授权范围"]
+
+
+def test_search_excludes_all_traces_seen_under_an_investigation(client, replay_backend, monkeypatch):
+    captured = []
+
+    def record_scope(query, *, top_k, filters):
+        captured.append(filters)
+        return []
+
+    _inject_hybrid(monkeypatch, record_scope)
+    case = "RUN-V2-ISOLATION"
+    search = {"query": "回连调查", "case_id": case, "attack_category": "C2_Exfiltration", "limit": 5}
+    assert client.post("/tools/search_knowledge", json=search).status_code == 200
+    assert captured[-1]["knowledge_only"]
+    # 使用来源过滤查询获得的 trace 也必须登记，不能只记录请求里的 trace_id。
+    rows = client.post("/tools/query_logs", json={"case_id": case, "src_ip": "10.0.0.66", "limit": 200}).json()["items"]
+    observed = {r["trace_id"] for r in rows}
+    assert len(observed) > 1
+    result = client.post("/tools/query_logs", json={"case_id": case, "trace_id": "CHAIN-CASE-02"})
+    assert result.json()["items"]
+    assert client.post("/tools/search_knowledge", json=search).status_code == 200
+    assert set(captured[-1]["exclude_scenario_ids"]) == observed | {case, "CHAIN-CASE-02"}
 
 
 def test_unknown_card_type_falls_back(monkeypatch):

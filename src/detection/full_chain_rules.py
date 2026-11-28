@@ -78,6 +78,86 @@ def _text_of(log: NormalizedLog) -> tuple[str, str]:
     return f"{uri} {extra}".strip(), payload
 
 
+#: 周期性外连判定：同一 (src,dst,uri) 至少这么多次才可能是心跳
+BEACON_MIN_BEATS = 3
+#: 心跳间隔的变异系数上限（标准差/均值）。真实业务请求不会这么规整。
+BEACON_MAX_CV = 0.25
+#: 单次出向字节达到该值视为大流量外传
+EXFIL_BYTES_THRESHOLD = 100_000
+
+
+def _outbound_signals(logs: list[NormalizedLog]) -> dict[str, tuple[str, dict[str, object]]]:
+    """批量识别两类出向异常，返回 ``{event_id: (kind, evidence)}``。
+
+    * ``beacon``：内网 → 外网、同一 URI 的等间隔重复请求（C2 心跳）；
+    * ``exfil`` ：内网 → 外网单次出向字节超过阈值（数据外传）。
+
+    为什么必须批量算：单条日志看不出"每 5 分钟一次"这种节律，只有把同一
+    (源, 目的, URI) 的整串请求放在一起比较间隔才能识别。CASE-08 的 C2
+    走 443 端口伪装成正常 HTTPS，端口规则永远抓不到，只能靠行为特征。
+
+    只在**命中的那几条日志**上出线索，而不是整段流量都报，
+    否则一次心跳会把几十条正常日志全变成告警。
+    """
+    buckets: dict[tuple[str, str, str], list[NormalizedLog]] = defaultdict(list)
+    for log in logs:
+        if not str(getattr(log, "log_source", "") or "").startswith("zeek"):
+            continue
+        src = log.src_ip or ""
+        dst = log.dst_ip or ""
+        if not (_is_private(src) and dst and not _is_private(dst)):
+            continue
+        uri = str(getattr(log, "resource", "") or "")
+        buckets[(src, dst, uri)].append(log)
+
+    signals: dict[str, tuple[str, dict[str, object]]] = {}
+    for (src, dst, uri), items in buckets.items():
+        # exfil：任意一条出向字节超过阈值即成立（不要求周期性，一次性拖库也算）
+        for log in items:
+            try:
+                nbytes = int(getattr(log, "bytes_out", 0) or 0)
+            except (TypeError, ValueError):
+                nbytes = 0
+            if nbytes >= EXFIL_BYTES_THRESHOLD:
+                signals[log.event_id] = (
+                    "exfil",
+                    {"internal_ip": src, "external_ip": dst, "bytes_out": nbytes},
+                )
+
+        # beacon：URI 非空、次数足够、且间隔足够规整
+        if not uri or len(items) < BEACON_MIN_BEATS:
+            continue
+        times = sorted(log.event_time for log in items)
+        gaps = [
+            (later - earlier).total_seconds()
+            for earlier, later in zip(times, times[1:])
+        ]
+        gaps = [gap for gap in gaps if gap > 0]
+        if len(gaps) < BEACON_MIN_BEATS - 1:
+            continue
+        mean = sum(gaps) / len(gaps)
+        if mean <= 0:
+            continue
+        variance = sum((gap - mean) ** 2 for gap in gaps) / len(gaps)
+        if (variance ** 0.5) / mean > BEACON_MAX_CV:
+            continue
+        for log in items:
+            signals.setdefault(
+                log.event_id,
+                (
+                    "beacon",
+                    {
+                        "internal_ip": src,
+                        "external_ip": dst,
+                        "uri": uri,
+                        "beats": len(items),
+                        "interval_seconds": round(mean, 1),
+                    },
+                ),
+            )
+    return signals
+
+
 def detect_supplementary(
     logs: list[NormalizedLog],
     *,
@@ -91,6 +171,7 @@ def detect_supplementary(
     """
     builder = builder or AnomalyEventBuilder()
     events: list[AnomalyEvent] = []
+    outbound = _outbound_signals(logs)
 
     # 扫描探测的滑动窗口：src_ip -> 最近 N 分钟的 404/403 时间戳
     error_window: dict[str, deque[datetime]] = defaultdict(deque)
@@ -232,5 +313,30 @@ def detect_supplementary(
                 attack_type="Suspicious_Outbound",
                 risk_component_overrides={"rule_strength": 30, "event_correlation": 10},
             ))
+
+        # ---- 7. 行为型出向异常：C2 心跳 / 大流量外传 ----
+        # 与第 6 条互补：第 6 条看端口，这一条看节律与字节数，
+        # 专门覆盖"伪装成 443 正常 HTTPS"的 C2（CASE-08）。
+        signal = outbound.get(log.event_id)
+        if signal:
+            kind, detail = signal
+            if kind == "beacon":
+                events.append(builder.build(
+                    log=log,
+                    rule_hits=["内网资产对外部地址呈现等间隔心跳"],
+                    reason_codes=["beacon_pattern"],
+                    evidence=dict(detail),
+                    attack_type="Suspicious_Outbound",
+                    risk_component_overrides={"rule_strength": 30, "event_correlation": 20},
+                ))
+            else:
+                events.append(builder.build(
+                    log=log,
+                    rule_hits=["内网资产向外部地址单次传输大流量"],
+                    reason_codes=["outbound_volume_spike"],
+                    evidence=dict(detail),
+                    attack_type="Data_Exfiltration",
+                    risk_component_overrides={"rule_strength": 30, "behavior_sensitivity": 20},
+                ))
 
     return events

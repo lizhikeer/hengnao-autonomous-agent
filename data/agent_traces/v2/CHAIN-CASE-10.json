@@ -1,0 +1,24 @@
+{
+  "case_id": "CHAIN-CASE-10",
+  "is_malicious": false,
+  "attack_type": "none",
+  "risk_level": "LOW",
+  "attacker_ip": "10.0.0.52",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261106-1001",
+    "LOG-20261106-1002",
+    "LOG-20261106-1003",
+    "LOG-20261106-1004",
+    "LOG-20261106-1005",
+    "LOG-20261106-1006",
+    "LOG-20261106-1007",
+    "LOG-20261106-1008",
+    "LOG-20261106-1009",
+    "LOG-20261106-1010"
+  ],
+  "attack_chain_summary": "来源 10.0.0.52 的账号 zhangsan 共失败 2 次（同源 10.0.0.52 账号 zhangsan 失败 2 次（中位间隔 69s），随后同源登录成功），随后同源登录成功，并在会话内完成 4 次常规业务请求，未出现攻击载荷、越权参数或异常外连；判定为正常登录重试，不作恶意处置。",
+  "recommended_action": "none",
+  "requires_human_approval": false,
+  "unknown_items": "该结论依据行为模式（低频失败+同源成功+后续业务），未依赖账号画像授权；同批日志另含账号 lisi，其活动未纳入本次重试模式判定，需按各自画像另行核对。"
+}

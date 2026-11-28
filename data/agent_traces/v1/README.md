@@ -20,11 +20,12 @@ Agent 每次多轮调查的过程（调了哪些工具、每次查到什么、�
 
 ```text
 data/agent_traces/
-├── v1/                              # V1 基线版（当前：已产 01~03，待补跑 04~10）
+├── v1/                              # V1 基线版（当前：已产 01~10）
 │   ├── CHAIN-CASE-01.json           # AgentResults，严格 11 字段
 │   ├── CHAIN-CASE-01.trace.json     # 运行元数据 + 轨迹 + 自检 + 评测对照
 │   ├── ...
-│   └── SUMMARY.md                   # 汇总表（由实际运行信息生成）
+│   ├── SUMMARY.md                   # 多轮调查运行汇总
+│   └── EVALUATION.md                # 10 案例四维算分报告
 ├── v2/                              # V2 迭代版（第 3 周）
 ├── v3/                              # V3 迭代版（第 4 周）
 └── legacy/                          # 改版前旧产物，禁止与新结果混用
@@ -102,6 +103,7 @@ data/agent_traces/
 
 ## 六、当前进度与 Known Limitations
 
-- PR #24 合入后，`data/agent_traces/v1/` 已包含 `CHAIN-CASE-01` ~ `CHAIN-CASE-03` 的本地回放结果与轨迹（基于 `dataset_replay` 控制器 `rule_based_v1_controller`）。
-- 随着 PR #25 合入 `CHAIN-CASE-04` ~ `CHAIN-CASE-10` 共 7 组全链路日志（累计 10 组、200 条），可立即运行 `python tests/run_v1_traces.py`（以及在恒脑平台侧实跑）补齐 04~10 的 V1 产物并交由 `scripts/eval_runner.py` 算分。
-- 已知限制：① 当前 `v1/` 已归档的 01~03 为 `dataset_replay` 控制器产出，非恒脑平台实跑；② 检索工具在本地回放环境未挂载 BGE 权重与 Qdrant 时会如实记 `status=error`（`backend_unavailable`）。
+- `data/agent_traces/v1/` 已包含 `CHAIN-CASE-01` ~ `CHAIN-CASE-10` 的本地回放结果与轨迹，均由 `dataset_replay` 下的 `rule_based_v1_controller` 生成；这不是恒脑平台模型实跑。
+- `SUMMARY.md` 汇总调查轮次和工具状态；`EVALUATION.md` 记录 10 案例的检测、调查、证据与处置算分。当前结果含 2 个恶意场景弃权、1 个正常扫描误报，详见评测报告；结果原样保留，未按 truth 手工改写。
+- 本次回放仍缺 BGE 权重、`sentence-transformers`、`qdrant-client`、NumPy 和可用的 Qdrant 服务；检索调用在轨迹中记为 `backend_unavailable`。
+- 恒脑平台、ClickHouse 实库和真实混合检索仍未联调。公网入口 `https://seclog.91666.icu:18443` 本次检查连接超时，不能据此判断服务内部状态。

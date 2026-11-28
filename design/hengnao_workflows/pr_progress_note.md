@@ -54,6 +54,20 @@ uv pip install -r requirements/runtime.txt --python "$TEMP/w2verify311/Scripts/p
 **没有暂存**：`data/agent_traces/legacy/`（历史归档）、`docs/superpowers/`（无关临时文档）、
 无 `.env` / 凭据 / 日志。
 
+---
+
+## 本地续作进度（2026-11-16）
+
+基于最新 `origin/main`（`e581305`）新建分支 `feature/w2-account-scope-v1-traces`。本轮将 `response-policy.yaml` 中 `ops_*` / `ops` 的来源与资产范围接入账号画像；CIDR 形式来源范围按网段匹配。处置豁免仍与行为授权分开。
+
+CASE-03 回放现为 `none` / `LOW`，证据 4 条。CASE-01～CASE-10 已全部重跑并生成轨迹；10 案例评测摘要：Recall 100%、FPR 50%、弃权率 30%、诊断准确率 14.3%、风险等级一致率 85.7%、平均证据召回率 49.0%、高危审批合规率 100%。CASE-06、CASE-08 恶意场景弃权，CASE-09 授权扫描误报；结果保留原样，供后续错题复盘。
+
+验证：`pytest tests/ -q` → **268 passed**；`git diff --check` 通过。
+
+仍未完成的 Issue #18 外部联调：本次访问 `https://seclog.91666.icu:18443/health` TCP 超时；检索依赖、BGE 权重、Qdrant 与知识库未就绪；本地未发现 ClickHouse DSN。因此没有验证 ClickHouse 实库、真实混合检索或恒脑平台执行。Issue #18 仍不能整体关闭。
+
+本轮对应产物见 `data/agent_traces/v1/`，验收记录见 `design/hengnao_workflows/week2_acceptance.md` 第十轮。
+
 ### 前一轮修复（2026-11-12 晚）
 
 **1. MCP 历史时间窗不一致**
@@ -140,3 +154,11 @@ CASE-02 的 `C2_Exfiltration` 仍未计入：`_c2_signal` 要求 payload 含明�
 **测试**：258 passed。**V1**：CASE-01 16/0.833、CASE-02 6/0.667、CASE-03 insufficient/0.4。
 
 </details>
+
+## PR #27 补充：评审问题修复（2026-11-17）
+
+已处理 PR #26 指向控制器的两项错题：授权扫描须逐条通过扫描器、资产、授权源 IP、授权时间窗、允许动作及禁止豁免类别核验；同源同资产时窗的 Zeek 连接记录归入调查证据。纯扫描结论降为 `MEDIUM` 并推荐 `rate_limit`，控制器仅生成建议、不实际执行处置。CASE-09 回放为 `none` / `LOW`（truth 恶意判定一致，13 条证据覆盖 truth，证据召回 100%）；CASE-07 为 `Scan` / `MEDIUM` / `rate_limit`。
+
+验证：上下文测试 46 passed；全量测试 271 passed；10 案例重跑后 Recall 100%、FPR 0%、弃权率 30%、诊断准确率 28.6%、风险一致率 100%、平均证据召回 69.0%。详细结果见 `week2_acceptance.md` 第十一轮及 `data/agent_traces/v1/`。
+
+平台连通信息更正：较早的本机 `/health` 超时记录不代表现状。`docs/架构变更说明_2026-11-12.md` 记录的新链路为固定域名 → 国内公网 IPv4 中转 → NAS frpc → Caddy TLS → FastAPI，并记录平台调试通过。本轮未重跑线上检查，因此没有把此前超时当成现行阻塞，也没有声称本轮已完成平台复验。真实 ClickHouse、混合检索与修改后恒脑工作流仍未验证。

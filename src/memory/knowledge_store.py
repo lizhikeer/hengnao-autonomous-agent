@@ -267,7 +267,7 @@ class KnowledgeStore:
         profile: str,
         now: str,
         limit: int,
-        category: str | None = None,
+        categories: tuple[str, ...] = (),
     ) -> list[sqlite3.Row]:
         if not query:
             return []
@@ -279,9 +279,16 @@ class KnowledgeStore:
             AND c.status='active' AND v.review_status='approved' AND v.valid_from<=?
             AND (v.valid_until IS NULL OR v.valid_until>?)"""
         args: list[Any] = [query, tenant_id, profile, now, now]
-        if category:
-            sql += " AND v.attack_category=?"
-            args.append(category)
+        if categories:
+            # 类别只通过占位符绑定，两路召回共用同一组类别。
+            placeholders = ",".join("?" for _ in categories)
+            sql += (
+                f" AND (v.attack_category IN ({placeholders}) OR EXISTS ("
+                "SELECT 1 FROM json_each(v.content_json, '$.related_attack_categories') "
+                f"WHERE value IN ({placeholders})))"
+            )
+            args.extend(categories)
+            args.extend(categories)
         sql += " ORDER BY score,ch.point_id LIMIT ?"
         args.append(limit)
         return self.db.execute(sql, args).fetchall()

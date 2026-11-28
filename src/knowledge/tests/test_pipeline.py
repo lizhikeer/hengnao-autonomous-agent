@@ -12,7 +12,7 @@ from qdrant_client import QdrantClient, models
 
 from src.knowledge.config import PROJECT_ROOT, KnowledgeConfig
 from src.knowledge.embedding import check_vectors
-from src.knowledge.loader import parse_cards
+from src.knowledge.loader import SourceManifest, parse_cards
 from src.knowledge.qdrant_client import VectorStore
 from src.knowledge.schema import CardValidator, normalize_card
 from src.knowledge.search import reciprocal_rank_fusion
@@ -31,9 +31,9 @@ def import_cards(service, tmp_path, cards, *, approve=True, split="knowledge"):
 def test_pending_is_sqlite_only(service, card, tmp_path):
     result = import_cards(service, tmp_path, [card], approve=False)
     assert result[0]["status"] == "pending"
-    assert service.store.get("default", card["card_id"], 1)["review_status"] == "pending"
+    assert service.store.get("default", card["card_id"], card["version"])["review_status"] == "pending"
     for collection in ("security_knowledge", "verified_cases"):
-        assert service.vectors.client.count(collection).count == 0
+        assert not service.vectors.client.collection_exists(collection)
     assert service.search("密码爆破") == []
 
 
@@ -50,13 +50,15 @@ def test_publish_reimport_and_restore_full_text(service, card, tmp_path):
 
 
 def test_new_pending_keeps_old_published_version(service, card, tmp_path):
+    original_version = card["version"]
+    next_version = original_version + 1
     import_cards(service, tmp_path, [card])
-    card.update(version=2, title="新版：登录失败后成功的调查")
+    card.update(version=next_version, title="新版：登录失败后成功的调查")
     import_cards(service, tmp_path, [card], approve=False)
-    assert {item["version"] for item in service.search("登录爆破")} == {1}
+    assert {item["version"] for item in service.search("登录爆破")} == {original_version}
     import_cards(service, tmp_path, [card])
-    assert {item["version"] for item in service.search("登录爆破")} == {2}
-    card["version"] = 1
+    assert {item["version"] for item in service.search("登录爆破")} == {next_version}
+    card["version"] = original_version
     with pytest.raises(ValueError, match="同版本内容冲突"):
         import_cards(service, tmp_path, [card])
 
@@ -75,8 +77,10 @@ def test_incompatible_collection_is_preserved(tmp_path):
 
 
 def test_index_failure_retains_old_version_and_retry_is_safe(service, card, tmp_path, monkeypatch):
+    original_version = card["version"]
+    next_version = original_version + 1
     import_cards(service, tmp_path, [card])
-    card.update(version=2, title="新版认证调查")
+    card.update(version=next_version, title="新版认证调查")
     original = service.vectors.upsert
     with monkeypatch.context() as patch:
         patch.setattr(
@@ -84,7 +88,7 @@ def test_index_failure_retains_old_version_and_retry_is_safe(service, card, tmp_
         )
         with pytest.raises(OSError):
             import_cards(service, tmp_path, [card])
-    assert {item["version"] for item in service.search("密码爆破")} == {1}
+    assert {item["version"] for item in service.search("密码爆破")} == {original_version}
     assert (
         service.store.db.execute(
             "SELECT count(*) FROM kb_index_jobs WHERE status='failed'"
@@ -93,7 +97,7 @@ def test_index_failure_retains_old_version_and_retry_is_safe(service, card, tmp_
     )
     assert service.vectors.upsert == original
     import_cards(service, tmp_path, [card])
-    assert {item["version"] for item in service.search("密码爆破")} == {2}
+    assert {item["version"] for item in service.search("密码爆破")} == {next_version}
 
 
 def test_withdrawal_is_effective_even_when_qdrant_delete_fails(
@@ -110,9 +114,9 @@ def test_withdrawal_is_effective_even_when_qdrant_delete_fails(
     assert service.search("密码爆破") == []
     with pytest.raises(ValueError, match="恢复下架"):
         import_cards(service, tmp_path, [card])
-    card["version"] = 2
+    card["version"] += 1
     import_cards(service, tmp_path, [card])
-    assert service.search("密码爆破")[0]["version"] == 2
+    assert service.search("密码爆破")[0]["version"] == card["version"]
 
 
 def test_tenant_category_log_source_and_dates(service, card, tmp_path):
@@ -147,7 +151,7 @@ def test_candidate_case_and_approved_revision_are_isolated(service, tmp_path):
     )[2]
     case["tenant_id"] = "default"
     import_cards(service, tmp_path, [case], approve=False, split="development")
-    assert service.vectors.client.count("verified_cases").count == 0
+    assert not service.vectors.client.collection_exists("verified_cases")
     with pytest.raises(ValueError):
         import_cards(service, tmp_path, [case], split="development")
     case["case_details"]["verification"] = {
@@ -196,16 +200,64 @@ def test_source_outside_root_and_duplicate_ids_are_rejected(tmp_path, card):
         manifest.read(paths[0], "default")
 
 
-def test_all_twenty_existing_cards_validate():
+def test_all_manifest_cards_validate():
     validator = CardValidator()
-    count = 0
-    for path in sorted((PROJECT_ROOT / "data/knowledge_cards").glob("*.json")):
-        if path.name == "manifest.json":
-            continue
-        for card in json.loads(path.read_text(encoding="utf-8")):
+    folder = PROJECT_ROOT / "data/knowledge_cards"
+    manifest_path = folder / "manifest.json"
+    manifest = SourceManifest(manifest_path, PROJECT_ROOT)
+    files = set(folder.glob("*.json")) - {manifest_path}
+    assert files
+    assert files == {PROJECT_ROOT / name for name in manifest.files}
+    for path in sorted(files):
+        for card in manifest.read(path, "default"):
             validator.validate(normalize_card(card, tenant_id="default"))
-            count += 1
-    assert count == 20
+
+
+def test_case_memory_manifest_review_and_case_alias_isolation(service):
+    folder = PROJECT_ROOT / "data/case_memories"
+    manifest = SourceManifest(folder / "manifest.json", PROJECT_ROOT)
+    paths = [PROJECT_ROOT / name for name in manifest.files]
+    pending = service.ingest_files(paths, manifest=manifest)
+    assert all(row["status"] == "pending" for row in pending)
+    assert not service.vectors.client.collection_exists("verified_cases")
+    service.ingest_files(paths, manifest=manifest, reviewed_by="test-review")
+    results = service.search("失误修订", top_k=20)
+    assert {r["card_type"] for r in results} == {"verified_error_revision", "verified_correct_case"}
+    assert not service.search("开发案例", filters={"knowledge_only": True})
+    for card in results:
+        same = card["origin"]["case_id"].lower().removeprefix("chain-")
+        hits = service.search("开发案例", top_k=20, filters={"exclude_scenario_ids": [same]})
+        assert card["card_id"] not in {hit["card_id"] for hit in hits}
+
+
+def test_case_can_be_retrieved_by_either_stage_and_excluded_by_trace(service, monkeypatch):
+    folder = PROJECT_ROOT / "data/case_memories"
+    manifest = SourceManifest(folder / "manifest.json", PROJECT_ROOT)
+    service.ingest_files([folder / "MEM-DEV-002.json"], manifest=manifest, reviewed_by="test")
+    query = "上传后服务器持续外连，如何还原调查顺序"
+    for backend, method in [(service.store, "keyword_search"), (service.vectors, "search")]:
+        with monkeypatch.context() as patch:
+            patch.setattr(backend, method, lambda *args, **kwargs: [])
+            for stage in ("C2_Exfiltration", "Malicious_Upload"):
+                filters = {"attack_category": stage, "exclude_investigation_id": "RUN-A"}
+                hits = service.search(query, top_k=5, filters=filters)
+                assert [card["card_id"] for card in hits] == ["MEM-DEV-002"]
+                filters["exclude_scenario_ids"] = ["CASE-02"]
+                assert service.search(query, top_k=5, filters=filters) == []
+
+
+@pytest.mark.parametrize(
+    "reference", ["来源CHAIN-CASE-13记录", "引用LOG-20261120-2001", "chain_case_13_truth.json"]
+)
+def test_holdout_reference_inside_free_text_is_rejected(service, tmp_path, card, reference):
+    policy = tmp_path / "data/case_memories"
+    policy.mkdir(parents=True)
+    (policy / "manifest.json").write_text(
+        json.dumps({"excluded_scenario_ids": ["CHAIN-CASE-13", "CHAIN-CASE-20"]}), encoding="utf-8"
+    )
+    card["summary"] = reference
+    with pytest.raises(ValueError, match="独立评测"):
+        import_cards(service, tmp_path, [card])
 
 
 def test_markdown_front_matter_and_json_block(card):
@@ -247,6 +299,32 @@ def test_keyword_only_retrieves_exact_mitre_identifier(service, card, tmp_path, 
     import_cards(service, tmp_path, [card])
     monkeypatch.setattr(service.vectors, "search", lambda *args, **kwargs: [])
     assert service.search("T1110.001")[0]["card_id"] == card["card_id"]
+
+
+def test_scan_filter_matches_wstg_and_attack_categories_in_both_retrievers(
+    service, card, tmp_path, monkeypatch
+):
+    cards = [
+        {
+            **card,
+            "card_id": f"KB-{category}",
+            "attack_category": category,
+            "title": f"扫描调查 {category}",
+        }
+        for category in ("Information_Gathering", "Discovery", "Brute_Force")
+    ]
+    import_cards(service, tmp_path, cards)
+    expected = {"Information_Gathering", "Discovery"}
+    filters = {"attack_category": "Scan"}
+    with monkeypatch.context() as patch:
+        patch.setattr(service.store, "keyword_search", lambda *args, **kwargs: [])
+        assert {
+            hit["attack_category"] for hit in service.search("扫描调查", filters=filters)
+        } == expected
+    monkeypatch.setattr(service.vectors, "search", lambda *args, **kwargs: [])
+    assert {
+        hit["attack_category"] for hit in service.search("扫描调查", filters=filters)
+    } == expected
 
 
 def test_same_content_under_another_id_reuses_existing_entry(service, card, tmp_path):

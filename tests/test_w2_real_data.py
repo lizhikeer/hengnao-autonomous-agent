@@ -67,7 +67,7 @@ def test_replay_filters_by_src_ip_across_scenarios(replay_backend, client):
     r = client.post("/tools/query_logs", json={"src_ip": "10.0.0.66", "limit": 200})
     body = r.json()
     assert body["meta"]["total"] > 0
-    assert body["meta"]["scenarios"] == ["CHAIN-CASE-03"]
+    assert body["meta"]["scenarios"] == ["CHAIN-CASE-03", "CHAIN-CASE-06", "CHAIN-CASE-09"]
     assert all(i["src_ip"] == "10.0.0.66" for i in body["items"])
 
 
@@ -119,6 +119,22 @@ def test_invalid_mode_is_rejected(monkeypatch, client):
     r = client.post("/tools/query_logs", json={"trace_id": "CHAIN-CASE-01"})
     assert r.status_code == 422
     app_module.reset_source_cache()
+
+
+def test_configured_operator_scope_is_returned_separately_from_exemption(monkeypatch):
+    """allowlist 用户配置的行为范围应进入画像，但仍与处置豁免字段分开。"""
+    monkeypatch.delenv("SECLOG_CONFIG_DIR", raising=False)
+    from api import asset_context
+
+    asset_context.reset_cache()
+    profile = asset_context.get_user_profile("ops_zhang")
+    asset_context.reset_cache()
+
+    assert profile["disposition_exempt"] is True
+    assert profile["common_src_ips"] == ["10.0.0.0/24", "10.0.0.66", "10.10.0.50"]
+    assert profile["allowed_assets"] == ["web-prod-01", "backup-01", "nas-host-01"]
+    assert profile["source_scope_provided"] is True
+    assert profile["asset_scope_provided"] is True
 
 
 # ---------------------------------------------------------------------------

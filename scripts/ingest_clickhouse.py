@@ -193,17 +193,123 @@ def iter_records(path: Path):
             yield idx, None, f"第 {idx} 行 JSON 解析失败: {exc}"
 
 
+def _local_scene_counts(project_root: Path) -> dict[str, int]:
+    """统计本地场景包按 trace_id 的条数（排除 truth 标注）。"""
+    counts: dict[str, int] = {}
+    log_dir = project_root / "data" / "full_chain_logs"
+    if not log_dir.exists():
+        return counts
+    for path in sorted(list(log_dir.glob("*.json")) + list(log_dir.glob("*.jsonl"))):
+        if "truth" in path.name.lower():
+            continue
+        for _, row, err in iter_records(path):
+            if err or not isinstance(row, dict):
+                continue
+            trace_id = str(row.get("trace_id") or row.get("case_id") or "")
+            if trace_id:
+                counts[trace_id] = counts.get(trace_id, 0) + 1
+    return counts
+
+
+def verify_counts(env: dict[str, str], table: str, project_root: Path) -> int:
+    """只读核验：本地场景包 vs ClickHouse 表 / 两个视图的条数与脱敏结果。
+
+    只读不写，适合入库后复查。三项检查各自独立报告：
+
+    1. **表条数**：按 trace_id 与本地逐组比对，缺组或多行都要暴露；
+    2. **视图可用性**：``v_session_summary`` / ``v_attack_chain_timeline`` 能否查通
+       （视图定义由 SQL 目录维护，这里只验证"查得到"）；
+    3. **脱敏核验**：``payload_summary`` 里不应出现 ``password=`` 这类明文口令。
+
+    任一项不一致返回 1，全部一致返回 0，连不上库返回 2。
+    """
+    local = _local_scene_counts(project_root)
+    if not local:
+        print(f"[ERR] 本地没有可核验的场景包：{project_root / 'data' / 'full_chain_logs'}", file=sys.stderr)
+        return 2
+
+    try:
+        raw = ch_query(env, f"SELECT trace_id, count() AS n FROM {table} GROUP BY trace_id FORMAT JSONEachRow")
+    except Exception as exc:
+        print(f"[ERR] 查询 {table} 失败：{type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+
+    remote: dict[str, int] = {}
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        remote[str(item.get("trace_id"))] = int(item.get("n") or 0)
+
+    problems: list[str] = []
+    print(f"{'trace_id':<16}{'本地':>6}{'库内':>6}  结果")
+    for trace_id in sorted(set(local) | set(remote)):
+        local_n = local.get(trace_id, 0)
+        remote_n = remote.get(trace_id, 0)
+        ok = local_n == remote_n and local_n > 0
+        print(f"{trace_id:<16}{local_n:>6}{remote_n:>6}  {'OK' if ok else 'MISMATCH'}")
+        if not ok:
+            problems.append(f"{trace_id}: 本地 {local_n} / 库内 {remote_n}")
+
+    for view in ("v_session_summary", "v_attack_chain_timeline"):
+        try:
+            view_raw = ch_query(env, f"SELECT count() AS n FROM {view} FORMAT JSONEachRow")
+            total = int(json.loads(view_raw.strip().splitlines()[0]).get("n") or 0) if view_raw.strip() else 0
+            print(f"[视图] {view}: {total} 行")
+        except Exception as exc:
+            print(f"[视图] {view}: 查询失败 {type(exc).__name__}: {exc}", file=sys.stderr)
+            problems.append(f"{view} 不可用")
+
+    try:
+        leak_raw = ch_query(
+            env,
+            f"SELECT count() AS n FROM {table} "
+            "WHERE positionCaseInsensitive(payload_summary, 'password=') > 0 "
+            "OR positionCaseInsensitive(payload_summary, 'passwd=') > 0 FORMAT JSONEachRow",
+        )
+        leaks = int(json.loads(leak_raw.strip().splitlines()[0]).get("n") or 0) if leak_raw.strip() else 0
+        print(f"[脱敏] 明文口令命中：{leaks} 行")
+        if leaks:
+            problems.append(f"{leaks} 行 payload 疑似含明文口令")
+    except Exception as exc:
+        print(f"[脱敏] 核验失败 {type(exc).__name__}: {exc}", file=sys.stderr)
+        problems.append("脱敏核验未完成")
+
+    if problems:
+        print("\n[FAIL] 发现 {} 处不一致：".format(len(problems)), file=sys.stderr)
+        for item in problems:
+            print(f"  - {item}", file=sys.stderr)
+        return 1
+    print("\n[OK] 本地场景包与库内容一致，视图可用，未发现明文口令")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="统一 Schema JSONL → ClickHouse full_chain_logs")
-    ap.add_argument("--input", required=True, help="JSONL 文件或目录")
+    ap.add_argument("--input", default=None, help="JSONL 文件或目录（--verify-counts 时可省略）")
     ap.add_argument("--batch-note", default="", help="批次备注，写入 ingest_batches.error_summary 之外的日志")
     ap.add_argument("--dry-run", action="store_true", help="只校验不写库")
+    ap.add_argument(
+        "--verify-counts",
+        action="store_true",
+        help="只读核验：本地 chain_case_01~10 与 full_chain_logs / 两个视图的条数一致性，并做脱敏检查",
+    )
     ap.add_argument("--project-root", default=str(Path(__file__).resolve().parents[1]))
     args = ap.parse_args()
 
     project_root = Path(args.project_root)
     env = load_env(project_root)
     table = env.get("CLICKHOUSE_FULL_CHAIN_TABLE", "log_ai.full_chain_logs")
+
+    if args.verify_counts:
+        return verify_counts(env, table, project_root)
+
+    if not args.input:
+        ap.error("--input 是必需的（除非使用 --verify-counts）")
 
     src = Path(args.input)
     files = sorted(list(src.rglob("*.jsonl")) + list(src.rglob("*.json"))) if src.is_dir() else [src]

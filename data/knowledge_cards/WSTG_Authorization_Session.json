@@ -1,0 +1,194 @@
+[
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-009",
+    "version": 2,
+    "card_type": "security_knowledge",
+    "title": "水平越权访问异常识别与调查",
+    "summary": "关联用户身份、资源归属和应用访问日志，识别用户访问其他用户资源的异常行为。",
+    "attack_category": "Authorization_Failure",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "application_access",
+      "application_audit",
+      "nginx_access"
+    ],
+    "keywords": [
+      "水平越权",
+      "IDOR",
+      "对象级授权",
+      "资源归属",
+      "未授权访问",
+      "访问控制"
+    ],
+    "key_indicators": [
+      "普通用户访问记录中出现不属于其账户或组织的资源标识",
+      "同一账户在短时间内访问大量不同用户的资源",
+      "资源访问返回成功，但应用审计记录显示请求用户与资源所有者不一致",
+      "同一用户对多个资源执行异常读取、修改或删除操作"
+    ],
+    "investigation_steps": [
+      "核对请求用户身份、资源标识、请求时间和访问结果",
+      "通过应用授权日志确认请求用户是否具有目标资源的访问权限",
+      "检查资源所有者、所属组织和用户角色之间的关系",
+      "关联应用审计日志，判断是否存在未授权的数据读取或修改",
+      "排除管理员代办、共享资源和正常业务授权场景"
+    ],
+    "recommended_action": "block_ip_short_term",
+    "error_revision_note": "共享资源、组织协作和管理员授权操作可能导致用户访问其他账户创建的资源。不能仅凭资源所有者与请求用户不同判定越权。 仅在日志与对象级授权审计确认发生未授权访问后，才对来源申请短时封禁；需保留对象、账户和请求证据并经人工审批。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Insecure Direct Object References; OWASP Top 10 A01:2021 Broken Access Control https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/05-Authorization_Testing/",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-010",
+    "version": 2,
+    "card_type": "security_knowledge",
+    "title": "垂直权限提升风险识别与调查",
+    "summary": "通过账户角色、权限变更记录和敏感操作日志，识别普通用户执行高权限管理操作的异常情况。",
+    "attack_category": "Privilege_Escalation",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "application_access",
+      "application_audit",
+      "identity_provider"
+    ],
+    "keywords": [
+      "垂直越权",
+      "权限提升",
+      "角色权限",
+      "管理员操作",
+      "RBAC",
+      "最小权限"
+    ],
+    "key_indicators": [
+      "低权限账户访问通常仅允许管理员使用的业务接口",
+      "普通用户执行角色分配、账户管理或系统配置等敏感操作",
+      "账户角色或权限发生变化，但缺少对应的授权审批记录",
+      "应用审计日志显示操作成功，但执行账户不具备相应权限"
+    ],
+    "investigation_steps": [
+      "核对异常操作发生时的账户身份和角色信息",
+      "对照权限矩阵确认该账户是否具有对应操作权限",
+      "检查角色变更记录和管理审批记录",
+      "关联应用审计日志，确认敏感操作是否实际执行成功",
+      "检查相关账户是否存在异常权限变更或配置错误"
+    ],
+    "recommended_action": "isolate_account",
+    "error_revision_note": "临时授权、管理员代操作和业务角色调整可能产生类似日志。应结合审批记录、权限矩阵和实际操作结果判断。 仅在确认账户实施未授权高权限操作后申请账户隔离；需核实账户归属、授权变更和操作审计并经人工审批。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Privilege Escalation; OWASP Top 10 A01:2021 Broken Access Control https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/05-Authorization_Testing/",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-011",
+    "version": 2,
+    "card_type": "security_knowledge",
+    "title": "异常会话复用与会话固定风险识别",
+    "summary": "通过会话生命周期、客户端信息和认证事件之间的关联，识别异常会话复用及会话状态管理问题。",
+    "attack_category": "Session_Management",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "application_auth",
+      "application_access",
+      "application_audit"
+    ],
+    "keywords": [
+      "会话固定",
+      "Session Fixation",
+      "会话复用",
+      "会话标识",
+      "身份认证",
+      "会话管理"
+    ],
+    "key_indicators": [
+      "认证前后会话标识未按应用安全策略发生更新",
+      "同一会话标识在异常客户端或不符合正常业务规律的环境中重复使用",
+      "已退出或已失效的会话仍然产生成功访问记录",
+      "会话创建、认证成功和权限变化事件之间存在异常关联"
+    ],
+    "investigation_steps": [
+      "核对会话创建、认证成功、权限变化和退出登录的时间顺序",
+      "检查认证前后会话标识的更新记录",
+      "关联客户端信息和应用访问日志，识别异常会话复用",
+      "确认异常会话是否执行敏感业务操作",
+      "排除负载均衡、会话共享和日志采集延迟造成的记录差异"
+    ],
+    "recommended_action": "isolate_account",
+    "error_revision_note": "分布式部署、负载均衡和合法多设备登录可能产生会话记录重复。需要结合会话生命周期和认证状态综合判断。 仅在确认会话被未授权复用且可关联到受影响账户时申请账户隔离；会话失效与代码修复仍由应用侧执行。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Session Fixation; OWASP Session Management Cheat Sheet https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/06-Session_Management_Testing/",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z"
+  },
+  {
+    "schema_version": "1.0",
+    "tenant_id": "default",
+    "card_id": "KB-WSTG-012",
+    "version": 2,
+    "card_type": "security_knowledge",
+    "title": "会话超时与失效机制异常识别",
+    "summary": "分析会话有效期、退出登录和超时处理记录，识别会话失效机制配置不合理或失效处理异常的问题。",
+    "attack_category": "Session_Management",
+    "mitre_id": null,
+    "applicable_log_sources": [
+      "application_auth",
+      "application_access",
+      "application_audit"
+    ],
+    "keywords": [
+      "会话超时",
+      "Session Timeout",
+      "会话失效",
+      "退出登录",
+      "会话生命周期",
+      "访问控制"
+    ],
+    "key_indicators": [
+      "超过系统规定有效期的会话仍然产生成功访问记录",
+      "退出登录后同一会话仍持续访问需要认证的业务资源",
+      "会话失效事件与后续访问成功记录存在明显时间冲突",
+      "不同应用节点对同一会话的有效状态判断不一致"
+    ],
+    "investigation_steps": [
+      "核对应用规定的会话空闲超时和绝对有效期策略",
+      "检查会话创建时间、最后活动时间和失效时间",
+      "关联退出登录事件与退出后的访问记录",
+      "检查不同应用节点之间的会话状态同步情况",
+      "确认相关访问是否属于正常的令牌刷新或重新认证流程"
+    ],
+    "recommended_action": "none",
+    "error_revision_note": "令牌自动刷新、时钟偏差和分布式会话同步可能造成时间记录差异。不能仅凭客户端仍持有会话标识判断会话有效。 会话超时与退出失效属于应用配置/逻辑整改；在无账户失陷证据时不触发处置动作，故推荐动作为 none。",
+    "source_reference": "OWASP Web Security Testing Guide v4.2 - Testing for Session Timeout; OWASP Session Management Cheat Sheet https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/06-Session_Management_Testing/",
+    "review_status": "pending",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "valid_from": "2026-11-17T01:20:33.000Z",
+    "valid_until": null,
+    "dataset_split": "knowledge",
+    "created_at": "2026-11-17T01:20:33.000Z",
+    "updated_at": "2026-11-19T00:00:00.000Z"
+  }
+]

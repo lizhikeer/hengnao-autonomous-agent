@@ -15,6 +15,34 @@
 
 ---
 
+# 第十轮：接入账号授权范围并补齐 10 案例 V1（2026-11-16）
+
+## 1. 授权范围接入
+
+最新 `main` 的 `config/response-policy.yaml#allowlist.users` 已为 `ops_*` 和 `ops` 配置 `common_src_ips` 与 `allowed_assets`。`get_user_profile()` 现将这两项作为行为授权范围传给调查器，同时继续单独标记 `disposition_exempt`，不再把处置豁免与行为授权混为一谈。`common_src_ips` 支持单 IP 和 CIDR；无效 IP 或配置项不匹配授权范围。
+
+CASE-03 重新回放后判定为 `none`，风险 `LOW`，4 条证据，2 轮；来源 `10.0.0.66`、目标 `web-prod-01` 均命中授权范围，行为落在配置的维护窗口内。
+
+## 2. V1 轨迹与 10 案例算分
+
+`tests/run_v1_traces.py` 已对 CASE-01～CASE-10 全部重跑。结果 JSON、轨迹 JSON、`SUMMARY.md` 与 `EVALUATION.md` 均由程序生成；truth 只用于独立评测，未参与调查。全部 10 个结果通过 AgentResults 契约校验，所有引用证据均已登记。
+
+主要指标：检测 Recall 100%、正常业务误报率 50%、弃权率 30%、诊断准确率 14.3%、风险等级一致率 85.7%、平均证据召回率 49.0%、高危动作审批合规率 100%。CASE-06 与 CASE-08 对恶意场景弃权；CASE-09 将授权扫描误判为恶意。以上差异保留在产物中，后续应作为错题分析输入，不按 truth 直接改写调查结论。
+
+产物位置：`data/agent_traces/v1/`。本轮来源为本地 `dataset_replay`，控制器为 `rule_based_v1_controller`，不是恒脑平台模型运行结果。
+
+## 3. 回归与外部依赖
+
+全量测试：`268 passed`；`git diff --check` 通过。
+
+真实检索检查仍缺 `sentence-transformers`、`qdrant-client`、NumPy、BGE 权重、可用 Qdrant 服务和 SQLite 知识库。本轮对 `https://seclog.91666.icu:18443/health` 的 TCP 连接超时；未能验证该中转上的应用、ClickHouse 数据源或恒脑平台工作流。工作区没有 `CLICKHOUSE_DSN` 等本地连接配置，因此没有发起真实 ClickHouse 查询。
+
+## 4. 当前交付边界
+
+已完成本地授权范围接入、CIDR 匹配、CASE-03 回放、CASE-01～CASE-10 轨迹生成和 10 案例算分。恒脑平台联调、ClickHouse 实库和真实混合检索仍未完成；Issue #18 不应据此标记为整体验收通过。
+
+---
+
 # 第九轮：运行时依赖修复 + 干净环境验证 + 暂存整理（2026-11-12 深夜）
 
 ## 1. 依赖冲突（已修）
@@ -1012,3 +1040,20 @@ CASE-03 授权依据（trace `context_decision`）：账号 `ops_zhang` 命中 `
 * `docs/superpowers/` 未改动；
 * 本地规则控制器结果、恒脑平台结果、真实检索验证三者已分开描述，未互相替代；
 * 单元测试通过不等于真实检索联调通过；离线回放通过不等于平台已通过。
+
+## 第十一轮：PR #27 评审补充（2026-11-17）
+
+针对 PR #26 中转交给控制器修复的两项问题，补充结果如下：
+
+1. **授权漏洞扫描判为正常**：只有扫描器标识、资产、授权源 IP、时间窗和 `vuln_scan`/`probe` 动作都与维护窗口匹配时，才将该扫描记录作为授权测试；窗口的 `never_exempt` 类别仍然告警。与授权扫描同源、同资产时窗的 Zeek 连接记录可作为扫描活动证据，避免其因缺少 HTTP User-Agent 被单独判为未知事件。CASE-09 现为 `none` / `LOW`，13 条调查证据，非恶意判定与 truth 一致。
+2. **扫描处置过重**：纯 `Scan` 结论推荐 `rate_limit`，风险为 `MEDIUM`，输出不要求人工审批；该控制器只生成建议，不调用处置工具。CASE-07 的输出为 `Scan` / `MEDIUM` / `rate_limit`。
+
+新增 3 项上下文回归测试覆盖授权扫描、禁止豁免的 WebShell、纯扫描限速；`tests/test_w2_context_usage.py` 46 项通过，全量 `pytest tests/ -q` **271 项通过**。10 案例回放后：Recall 100%、正常业务 FPR 0%、弃权率 30%、诊断准确率 28.6%、风险等级一致率 100%、平均证据召回 69.0%、高危审批合规率 100%。CASE-06、08、10 的弃权仍保留；CASE-09 的 Zeek 连接记录 LOG-20261105-0913 已纳入证据（召回 100%），没有用分类通过掩盖证据缺口。
+
+### 平台连接状态更正
+
+先前进度摘要中“本轮访问中转 `/health` TCP 超时”是一次本地探测记录，不能代表当前平台链路状态。仓库 [架构变更说明](../../docs/架构变更说明_2026-11-12.md) 已记录当前方式为固定域名 `https://seclog.91666.icu:18443` → 国内公网 IPv4 中转 → NAS 上 frpc → Caddy TLS → FastAPI，并记录 `/health`、REST、`/mcp/`、`/investigation/` 与恒脑平台调试状态通过。本轮未重新操作恒脑平台，也未从本机重新验证公网接口；线上状态以该架构记录为依据。本轮新增的控制器结果仍是本地 `dataset_replay`，不冒充平台实跑。
+
+### 当前边界
+
+真实混合检索、ClickHouse 实库和本轮改动后的恒脑工作流端到端复验仍未执行。PR #27 与 PR #26 都包含 V1 轨迹文件；本次更新 PR #27 的轨迹以反映修复后的控制器输出，不修改或关闭队友的 PR #26。

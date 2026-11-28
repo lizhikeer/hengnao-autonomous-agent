@@ -20,7 +20,7 @@ $env:BGE_MODEL_PATH = "$PWD/work/models/bge-small-zh-v1.5"
 ## 运行
 
 ```powershell
-# 校验现有 20 张卡片和文件来源，不需要启动数据库或模型。
+# 校验知识卡及其来源。
 & .venv/Scripts/python.exe scripts/ingest_knowledge.py validate
 
 # 离线开发：在本地目录建立两个 Qdrant 集合。
@@ -58,7 +58,26 @@ items = hybrid_search("密码爆破后如何查证", top_k=5, filters={"attack_c
 
 保留基础设施约定的函数签名。`filters` 支持 attack_category、log_sources、exclude_investigation_id、exclude_scenario_ids；tenant_id 只允许与后台配置相同。范围由接口负责人根据认证上下文传入。返回原卡片字段、版本、完整调查步骤、来源、匹配章节与 RRF 排名分；score 是归一化排名分，不是结论正确概率。
 
-复用实例时使用 `KnowledgeService`，每个实例串行调用并在结束时 close。当前 API/MCP 路由仍由接口负责人接线，本模块不修改其 Mock 路由。
+REST 和 MCP 可传 `case_id` 排除当前调查及同场景案例。工具返回卡片版本、调查步骤、命中规则及其数据要求和来源。七类调查分类可用于过滤，`Scan` 同时匹配 `Information_Gathering` 和 `Discovery` 卡片。
+
+REST 与 MCP 根据 `case_id` 排除该调查历次日志查询关联的全部 `trace_id`。调用方也可显式传入 `trace_id`。缺少案件编号或日志链关联时，只返回知识卡。多阶段案例可用 `related_attack_categories` 登记其他适用类别；限定类别时最多为已审核案例预留一半名额。
+
+## 案例审核与检索评测
+
+在仓库根目录运行以下命令。每个案例文件在 `data/case_memories/manifest.json` 登记来源场景、卡号和 SHA-256。日常送审写入 SQLite，发布时核对原始证据，再指定审核人。单文件审批可加 `--input 文件路径`。
+
+```sh
+python scripts/ingest_knowledge.py validate --library case_memories
+python scripts/ingest_knowledge.py ingest --library case_memories
+python scripts/ingest_knowledge.py ingest --library case_memories --approve-by 审核人标识
+python scripts/eval_knowledge_retrieval.py
+```
+
+评测前将两类卡发布到同一测试库。脚本对比等权分块 RRF 与按卡片版本融合的排序，并复查同案排除。语义权重由 `KNOWLEDGE_SEMANTIC_WEIGHT` 配置，默认 0.4。
+
+NAS 配置使用 `docker/docker-compose.yml` 叠加 `docker/knowledge.compose.yml`。在宿主机指定 `BGE_HOST_PATH` 为 small 权重目录，API 容器只读挂载模型并通过卷保存 SQLite，向量使用现有 Qdrant 服务。容器内同样运行上述管理命令。
+
+部署后运行 `python scripts/eval_knowledge_retrieval.py --url https://主机:端口`。脚本用两个独立调查编号依次查询日志和知识，检查真实混合检索标识、跨阶段召回、错题正文和同案排除。
 
 ## 配置与验证
 

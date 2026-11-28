@@ -27,6 +27,7 @@
     "analysis_rules": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/analysis_rule" } },
     "applicability_limits": { "$ref": "#/$defs/nonempty_list" },
     "attack_category": { "$ref": "#/$defs/nonempty" },
+    "related_attack_categories": { "$ref": "#/$defs/string_list" },
     "mitre_id": { "type": ["string", "null"], "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" },
     "applicable_log_sources": { "$ref": "#/$defs/string_list" },
     "keywords": { "$ref": "#/$defs/string_list" },

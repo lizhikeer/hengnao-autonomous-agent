@@ -1,0 +1,29 @@
+{
+  "case_id": "CHAIN-CASE-07",
+  "is_malicious": true,
+  "attack_type": "Scan",
+  "risk_level": "MEDIUM",
+  "attacker_ip": "45.155.205.233",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261104-0701",
+    "LOG-20261104-0702",
+    "LOG-20261104-0703",
+    "LOG-20261104-0704",
+    "LOG-20261104-0705",
+    "LOG-20261104-0706",
+    "LOG-20261104-0707",
+    "LOG-20261104-0708",
+    "LOG-20261104-0709",
+    "LOG-20261104-0710",
+    "LOG-20261104-0711",
+    "LOG-20261104-0712",
+    "LOG-20261104-0713",
+    "LOG-20261104-0714",
+    "LOG-20261104-0718"
+  ],
+  "attack_chain_summary": "攻击源 45.155.205.233 对 web-prod-01 实施：扫描探测 15 次。",
+  "recommended_action": "rate_limit",
+  "requires_human_approval": false,
+  "unknown_items": "仅生成限速建议；本调查器未调用处置工具。"
+}

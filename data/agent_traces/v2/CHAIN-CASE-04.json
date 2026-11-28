@@ -1,0 +1,24 @@
+{
+  "case_id": "CHAIN-CASE-04",
+  "is_malicious": true,
+  "attack_type": "XSS",
+  "risk_level": "HIGH",
+  "attacker_ip": "198.51.100.61",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261103-0404",
+    "LOG-20261103-0405",
+    "LOG-20261103-0406",
+    "LOG-20261103-0407",
+    "LOG-20261103-0408",
+    "LOG-20261103-0409",
+    "LOG-20261103-0410",
+    "LOG-20261103-0411",
+    "LOG-20261103-0412",
+    "LOG-20261103-0417"
+  ],
+  "attack_chain_summary": "攻击源 198.51.100.61 对 web-prod-01 实施：跨站脚本尝试 2 次；同一会话标识被另一来源复用（会话劫持迹象）；攻击请求得到响应（未确认利用成功）。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "处置建议尚未经过人工审批，未提交处置申请；存在标注为 recon、exploitation 的日志，但缺少对应行为证据，仅作待查线索，未计入结论。"
+}

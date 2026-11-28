@@ -47,6 +47,7 @@ class VectorStore:
                 "card_id": "keyword",
                 "card_type": "keyword",
                 "attack_category": "keyword",
+                "related_attack_categories": "keyword",
                 "mitre_id": "keyword",
                 "applicable_log_sources": "keyword",
                 "review_status": "keyword",
@@ -110,6 +111,7 @@ class VectorStore:
                 vector={"dense": vector},
                 payload={
                     **metadata,
+                    "related_attack_categories": card.get("related_attack_categories", []),
                     "status": "active",
                     "index_profile": profile,
                     "chunk_index": chunk["chunk_index"],
@@ -133,7 +135,7 @@ class VectorStore:
         profile: str,
         now: str,
         limit: int,
-        category: str | None = None,
+        categories: tuple[str, ...] = (),
     ) -> list[Any]:
         """两集合分别召回；有效期、租户与审核过滤由后台固定添加。"""
         check_vectors([vector], 1)
@@ -163,10 +165,13 @@ class VectorStore:
                 ]
             )
         )
-        if category:
+        if categories:
             conditions.append(
-                models.FieldCondition(
-                    key="attack_category", match=models.MatchValue(value=category)
+                models.Filter(
+                    should=[
+                        models.FieldCondition(key=key, match=models.MatchAny(any=list(categories)))
+                        for key in ("attack_category", "related_attack_categories")
+                    ]
                 )
             )
         hits = []

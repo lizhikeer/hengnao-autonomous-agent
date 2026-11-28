@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.1",
+  "tenant_id": "default",
+  "version": 1,
+  "card_id": "MEM-DEV-006",
+  "card_type": "verified_error_revision",
+  "title": "SSH 多账号认证失败后成功登录：按来源重建认证序列",
+  "summary": "同一来源先后尝试多个账户并出现成功认证。后续横向移动仍需目标主机的认证记录。",
+  "investigation_goal": "SSH 多账号认证失败后成功登录：按来源重建认证序列",
+  "trigger_conditions": [
+    "SSH 多账号认证失败后成功登录：按来源重建认证序列"
+  ],
+  "required_data": [
+    {
+      "data_id": "D1",
+      "description": "涉事资产的时间序列与授权记录",
+      "log_sources": [
+        "auth_log",
+        "zeek_conn"
+      ],
+      "fields": [
+        "timestamp",
+        "src_ip",
+        "dest_ip",
+        "action_or_method",
+        "asset_id"
+      ],
+      "purpose": "按源地址、目标服务和时间聚合认证事件，保留账号切换顺序。",
+      "if_missing": "记录缺失字段及其影响，只报告已有证据支持的阶段。"
+    }
+  ],
+  "analysis_rules": [
+    {
+      "rule_id": "R1",
+      "data_ids": [
+        "D1"
+      ],
+      "condition": "同一来源和目标 SSH 服务在短时间内对多个账号产生认证失败，随后出现同源成功认证。",
+      "conclusion": "同一来源先后尝试多个账户并出现成功认证。后续横向移动仍需目标主机的认证记录。",
+      "next_step": "关联成功会话与后续网络连接，分别核查账号授权和目标主机审计。",
+      "source_ids": [
+        "SRC1"
+      ]
+    }
+  ],
+  "applicability_limits": [
+    "需核实当前资产和账号的授权，历史案例只能提供调查方法。"
+  ],
+  "attack_category": "Brute_Force",
+  "mitre_id": null,
+  "applicable_log_sources": [
+    "auth_log",
+    "zeek_conn"
+  ],
+  "keywords": [
+    "SSH",
+    "多账号",
+    "认证失败",
+    "成功登录"
+  ],
+  "key_indicators": [
+    "SSH 多账号认证失败后成功登录：按来源重建认证序列"
+  ],
+  "investigation_steps": [
+    "按源地址、目标服务和时间聚合认证事件，保留账号切换顺序。",
+    "关联成功会话与后续网络连接，分别核查账号授权和目标主机审计。"
+  ],
+  "recommended_action": "none",
+  "error_revision_note": "原调查在已查到多账号失败与后续成功认证后仍弃权。先按来源聚合，再分别核验成功会话与横向移动。",
+  "source_reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-06.json",
+  "sources": [
+    {
+      "source_id": "SRC1",
+      "title": "开发场景 V1 回放",
+      "uri": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-06.json",
+      "locator": "attack_type、evidence_log_ids 与场景日志",
+      "accessed_at": "2026-11-19T00:00:00.000Z"
+    }
+  ],
+  "review_status": "pending",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "valid_from": "2026-11-19T00:00:00.000Z",
+  "valid_until": null,
+  "dataset_split": "development",
+  "created_at": "2026-11-19T00:00:00.000Z",
+  "updated_at": "2026-11-19T00:00:00.000Z",
+  "origin": {
+    "case_id": "CHAIN-CASE-06",
+    "investigation_id": "CHAIN-CASE-06",
+    "event_id": null,
+    "judgement_id": null,
+    "source_feedback_id": null,
+    "agent_run_id": null,
+    "trace_id": "CHAIN-CASE-06",
+    "attack_chain_id": null,
+    "scenario_ids": [
+      "CHAIN-CASE-06"
+    ]
+  },
+  "evidence_refs": [
+    {
+      "evidence_id": "E602",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261104-0602",
+      "locator": "data/full_chain_logs/chain_case_06_ssh_brute_lateral.json#LOG-20261104-0602",
+      "observed_at": "2026-11-04T02:10:03.000Z",
+      "snapshot_summary": "2026-11-04T02:10:03Z auth_log nas-host-01 login_failure root 198.51.100.99 10.0.0.20",
+      "snapshot_sha256": "f3f646ff072a737c447da60ca022369bc8e461eaee4b196f1c999e3a8ae107cf"
+    },
+    {
+      "evidence_id": "E604",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261104-0604",
+      "locator": "data/full_chain_logs/chain_case_06_ssh_brute_lateral.json#LOG-20261104-0604",
+      "observed_at": "2026-11-04T02:10:22.000Z",
+      "snapshot_summary": "2026-11-04T02:10:22Z auth_log nas-host-01 login_failure admin 198.51.100.99 10.0.0.20",
+      "snapshot_sha256": "df054cb07a2ccf00b77f0f9d200ef13ad7e94d791486998a5b9dd07a3ce663a3"
+    },
+    {
+      "evidence_id": "E613",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261104-0613",
+      "locator": "data/full_chain_logs/chain_case_06_ssh_brute_lateral.json#LOG-20261104-0613",
+      "observed_at": "2026-11-04T02:13:10.000Z",
+      "snapshot_summary": "2026-11-04T02:13:10Z auth_log nas-host-01 login_success ops 198.51.100.99 10.0.0.20",
+      "snapshot_sha256": "543035390a739e09ed1cee4e632555b076846b3c376d450ebbc8894d2f5bd357"
+    },
+    {
+      "evidence_id": "E614",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261104-0614",
+      "locator": "data/full_chain_logs/chain_case_06_ssh_brute_lateral.json#LOG-20261104-0614",
+      "observed_at": "2026-11-04T02:13:12.000Z",
+      "snapshot_summary": "2026-11-04T02:13:12Z auth_log nas-host-01 session_opened ops 198.51.100.99 10.0.0.20",
+      "snapshot_sha256": "0660d7f9baf15e5467e25de584abea4f04590004f56d3fe7ef30f390fd1380ab"
+    },
+    {
+      "evidence_id": "E615",
+      "ref_type": "log",
+      "source_table": "security_logs",
+      "source_id": "LOG-20261104-0615",
+      "locator": "data/full_chain_logs/chain_case_06_ssh_brute_lateral.json#LOG-20261104-0615",
+      "observed_at": "2026-11-04T02:13:30.000Z",
+      "snapshot_summary": "2026-11-04T02:13:30Z zeek_conn nas-host-01 TCP None 198.51.100.99 10.0.0.20",
+      "snapshot_sha256": "4af9f0410a984cc0336ee520aea8f6f5c4d8cd55f8ef0620c8ee7101aea870d2"
+    }
+  ],
+  "case_details": {
+    "symptom_summary": "SSH 多账号认证失败后成功登录：按来源重建认证序列",
+    "environment_summary": "项目开发集 V1 控制器离线回放",
+    "investigation_summary": [
+      "按源地址、目标服务和时间聚合认证事件，保留账号切换顺序。",
+      "关联成功会话与后续网络连接，分别核查账号授权和目标主机审计。"
+    ],
+    "original_judgement": "insufficient_evidence",
+    "final_judgement": "同一来源先后尝试多个账户并出现成功认证。后续横向移动仍需目标主机的认证记录。",
+    "outcome": "confirmed_attack",
+    "risk_level": "high",
+    "dimension_labels": {
+      "diagnosis": "incorrect",
+      "evidence": "unknown",
+      "response": "not_applicable"
+    },
+    "error_reason": "原调查在已查到多账号失败与后续成功认证后仍弃权。先按来源聚合，再分别核验成功会话与横向移动。",
+    "corrected_steps": [
+      "按源地址、目标服务和时间聚合认证事件，保留账号切换顺序。",
+      "关联成功会话与后续网络连接，分别核查账号授权和目标主机审计。"
+    ],
+    "lessons": [
+      "同一来源先后尝试多个账户并出现成功认证。后续横向移动仍需目标主机的认证记录。"
+    ],
+    "investigation_trace": [
+      {
+        "step_id": "S1",
+        "question": "SSH 多账号认证失败后成功登录：按来源重建认证序列",
+        "action": "按源地址、目标服务和时间聚合认证事件，保留账号切换顺序。",
+        "evidence_ids": [
+          "E602",
+          "E604",
+          "E613",
+          "E614",
+          "E615"
+        ],
+        "rule_ids": [
+          "R1"
+        ],
+        "observation": "同一来源先后尝试多个账户并出现成功认证。后续横向移动仍需目标主机的认证记录。",
+        "conclusion": "同一来源先后尝试多个账户并出现成功认证。后续横向移动仍需目标主机的认证记录。",
+        "next_step": "关联成功会话与后续网络连接，分别核查账号授权和目标主机审计。"
+      }
+    ],
+    "verification": {
+      "method": "controlled_experiment",
+      "reference": "https://github.com/lizhikeer/hengnao-autonomous-agent/blob/68d0783/data/agent_traces/v1/CHAIN-CASE-06.json",
+      "notes": "依据已归档的受控 V1 回放输出及对应场景日志核对。"
+    },
+    "response_summary": "回放仅用于调查。",
+    "response_result": "not_executed"
+  }
+}
