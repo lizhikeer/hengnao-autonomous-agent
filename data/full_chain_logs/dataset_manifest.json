@@ -1,0 +1,215 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-11-26T12:44:25Z",
+  "total_cases": 20,
+  "total_logs": 380,
+  "splits": {
+    "dev": [
+      "CHAIN-CASE-01",
+      "CHAIN-CASE-02",
+      "CHAIN-CASE-03",
+      "CHAIN-CASE-04",
+      "CHAIN-CASE-05",
+      "CHAIN-CASE-06",
+      "CHAIN-CASE-07",
+      "CHAIN-CASE-08",
+      "CHAIN-CASE-09",
+      "CHAIN-CASE-10",
+      "CHAIN-CASE-11",
+      "CHAIN-CASE-12"
+    ],
+    "holdout_test": [
+      "CHAIN-CASE-13",
+      "CHAIN-CASE-14",
+      "CHAIN-CASE-15",
+      "CHAIN-CASE-16",
+      "CHAIN-CASE-17",
+      "CHAIN-CASE-18",
+      "CHAIN-CASE-19",
+      "CHAIN-CASE-20"
+    ]
+  },
+  "leakage_policy": "holdout_test（CHAIN-CASE-13~20）**仅供评分与最终验收**。任何 RAG 知识卡、案例卡、Prompt 示例、few-shot 上下文均严禁引用、摘录或硬编码这些 case 的日志内容、真值卡内容与 case_id。评测前如需调参，只能使用 dev 集（01~12）。sha256 用于校验盲测集在交付后未被改动。",
+  "cases": [
+    {
+      "case_id": "CHAIN-CASE-01",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_01_sqli.json",
+      "truth_file": "data/full_chain_logs/chain_case_01_truth.json",
+      "log_count": 29,
+      "sha256_log": "3bbbf616ecca0df03789817c4117aadd986ae3adc37e626ef9299fc5e5305409",
+      "sha256_truth": "79c7274977c2a5c5c9f0c3ccc644b31f3b205aa305c1f2465cc9a241f4f49198"
+    },
+    {
+      "case_id": "CHAIN-CASE-02",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_02_webshell_c2.json",
+      "truth_file": "data/full_chain_logs/chain_case_02_truth.json",
+      "log_count": 20,
+      "sha256_log": "447072ae4627ecad5b80d51be33459896d0ff595fe5ff9258ca275d3e92001ad",
+      "sha256_truth": "f1fbcbcc956ac8dd6e62896ca630fca14422f483d2f1911b9e3183d834f5ac5f"
+    },
+    {
+      "case_id": "CHAIN-CASE-03",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_03_benign_ops.json",
+      "truth_file": "data/full_chain_logs/chain_case_03_truth.json",
+      "log_count": 22,
+      "sha256_log": "f7aad137f966f507bf86e0abda20293a1780f2156eb166e71565ee5323cbac5c",
+      "sha256_truth": "9c6ed2bf01ba64ff70bdf0a3f3ddc4d1fdcaa7adf51b67aa8dcc0bd51791f50e"
+    },
+    {
+      "case_id": "CHAIN-CASE-04",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_04_xss_session.json",
+      "truth_file": "data/full_chain_logs/chain_case_04_truth.json",
+      "log_count": 19,
+      "sha256_log": "28fa3034bb6bcacda15bccf8895c3f83f2a738edafb1796cdbd56ef3967540fa",
+      "sha256_truth": "d671993abb3608ad61314ebae3b3d1bf8b08c5c806e76e2bb97e46ef488a7f57"
+    },
+    {
+      "case_id": "CHAIN-CASE-05",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_05_path_traversal_idor.json",
+      "truth_file": "data/full_chain_logs/chain_case_05_truth.json",
+      "log_count": 18,
+      "sha256_log": "4213666c37cf043efec6bdfe444a298223c75d64a86c3b98a785717427ef204b",
+      "sha256_truth": "fe9d155acc95e9428cb889ab4821b645e21fb0b5438c84a4ac85481aaa74d52c"
+    },
+    {
+      "case_id": "CHAIN-CASE-06",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_06_ssh_brute_lateral.json",
+      "truth_file": "data/full_chain_logs/chain_case_06_truth.json",
+      "log_count": 21,
+      "sha256_log": "7d5e42536530af02e08119998c7ff1de7e4cdefe8be8d73d749d7cb4b60a5e88",
+      "sha256_truth": "e718dcc6cf68e54888e681bf4e5c8a5df3c66643376cc1e59b9b75cea4eea07a"
+    },
+    {
+      "case_id": "CHAIN-CASE-07",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_07_recon_scanner.json",
+      "truth_file": "data/full_chain_logs/chain_case_07_truth.json",
+      "log_count": 19,
+      "sha256_log": "28636b2660be5008021b461a456c02dd6eeadd9c5322eb12dae9645b648d33b9",
+      "sha256_truth": "1661491ff0854d0d3a287215da222aaefe2b47d0f7345823c67cb0a610a5a86d"
+    },
+    {
+      "case_id": "CHAIN-CASE-08",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_08_c2_exfiltration.json",
+      "truth_file": "data/full_chain_logs/chain_case_08_truth.json",
+      "log_count": 17,
+      "sha256_log": "37413f55858bb504a12dd8f3d9e9c98d4057dfe722b927cdca552690026bd7f7",
+      "sha256_truth": "4461fe4eef05ca8bbcb3760d2bb0e51d181a1e17562203716e703ae9ca48efe1"
+    },
+    {
+      "case_id": "CHAIN-CASE-09",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_09_benign_vuln_scan.json",
+      "truth_file": "data/full_chain_logs/chain_case_09_truth.json",
+      "log_count": 19,
+      "sha256_log": "758384e7e671f65c856ac33c04eb4a33e9942dc54bce4b9992eb9b8f77ad3c0c",
+      "sha256_truth": "0aa31de6e153ced35412b3c79d6298f6f4aacd5018f2ba678f37362e5dea85a5"
+    },
+    {
+      "case_id": "CHAIN-CASE-10",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_10_benign_login_retry.json",
+      "truth_file": "data/full_chain_logs/chain_case_10_truth.json",
+      "log_count": 16,
+      "sha256_log": "f2804dcca94f16a29f95ed9e8464806e32f60e9814375b0710c864ae29531be5",
+      "sha256_truth": "37aaa7b3318a806dbeaab10f1a8ed6ddd48728be593ce6bcac2efc500ae9a52a"
+    },
+    {
+      "case_id": "CHAIN-CASE-11",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_11_slow_brute.json",
+      "truth_file": "data/full_chain_logs/chain_case_11_truth.json",
+      "log_count": 20,
+      "sha256_log": "3eb21926f8121a3a1ef38829c5015e9f02b7204ed72cf605e7a85088ef7b7704",
+      "sha256_truth": "bbaee18eaaf38791a17bbfc23b19deda8abbb1d30d8e6a7455ab5af2a1ceac6c"
+    },
+    {
+      "case_id": "CHAIN-CASE-12",
+      "split": "dev",
+      "log_file": "data/full_chain_logs/chain_case_12_time_blind_sqli.json",
+      "truth_file": "data/full_chain_logs/chain_case_12_truth.json",
+      "log_count": 18,
+      "sha256_log": "1459ab622cabb1a13a46f79932a621b536ab93cfdf2479280a12f83c8e5bd7db",
+      "sha256_truth": "253249f1956d93924014f9b8b61578d42d022227297a8363985dca0e2b932805"
+    },
+    {
+      "case_id": "CHAIN-CASE-13",
+      "split": "holdout_test",
+      "log_file": "data/full_chain_logs/chain_case_13_lateral_move.json",
+      "truth_file": "data/full_chain_logs/chain_case_13_truth.json",
+      "log_count": 19,
+      "sha256_log": "a2fb4c466f4394464078dfef2a998dcd257f53cec2cbd650a02995dda8ed0cd0",
+      "sha256_truth": "6945e0b7092b8adb1cbe5dd618e0e5db6a43d9397b1871cec3b8b2057291cac4"
+    },
+    {
+      "case_id": "CHAIN-CASE-14",
+      "split": "holdout_test",
+      "log_file": "data/full_chain_logs/chain_case_14_stealth_webshell.json",
+      "truth_file": "data/full_chain_logs/chain_case_14_truth.json",
+      "log_count": 19,
+      "sha256_log": "11faea03db509fb042c68563df4d9742e283af79c2bfb8e3a108104d0c8c9451",
+      "sha256_truth": "c0e5b2f4b64c975a5055e9c8c3c1280c5f36bacfab2706cf33d1cd0d26712b57"
+    },
+    {
+      "case_id": "CHAIN-CASE-15",
+      "split": "holdout_test",
+      "log_file": "data/full_chain_logs/chain_case_15_dns_tunnel_c2.json",
+      "truth_file": "data/full_chain_logs/chain_case_15_truth.json",
+      "log_count": 18,
+      "sha256_log": "5206b5b2c51c0b5023226a8b980a4da2bbe452c1dcbc88f782a82d226fa21717",
+      "sha256_truth": "0731988bd5296a12707a96b180afd34e7d767cd492114b38344e09fcd2934500"
+    },
+    {
+      "case_id": "CHAIN-CASE-16",
+      "split": "holdout_test",
+      "log_file": "data/full_chain_logs/chain_case_16_window_sqli.json",
+      "truth_file": "data/full_chain_logs/chain_case_16_truth.json",
+      "log_count": 18,
+      "sha256_log": "d964cc7249afa4c659d6ae05a8b91213591f844a36b8d9a1816c5ba059a897de",
+      "sha256_truth": "a96c950f2bcadae0b2b7c91caf7f6d15ea73c5e34282757d2c7aa1217005a837"
+    },
+    {
+      "case_id": "CHAIN-CASE-17",
+      "split": "holdout_test",
+      "log_file": "data/full_chain_logs/chain_case_17_window_webshell.json",
+      "truth_file": "data/full_chain_logs/chain_case_17_truth.json",
+      "log_count": 18,
+      "sha256_log": "ed29dfa5d3560fcd94cf51767c7bd4452636674a5a8bfdcf167c1a6efa5e62d7",
+      "sha256_truth": "8447a3faebf02d8f2d0c6e71aa9ce111bcc463f8c5d39672e4a983416f9ff076"
+    },
+    {
+      "case_id": "CHAIN-CASE-18",
+      "split": "holdout_test",
+      "log_file": "data/full_chain_logs/chain_case_18_benign_backup.json",
+      "truth_file": "data/full_chain_logs/chain_case_18_truth.json",
+      "log_count": 18,
+      "sha256_log": "19b721c90260595c5ecf79416a6df7bab88ffb84ddc29dcef75780d1bdf2acde",
+      "sha256_truth": "6b9f6f098e6e844451c49a394d70d1f9e18b0d4b0490475ec6da4b1ba6babb0b"
+    },
+    {
+      "case_id": "CHAIN-CASE-19",
+      "split": "holdout_test",
+      "log_file": "data/full_chain_logs/chain_case_19_benign_troubleshoot.json",
+      "truth_file": "data/full_chain_logs/chain_case_19_truth.json",
+      "log_count": 18,
+      "sha256_log": "80cbb8ab23cde36439b31c667dd65d9e21199251f72f290124a1f4b2e2c8adf1",
+      "sha256_truth": "429adf5745583c225cfbe302f8f4bf754cf6d39ea44ab44be739ddc7a530cd36"
+    },
+    {
+      "case_id": "CHAIN-CASE-20",
+      "split": "holdout_test",
+      "log_file": "data/full_chain_logs/chain_case_20_insufficient_evidence.json",
+      "truth_file": "data/full_chain_logs/chain_case_20_truth.json",
+      "log_count": 14,
+      "sha256_log": "29df2f9beba8da2f0d3346c88fba104cae4b28c4980c8b98d24e4947b4e4d638",
+      "sha256_truth": "e2328c3f8d5468ae94ae0941160b168f09e0010e0f9f49afc5ba6269404de2f8"
+    }
+  ]
+}

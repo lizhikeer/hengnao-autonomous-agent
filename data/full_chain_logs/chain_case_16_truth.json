@@ -1,0 +1,18 @@
+{
+  "case_id": "CHAIN-CASE-16",
+  "is_malicious": true,
+  "attack_type": "SQL_Injection",
+  "risk_level": "HIGH",
+  "attacker_ip": "198.51.100.201",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261119-1604",
+    "LOG-20261119-1605",
+    "LOG-20261119-1606",
+    "LOG-20261119-1608"
+  ],
+  "attack_chain_summary": "2026-11-20 02:05—02:30（UTC+8）落在 web-prod-01 的登记维护窗口（02:00—03:30）内，运维 ops_zhang 的发布动作（LOG-20261119-1601、1602）与另一次备份拉取（1612）均属窗口内的正常变更；但同一窗口内出现攻击源 198.51.100.201 的 sqlmap 探测（1604）、时间盲注（1605，SLEEP(5)）、UNION 读取 users 表（1606）与批量导出（1608、1617）。按 maintenance-windows.yaml 的 never_exempt，sql_injection 在窗口内不免除告警，因此本次判定为恶意，窗口仅作为降权因子。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": ""
+}

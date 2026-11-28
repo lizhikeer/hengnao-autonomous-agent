@@ -1,0 +1,19 @@
+{
+  "case_id": "CHAIN-CASE-15",
+  "is_malicious": true,
+  "attack_type": "C2_Exfiltration",
+  "risk_level": "HIGH",
+  "attacker_ip": "91.219.236.7",
+  "victim_asset": "web-prod-01",
+  "evidence_log_ids": [
+    "LOG-20261119-1501",
+    "LOG-20261119-1502",
+    "LOG-20261119-1504",
+    "LOG-20261119-1508",
+    "LOG-20261119-1512"
+  ],
+  "attack_chain_summary": "web-prod-01（10.0.0.15）于 02:00 起以约 60 秒固定周期向 91.219.236.7 的 53 端口发起 TXT 查询（LOG-20261119-1501 起共 13 条 zeek_dns），查询名全部为 Base64 编码串、长度 16~28 字节，解码后为 awjhb3BsYWMudC5iYWQtY2RuLmV4YW1wbGU / id=234123413 / status=on / files1.txt 等指令与状态回传（1502、1503）；同时存在 3 次 53/UDP 短连接（conn_state=SF、orig 172~180 字节、resp 178~182 字节，1504、1508、1512）。单条 DNS 记录完全不显眼，只有按「同一目的 IP + 固定周期 + 高频小包 + 非白名单解析服务器」聚合才能识别为 DNS 隧道。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "隧道传输的完整数据内容未知（仅见 Base64 片段），需还原全部查询名后解码确认外传范围。"
+}

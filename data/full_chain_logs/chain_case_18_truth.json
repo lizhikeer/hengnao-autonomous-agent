@@ -1,0 +1,18 @@
+{
+  "case_id": "CHAIN-CASE-18",
+  "is_malicious": false,
+  "attack_type": "none",
+  "risk_level": "LOW",
+  "attacker_ip": "10.0.0.40",
+  "victim_asset": "db-core-01",
+  "evidence_log_ids": [
+    "LOG-20261120-1801",
+    "LOG-20261120-1803",
+    "LOG-20261120-1804",
+    "LOG-20261120-1807"
+  ],
+  "attack_chain_summary": "2026-11-20 23:05—23:50（UTC+8）落在 backup-01 的登记备份窗口（23:00—23:59）内：备份主机 10.0.0.40 以 backup 账号通过 SSH 登录 db-core-01（LOG-20261120-1801），随后两次长会话分别传输约 5.4GB 与 2.1GB（1803、1804），并通过 3306 拉取约 12MB 的 mysqldump 结果（1807）。大流量外传特征虽明显，但源 IP 在 allowlist 内、账号与资产匹配、时点落在登记窗口、流向为备份主机而非外网，且全程无异常登录失败，判定为正常备份，不建议任何处置。",
+  "recommended_action": "none",
+  "requires_human_approval": false,
+  "unknown_items": ""
+}

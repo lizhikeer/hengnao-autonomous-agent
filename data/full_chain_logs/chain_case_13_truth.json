@@ -1,0 +1,21 @@
+{
+  "case_id": "CHAIN-CASE-13",
+  "is_malicious": true,
+  "attack_type": "Brute_Force_After_Scan",
+  "risk_level": "HIGH",
+  "attacker_ip": "10.0.0.15",
+  "victim_asset": "db-core-01",
+  "evidence_log_ids": [
+    "LOG-20261118-1301",
+    "LOG-20261118-1302",
+    "LOG-20261118-1305",
+    "LOG-20261118-1306",
+    "LOG-20261118-1311",
+    "LOG-20261118-1313",
+    "LOG-20261118-1314"
+  ],
+  "attack_chain_summary": "已失陷的 web-prod-01（10.0.0.15）于 03:00 对核心数据库 db-core-01（10.0.0.30）发起内网横向：先探测 22 / 3306 / 6379 / 5432 四个端口（LOG-20261118-1301~1304，全部 conn_state=S0 无应用层数据），再对 22 端口做 3 轮 SSH 口令尝试（root、postgres、oracle 均失败，1306、1308、1310），03:06:30 以 backup 账号登录成功（1311）并建立 420 秒会话（1313），随后通过 3306 拉取约 12MB 数据（1314）。台账显示 db-core-01 只允许 web-prod-01 与备份主机访问，但 22 端口的密码认证本身不属于任何正常业务；处置上不对数据库资产下阻断动作（台账明令禁止），而是封禁已失陷的 web 主机。",
+  "recommended_action": "block_ip",
+  "requires_human_approval": true,
+  "unknown_items": "横向所用 backup 账号的密码来源未知（疑似来自 web-prod-01 上的配置文件），需排查凭据泄露面。"
+}
